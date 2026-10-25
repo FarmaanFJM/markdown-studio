@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import {
@@ -83,6 +83,18 @@ export function launchWithWorkspace(
     },
     ...extra
   })
+}
+
+/**
+ * Like `launchWithWorkspace`, with soft word wrap off. Editor text is read from the rendered
+ * lines, and a long line that wraps (the Windows CI display is narrow) would otherwise be read
+ * as several lines. Wrapping itself is covered by the Phase 1 settings tests.
+ */
+export function launchEditing(
+  sandbox: Sandbox,
+  extra: Record<string, unknown> = {}
+): Promise<Launched> {
+  return launchWithWorkspace(sandbox, { editor: { wordWrap: false }, ...extra })
 }
 
 export async function stubOpenDialog(app: ElectronApplication, filePaths: string[]): Promise<void> {
@@ -271,4 +283,91 @@ export async function openInViewer(app: ElectronApplication, file: string): Prom
   ])
   await viewer.waitForLoadState('load')
   return viewer
+}
+
+/** Types text into the focused editor, one key at a time, as a user would. */
+export async function typeInEditor(page: Page, text: string): Promise<void> {
+  await page.keyboard.type(text)
+}
+
+/** Creates an untitled document with `content` typed in, and leaves the editor focused. */
+export async function newDocumentWith(page: Page, content = ''): Promise<void> {
+  await page.keyboard.press(`${mod}+N`)
+  await expect(page.locator('.tab.active')).toBeVisible()
+  await focusEditor(page)
+  if (content) await page.keyboard.insertText(content)
+}
+
+/**
+ * The document's exact text. Saves it with Save As to `target` (the dialog is stubbed) and reads
+ * the file back, so line endings and every character are verified, not just what is on screen.
+ */
+export async function saveAndRead(
+  app: ElectronApplication,
+  page: Page,
+  target: string
+): Promise<string> {
+  await stubSaveDialog(app, target)
+  await page.keyboard.press(`${mod}+Shift+S`)
+  await expect(page.locator('.tab.active')).not.toHaveClass(/dirty/)
+  return readFileSync(target, 'utf8')
+}
+
+/** Runs a command from the command palette by (part of) its title, checking the match first. */
+export async function runPaletteCommand(
+  page: Page,
+  title: string,
+  expected = title
+): Promise<void> {
+  await page.keyboard.press(`${mod}+Shift+P`)
+  const input = page.getByTestId('palette-input')
+  await expect(input).toBeVisible()
+  await input.fill(title)
+  await expect(page.locator('.palette-item.selected')).toContainText(expected)
+  await page.keyboard.press('Enter')
+  await expect(input).toBeHidden()
+}
+
+/**
+ * Gives the source editor keyboard focus while a modal dialog covers it. A real click would hit
+ * the dialog backdrop, so the mouse events are dispatched to the editor directly, which is how
+ * Monaco takes focus.
+ */
+export async function focusEditorBehindDialog(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const target = document.querySelector('.monaco-editor .view-lines')!
+    const box = target.getBoundingClientRect()
+    for (const type of ['mousedown', 'mouseup', 'click']) {
+      target.dispatchEvent(
+        new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+          buttons: type === 'mousedown' ? 1 : 0,
+          clientX: box.left + 5,
+          clientY: box.top + 5
+        })
+      )
+    }
+  })
+}
+
+/** Clicks a native menu item by its menu and item labels (ampersands in labels are ignored). */
+export async function clickMenuItem(
+  app: ElectronApplication,
+  menu: string,
+  ...path: string[]
+): Promise<void> {
+  await app.evaluate(
+    ({ Menu, BrowserWindow }, [menuLabel, ...items]) => {
+      const clean = (label: string) => label.replace('&', '')
+      let current = Menu.getApplicationMenu()!.items.find((i) => clean(i.label) === menuLabel)
+      for (const label of items) {
+        current = current?.submenu?.items.find((i) => clean(i.label) === label)
+      }
+      if (!current) throw new Error(`Menu item not found: ${[menuLabel, ...items].join(' > ')}`)
+      current.click(undefined, BrowserWindow.getAllWindows()[0], undefined as never)
+    },
+    [menu, ...path]
+  )
 }

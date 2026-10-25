@@ -1,7 +1,7 @@
 import { watch, type FSWatcher } from 'node:fs'
 import path from 'node:path'
 
-const IGNORED_SEGMENTS = new Set(['.git', 'node_modules'])
+const IGNORED_SEGMENTS = new Set(['.git', 'node_modules', '.markdown-studio'])
 
 /**
  * Watches the workspace recursively and reports the directories whose contents changed,

@@ -5,6 +5,7 @@
  * validated again in the main process; the renderer is never given raw Node.js or Electron APIs.
  */
 import type { AppSettings, SettingsPatch } from './settings'
+import type { StoredTemplate, TemplateScope } from './templates'
 
 export interface DirEntry {
   name: string
@@ -21,6 +22,22 @@ export interface TextFile {
   hasBom: boolean
   mtimeMs: number
 }
+
+export interface FileListing {
+  /** Absolute paths of the files found. */
+  files: string[]
+  /** True when the listing stopped at the limit and more files exist. */
+  truncated: boolean
+}
+
+export interface TemplateListing {
+  global: StoredTemplate[]
+  workspace: StoredTemplate[]
+  /** False when no folder is open, so workspace templates cannot be saved. */
+  workspaceAvailable: boolean
+}
+
+export type EntryState = 'file' | 'directory' | 'missing' | 'unknown'
 
 export interface ImportedImage {
   path: string
@@ -71,6 +88,8 @@ export type MenuCommand =
   | 'view.fontReset'
   | 'help.about'
   | 'help.shortcuts'
+  /** Runs a command of the renderer's command registry; the id travels as the argument. */
+  | 'app.command'
 
 export interface MenuCommandMessage {
   command: MenuCommand
@@ -94,11 +113,17 @@ export const IPC = {
   fsCreateFile: 'fs:create-file',
   fsCreateDirectory: 'fs:create-directory',
   fsRename: 'fs:rename',
+  fsMove: 'fs:move',
+  fsListFiles: 'fs:list-files',
+  fsStatMany: 'fs:stat-many',
   fsTrash: 'fs:trash',
   fsDeletePermanently: 'fs:delete-permanently',
   dialogOpenMarkdown: 'dialog:open-markdown',
   dialogSaveMarkdown: 'dialog:save-markdown',
   assetsImportImage: 'assets:import-image',
+  templatesList: 'templates:list',
+  templatesSave: 'templates:save',
+  templatesDelete: 'templates:delete',
   renderPdf: 'render:pdf',
   exportPdf: 'export:pdf',
   exportHtml: 'export:html',
@@ -130,10 +155,25 @@ export interface MarkdownStudioApi {
   fs: {
     readDir(path: string): Promise<DirEntry[]>
     readText(path: string): Promise<TextFile>
-    writeText(path: string, content: string, hasBom: boolean): Promise<{ mtimeMs: number }>
+    /**
+     * Writes a document. When `expectedMtimeMs` is given, the write is refused if the file was
+     * modified on disk since that time, so concurrent changes are never overwritten silently.
+     */
+    writeText(
+      path: string,
+      content: string,
+      hasBom: boolean,
+      expectedMtimeMs?: number
+    ): Promise<{ mtimeMs: number }>
     createFile(directory: string, name: string): Promise<string>
     createDirectory(directory: string, name: string): Promise<string>
     rename(path: string, newName: string): Promise<string>
+    /** Moves a file or folder into another folder of the workspace; never overwrites. */
+    move(path: string, targetDirectory: string): Promise<string>
+    /** Recursive listing of the workspace, skipping hidden and dependency folders. */
+    listFiles(options?: { extensions?: string[]; limit?: number }): Promise<FileListing>
+    /** Existence check for many paths at once; paths outside permitted areas report `unknown`. */
+    statMany(paths: string[]): Promise<EntryState[]>
     trash(path: string): Promise<void>
     deletePermanently(path: string): Promise<void>
   }
@@ -145,6 +185,12 @@ export interface MarkdownStudioApi {
     /** Absolute path of a file dropped from the operating system, or '' if unavailable. */
     pathForFile(file: File): string
     importImage(sourcePath: string, targetDirectory: string): Promise<ImportedImage>
+  }
+  templates: {
+    list(): Promise<TemplateListing>
+    /** Creates the template (empty `id`) or updates the stored one with that id. */
+    save(scope: TemplateScope, template: Partial<StoredTemplate>): Promise<StoredTemplate>
+    delete(scope: TemplateScope, id: string): Promise<void>
   }
   render: {
     pdf(html: string): Promise<Uint8Array>

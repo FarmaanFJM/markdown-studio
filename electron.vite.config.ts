@@ -45,7 +45,17 @@ export default defineConfig({
     resolve: { alias }
   },
   renderer: {
-    resolve: { alias },
+    resolve: {
+      alias: {
+        ...alias,
+        // markdownlint runs in a Web Worker, which has no `document`; the package's browser
+        // build decodes entities through the DOM, so use its table-based build instead.
+        'decode-named-character-reference': resolve(
+          __dirname,
+          'node_modules/decode-named-character-reference/index.js'
+        )
+      }
+    },
     plugins: [react(), contentSecurityPolicy()],
     worker: { format: 'es' },
     build: { minify: true, chunkSizeWarningLimit: 6000 }

@@ -4,6 +4,10 @@ import { useSettings } from '../state/settings'
 import { notify } from '../state/ui'
 import { dataTransferHasDroppable, insertImages, sourcesFromDataTransfer } from './imageDrop'
 import { documentModels, setActiveEditor } from './models'
+import { installDiagnostics, registerQuickFixes } from '../diagnostics/manager'
+import { registerCompletions } from './markdown/completions'
+import { installContextMenu } from './markdown/contextMenu'
+import { installSmartEditing } from './markdown/smartEditing'
 import { monaco, monacoTheme } from './monaco'
 
 const EDITOR_FONT =
@@ -40,10 +44,14 @@ export function MarkdownEditor() {
       padding: { top: 12, bottom: 12 },
       renderLineHighlight: 'line',
       renderWhitespace: 'selection',
-      // Intelligent completions arrive in Phase 2; word-based suggestions are noise in prose.
+      // Markdown suggestions appear on request (Ctrl+Space) and after trigger characters such as
+      // "/" and "](" only; typing prose never opens a menu, and word-based suggestions are noise.
       quickSuggestions: false,
-      suggestOnTriggerCharacters: false,
+      suggestOnTriggerCharacters: true,
       wordBasedSuggestions: 'off',
+      snippetSuggestions: 'inline',
+      acceptSuggestionOnEnter: 'on',
+      suggest: { showStatusBar: true, insertMode: 'replace', preview: false },
       // Image drops are handled by Markdown Studio, which writes proper Markdown references.
       dropIntoEditor: { enabled: false },
       pasteAs: { enabled: false },
@@ -58,6 +66,13 @@ export function MarkdownEditor() {
     })
     editorRef.current = editor
     setActiveEditor(editor)
+    const features = [
+      registerCompletions(),
+      registerQuickFixes(),
+      installSmartEditing(editor),
+      installContextMenu(editor),
+      installDiagnostics(editor)
+    ]
 
     editor.onDidChangeCursorSelection(({ selection }) => {
       const model = editor.getModel()
@@ -124,6 +139,7 @@ export function MarkdownEditor() {
       container.removeEventListener('dragover', onDragOver, true)
       container.removeEventListener('dragleave', onDragLeave, true)
       container.removeEventListener('drop', onDrop, true)
+      features.forEach((feature) => feature.dispose())
       const shown = shownIdRef.current
       if (shown) documentModels.setViewState(shown, editor.saveViewState())
       setActiveEditor(null)

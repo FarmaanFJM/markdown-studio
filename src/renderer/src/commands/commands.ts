@@ -21,6 +21,7 @@ import {
 import { refreshSettings, useSettings } from '../state/settings'
 import { dialogs, notify } from '../state/ui'
 import { useWorkspace } from '../state/workspace'
+import { runRegisteredCommand } from './dispatch'
 
 function settings() {
   return useSettings.getState().settings
@@ -179,6 +180,10 @@ export const commands = {
     showSidebar('explorer')
   },
 
+  toggleToolbar() {
+    useSettings.getState().update({ markdown: { toolbar: !settings().markdown.toolbar } })
+  },
+
   toggleWordWrap() {
     useSettings.getState().update({ editor: { wordWrap: !settings().editor.wordWrap } })
   },
@@ -191,6 +196,10 @@ export const commands = {
 }
 
 export function runMenuCommand({ command, argument }: MenuCommandMessage): void {
+  if (command === 'app.command') {
+    if (argument) runRegisteredCommand(argument)
+    return
+  }
   const map: Record<MenuCommandMessage['command'], () => unknown> = {
     'file.new': commands.newFile,
     'file.open': commands.openFile,
@@ -221,7 +230,8 @@ export function runMenuCommand({ command, argument }: MenuCommandMessage): void 
     'view.fontDecrease': commands.decreaseFontSize,
     'view.fontReset': commands.resetFontSize,
     'help.about': commands.about,
-    'help.shortcuts': commands.shortcuts
+    'help.shortcuts': commands.shortcuts,
+    'app.command': () => undefined
   }
   void map[command]?.()
 }

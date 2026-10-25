@@ -1,4 +1,13 @@
-import { cpSync, mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  utimesSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -159,5 +168,81 @@ describe('AssetService', () => {
     expect(candidateName('a.png', 0)).toBe('a.png')
     expect(candidateName('a.png', 2)).toBe('a-2.png')
     expect(candidateName('Team Photo (2024).png', 1)).toBe('Team Photo (2024)-1.png')
+  })
+})
+
+describe('FileService (Phase 2 operations)', () => {
+  it('lists workspace files breadth first, with filters, skipping hidden and dependency folders', async () => {
+    mkdirSync(path.join(root, 'node_modules', 'pkg'), { recursive: true })
+    writeFileSync(path.join(root, 'node_modules', 'pkg', 'x.md'), '')
+    mkdirSync(path.join(root, '.markdown-studio'), { recursive: true })
+    writeFileSync(path.join(root, '.markdown-studio', 'hidden.md'), '')
+    const all = await files.listFiles({})
+    const names = all.files.map((f) => path.relative(root, f).replace(/\\/g, '/'))
+    expect(names).toContain('docs/guide.md')
+    expect(names).not.toContain('node_modules/pkg/x.md')
+    expect(names).not.toContain('.markdown-studio/hidden.md')
+    // Shallow files come before deeply nested ones.
+    expect(names.indexOf('README.md')).toBeLessThan(names.indexOf('docs/guide.md'))
+
+    const images = await files.listFiles({ extensions: ['.png', '.JPG'] })
+    expect(images.files.every((f) => /\.(png|jpg)$/i.test(f))).toBe(true)
+    expect(images.files.length).toBeGreaterThan(1)
+
+    const limited = await files.listFiles({ limit: 2 })
+    expect(limited).toMatchObject({ truncated: true })
+    expect(limited.files).toHaveLength(2)
+  })
+
+  it('reports whether paths exist, and refuses to look outside permitted areas', async () => {
+    const states = await files.statMany([
+      path.join(root, 'README.md'),
+      path.join(root, 'docs'),
+      path.join(root, 'nope.md'),
+      path.join(outside, 'notes.txt'),
+      ''
+    ])
+    expect(states).toEqual(['file', 'directory', 'missing', 'unknown', 'unknown'])
+    await expect(files.statMany('x')).rejects.toThrow()
+  })
+
+  it('moves entries into folders without overwriting or escaping the workspace', async () => {
+    mkdirSync(path.join(root, 'archive'))
+    const moved = await files.move(path.join(root, 'README.md'), path.join(root, 'archive'))
+    expect(moved).toBe(path.join(root, 'archive', 'README.md'))
+    expect(existsSync(path.join(root, 'README.md'))).toBe(false)
+
+    writeFileSync(path.join(root, 'archive', 'guide.md'), 'existing')
+    await expect(
+      files.move(path.join(root, 'docs', 'guide.md'), path.join(root, 'archive'))
+    ).rejects.toThrow(/already exists/)
+    expect(readFileSync(path.join(root, 'archive', 'guide.md'), 'utf8')).toBe('existing')
+
+    await expect(files.move(path.join(root, 'docs'), path.join(root, 'docs'))).rejects.toThrow(
+      /into itself/
+    )
+    mkdirSync(path.join(root, 'docs', 'inner'))
+    await expect(
+      files.move(path.join(root, 'docs'), path.join(root, 'docs', 'inner'))
+    ).rejects.toThrow(/into itself/)
+    await expect(files.move(path.join(root, 'docs'), outside)).rejects.toBeInstanceOf(
+      AccessDeniedError
+    )
+    await expect(files.move(root, path.join(root, 'archive'))).rejects.toThrow(/workspace folder/)
+  })
+
+  it('refuses to overwrite a file that changed on disk since it was read', async () => {
+    const target = path.join(root, 'docs', 'guide.md')
+    const { mtimeMs } = await files.readText(target)
+    await expect(files.writeText(target, 'mine', false, mtimeMs)).resolves.toBeTruthy()
+    // Someone else edits the file afterwards.
+    writeFileSync(target, 'theirs')
+    utimesSync(target, new Date(), new Date(Date.now() + 5000))
+    await expect(files.writeText(target, 'mine again', false, mtimeMs)).rejects.toThrow(
+      /changed on disk/
+    )
+    expect(readFileSync(target, 'utf8')).toBe('theirs')
+    // Without the guard (an ordinary save) writing still works.
+    await expect(files.writeText(target, 'forced', false)).resolves.toBeTruthy()
   })
 })

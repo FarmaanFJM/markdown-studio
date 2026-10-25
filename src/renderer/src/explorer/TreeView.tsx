@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useState,
   type DragEvent,
   type KeyboardEvent,
   type MouseEvent
@@ -9,8 +10,9 @@ import {
 import { ChevronRight } from 'lucide-react'
 import type { DirEntry } from '@shared/ipc'
 import { isImagePath } from '@shared/fileTypes'
-import { dirname, pathKey, pathsEqual } from '@shared/paths'
+import { basename, dirname, pathKey, pathsEqual } from '@shared/paths'
 import { EXPLORER_DRAG_MIME } from '../editor/imageDrop'
+import { moveWithReferences } from '../references/moveWithReferences'
 import { useDocuments } from '../state/documents'
 import { useUi } from '../state/ui'
 import { useWorkspace, type DirectoryState } from '../state/workspace'
@@ -46,7 +48,20 @@ export function startImageDrag(event: DragEvent, entry: DirEntry): void {
   event.dataTransfer.effectAllowed = 'copy'
 }
 
+/** Private drag type for moving entries between folders of the Explorer. */
+export const MOVE_DRAG_MIME = 'application/x-markdown-studio-move'
+
+function startEntryDrag(event: DragEvent, entry: DirEntry): void {
+  event.dataTransfer.setData(MOVE_DRAG_MIME, entry.path)
+  // Images can also be dropped into the editor to insert a reference.
+  if (isImagePath(entry.path)) event.dataTransfer.setData(EXPLORER_DRAG_MIME, entry.path)
+  event.dataTransfer.effectAllowed = 'copyMove'
+}
+
+const carriesMove = (event: DragEvent) => event.dataTransfer.types.includes(MOVE_DRAG_MIME)
+
 export function TreeView({ root }: { root: string }) {
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
   const directories = useWorkspace((s) => s.directories)
   const expanded = useWorkspace((s) => s.expanded)
   const selected = useWorkspace((s) => s.selected)
@@ -121,6 +136,23 @@ export function TreeView({ root }: { root: string }) {
     event.preventDefault()
   }
 
+  const dropOn = (event: DragEvent, folder: string) => {
+    event.preventDefault()
+    event.stopPropagation()
+    setDropTarget(null)
+    const source = event.dataTransfer.getData(MOVE_DRAG_MIME)
+    if (!source) return
+    const known = rows.find((r) => pathsEqual(r.entry.path, source))?.entry
+    const entry: DirEntry = known ?? {
+      name: basename(source),
+      path: source,
+      kind: 'file',
+      size: 0,
+      mtimeMs: 0
+    }
+    void moveWithReferences(entry, folder)
+  }
+
   const onContextMenu = (event: MouseEvent, entry: DirEntry | null) => {
     event.preventDefault()
     event.stopPropagation()
@@ -140,6 +172,12 @@ export function TreeView({ root }: { root: string }) {
       tabIndex={0}
       onKeyDown={onKeyDown}
       onContextMenu={(e) => onContextMenu(e, null)}
+      onDragOver={(e) => {
+        if (!carriesMove(e)) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+      }}
+      onDrop={(e) => dropOn(e, root)}
     >
       {rows.length === 0 && <div className="explorer-message">This folder is empty.</div>}
       {rows.map(({ entry, depth }) => {
@@ -150,7 +188,7 @@ export function TreeView({ root }: { root: string }) {
         return (
           <div
             key={entry.path}
-            className={`tree-row${isSelected ? ' selected' : ''}${isActive ? ' active' : ''}`}
+            className={`tree-row${isSelected ? ' selected' : ''}${isActive ? ' active' : ''}${dropTarget === entry.path ? ' drop-target' : ''}`}
             role="treeitem"
             aria-selected={isSelected}
             aria-expanded={isDir ? isOpen : undefined}
@@ -158,8 +196,22 @@ export function TreeView({ root }: { root: string }) {
             data-path={entry.path}
             title={entry.path}
             style={{ paddingLeft: 8 + depth * 14 }}
-            draggable={isImagePath(entry.path)}
-            onDragStart={(e) => startImageDrag(e, entry)}
+            draggable
+            onDragStart={(e) => startEntryDrag(e, entry)}
+            onDragEnd={() => setDropTarget(null)}
+            onDragOver={
+              isDir
+                ? (e) => {
+                    if (!carriesMove(e)) return
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.dataTransfer.dropEffect = 'move'
+                    setDropTarget(entry.path)
+                  }
+                : undefined
+            }
+            onDragLeave={isDir ? () => setDropTarget(null) : undefined}
+            onDrop={isDir ? (e) => dropOn(e, entry.path) : undefined}
             onClick={() => activate(entry)}
             onContextMenu={(e) => onContextMenu(e, entry)}
           >

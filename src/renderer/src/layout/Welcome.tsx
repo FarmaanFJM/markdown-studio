@@ -1,7 +1,8 @@
-import { FilePlus, FileText, FolderOpen } from 'lucide-react'
+import { FilePlus, FileStack, FileText, FolderOpen } from 'lucide-react'
 import { basename } from '@shared/paths'
 import logo from '../assets/logo-128.png'
 import { commands } from '../commands/commands'
+import { runCommand } from '../commands/registry'
 import { useSettings } from '../state/settings'
 import { useWorkspace } from '../state/workspace'
 
@@ -20,6 +21,13 @@ export function Welcome() {
       <div className="welcome-actions">
         <button type="button" className="welcome-action" onClick={commands.newFile}>
           <FilePlus size={16} /> New Markdown File <kbd>{mod}+N</kbd>
+        </button>
+        <button
+          type="button"
+          className="welcome-action"
+          onClick={() => runCommand('template.newDocument')}
+        >
+          <FileStack size={16} /> New from Template… <kbd>{mod}+Shift+N</kbd>
         </button>
         <button type="button" className="welcome-action" onClick={() => void commands.openFile()}>
           <FileText size={16} /> Open File… <kbd>{mod}+O</kbd>
@@ -47,7 +55,7 @@ export function Welcome() {
       {root && (
         <p className="welcome-hint">
           Open a Markdown file from the Explorer. Drag images from the Explorer or from your file
-          manager into a document to insert them.
+          manager into a document to insert them. Press {mod}+Shift+P for every command.
         </p>
       )}
     </div>
