@@ -22,7 +22,8 @@
     "package:win": "npm run build && electron-builder --win --publish never",
     "package:linux": "npm run build && electron-builder --linux --publish never",
     "package:mac": "npm run build && electron-builder --mac --publish never",
-    "notices": "node scripts/generate-notices.mjs"
+    "notices": "node scripts/generate-notices.mjs",
+    "screenshots": "npm run build && node scripts/capture-screenshots.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

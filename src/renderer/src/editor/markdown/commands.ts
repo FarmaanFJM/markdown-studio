@@ -17,7 +17,7 @@ import { getActiveEditor } from '../models'
 import { monaco } from '../monaco'
 import { applyResults, currentSelections } from './apply'
 import { imageSnippet, insertBuiltInSnippet, insertSnippetText, linkSnippet } from './insert'
-import { lineAccess, protectedLines } from './model'
+import { analysisFor, lineAccess, protectedLines } from './model'
 import { BUILT_IN_SNIPPETS } from '@shared/markdown/snippets'
 
 type Editor = monaco.editor.IStandaloneCodeEditor
@@ -65,18 +65,52 @@ function inline(style: InlineStyleName): () => void {
   }
 }
 
-function heading(level: number): () => void {
+/**
+ * Underlined (Setext) headings are shown in the outline, but converting them would leave the
+ * underline behind, so the heading commands skip their lines.
+ */
+function skipUnderlinedHeadings(
+  editor: Editor,
+  isProtected: (line: number) => boolean
+): (line: number) => boolean {
+  const underlined = analysisFor(editor.getModel()!).headings.filter((h) => h.setext)
+  return (line) => isProtected(line) || underlined.some((h) => line >= h.line && line < h.endLine)
+}
+
+function headingCommand(
+  apply: (
+    lines: LineAccess,
+    selection: PureSelection,
+    isProtected: (line: number) => boolean
+  ) => EditResult
+): () => void {
   return () => {
     const editor = requireEditor()
-    if (editor) run(editor, (s, lines, p) => setHeading(lines, s, level, p))
+    if (!editor) return
+    const changed = run(editor, (selection, lines, isProtected) =>
+      apply(lines, selection, skipUnderlinedHeadings(editor, isProtected))
+    )
+    if (!changed) {
+      const line = (editor.getPosition()?.lineNumber ?? 1) - 1
+      const underlined = analysisFor(editor.getModel()!).headings.some(
+        (h) => h.setext && line >= h.line && line < h.endLine
+      )
+      if (underlined)
+        notify('info', 'Underlined headings cannot be changed with the heading commands.')
+    }
   }
 }
 
+function heading(level: number): () => void {
+  return headingCommand((lines, selection, isProtected) =>
+    setHeading(lines, selection, level, isProtected)
+  )
+}
+
 function shift(delta: 1 | -1): () => void {
-  return () => {
-    const editor = requireEditor()
-    if (editor) run(editor, (s, lines, p) => shiftHeading(lines, s, delta, p))
-  }
+  return headingCommand((lines, selection, isProtected) =>
+    shiftHeading(lines, selection, delta, isProtected)
+  )
 }
 
 function list(kind: ListKind): () => void {
