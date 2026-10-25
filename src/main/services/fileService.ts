@@ -1,10 +1,23 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import type { DirEntry, TextFile } from '@shared/ipc'
+import type { DirEntry, EntryState, FileListing, TextFile } from '@shared/ipc'
 import type { AccessControl } from './accessControl'
 
 /** Entries hidden from the Explorer. They are still untouched on disk. */
-const HIDDEN_ENTRIES = new Set(['.git', '.DS_Store', 'Thumbs.db', 'desktop.ini'])
+const HIDDEN_ENTRIES = new Set([
+  '.git',
+  '.DS_Store',
+  'Thumbs.db',
+  'desktop.ini',
+  // Workspace metadata (templates); it is managed by the application, not shown as documents.
+  '.markdown-studio'
+])
+
+/** Folders never descended into when listing the workspace for suggestions. */
+const SKIPPED_DIRECTORIES = new Set(['node_modules'])
+const DEFAULT_LISTING_LIMIT = 5000
+const MAX_LISTING_LIMIT = 20000
+const MAX_STAT_PATHS = 5000
 
 const MAX_TEXT_FILE_BYTES = 32 * 1024 * 1024
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf])
@@ -14,6 +27,14 @@ export class FileOperationError extends Error {
   constructor(message: string) {
     super(message)
     this.name = 'FileOperationError'
+  }
+}
+
+/** The file changed on disk after it was read, so writing would overwrite someone else's edit. */
+export class FileConflictError extends FileOperationError {
+  constructor(name: string) {
+    super(`"${name}" was changed on disk after it was opened. Reload it before saving.`)
+    this.name = 'FileConflictError'
   }
 }
 
@@ -103,9 +124,20 @@ export class FileService {
   }
 
   /** Writes the document exactly as given; only a BOM present when it was opened is restored. */
-  async writeText(file: unknown, content: unknown, hasBom: unknown): Promise<{ mtimeMs: number }> {
+  async writeText(
+    file: unknown,
+    content: unknown,
+    hasBom: unknown,
+    expectedMtimeMs?: unknown
+  ): Promise<{ mtimeMs: number }> {
     const target = this.access.assertFile(file)
     if (typeof content !== 'string') throw new FileOperationError('Invalid document content.')
+    if (typeof expectedMtimeMs === 'number') {
+      const current = await fs.stat(target).catch(() => null)
+      if (current && Math.abs(current.mtimeMs - expectedMtimeMs) > 1) {
+        throw new FileConflictError(path.basename(target))
+      }
+    }
     const body = Buffer.from(content, 'utf8')
     await fs.writeFile(target, hasBom === true ? Buffer.concat([UTF8_BOM, body]) : body)
     const stat = await fs.stat(target)
@@ -160,6 +192,105 @@ export class FileService {
     }
     await fs.rename(from, to)
     return to
+  }
+
+  /** Moves a file or folder into another workspace folder. Existing entries are never replaced. */
+  async move(source: unknown, targetDirectory: unknown): Promise<string> {
+    const from = this.access.assertWorkspace(source)
+    if (this.access.isWorkspaceRoot(from)) {
+      throw new FileOperationError('The workspace folder itself cannot be moved.')
+    }
+    const directory = this.access.assertWorkspace(targetDirectory)
+    const stat = await fs.stat(directory).catch(() => null)
+    if (!stat?.isDirectory()) throw new FileOperationError('The destination is not a folder.')
+    const to = path.join(directory, path.basename(from))
+    this.access.assertWorkspace(to)
+    if (sameEntry(from, to)) return to
+    const relative = path.relative(from, directory)
+    if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
+      throw new FileOperationError('A folder cannot be moved into itself.')
+    }
+    if (await exists(to)) {
+      throw new FileOperationError(`"${path.basename(to)}" already exists in the destination.`)
+    }
+    try {
+      await fs.rename(from, to)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'EXDEV') {
+        throw new FileOperationError('Items cannot be moved to a different drive from here.')
+      }
+      throw error
+    }
+    return to
+  }
+
+  /**
+   * Lists the workspace's files (breadth first, so shallow files come first) for suggestions.
+   * Hidden folders, dependency folders and symbolic links to folders are skipped.
+   */
+  async listFiles(options: unknown): Promise<FileListing> {
+    const root = this.access.getWorkspace()
+    if (!root) return { files: [], truncated: false }
+    const opts = (typeof options === 'object' && options !== null ? options : {}) as {
+      extensions?: unknown
+      limit?: unknown
+    }
+    const extensions = Array.isArray(opts.extensions)
+      ? new Set(
+          opts.extensions
+            .filter((e): e is string => typeof e === 'string')
+            .map((e) => e.toLowerCase())
+        )
+      : null
+    const limit =
+      typeof opts.limit === 'number' && opts.limit > 0
+        ? Math.min(Math.floor(opts.limit), MAX_LISTING_LIMIT)
+        : DEFAULT_LISTING_LIMIT
+
+    const found: string[] = []
+    const queue = [root]
+    while (queue.length > 0) {
+      const directory = queue.shift()!
+      let dirents
+      try {
+        dirents = await fs.readdir(directory, { withFileTypes: true })
+      } catch {
+        continue
+      }
+      dirents.sort((a, b) => naturalCompare(a.name, b.name))
+      for (const dirent of dirents) {
+        if (dirent.name.startsWith('.') || HIDDEN_ENTRIES.has(dirent.name)) continue
+        const full = path.join(directory, dirent.name)
+        if (dirent.isDirectory()) {
+          if (!SKIPPED_DIRECTORIES.has(dirent.name)) queue.push(full)
+        } else if (dirent.isFile()) {
+          if (extensions && !extensions.has(path.extname(dirent.name).toLowerCase())) continue
+          if (found.length >= limit) return { files: found, truncated: true }
+          found.push(full)
+        }
+      }
+    }
+    return { files: found, truncated: false }
+  }
+
+  /** Whether each path is a file, a folder or missing. Paths the renderer may not read are `unknown`. */
+  async statMany(paths: unknown): Promise<EntryState[]> {
+    if (!Array.isArray(paths) || paths.length > MAX_STAT_PATHS) {
+      throw new FileOperationError('Too many paths to check.')
+    }
+    return Promise.all(
+      paths.map(async (candidate): Promise<EntryState> => {
+        if (typeof candidate !== 'string' || candidate.length === 0) return 'unknown'
+        const resolved = path.resolve(candidate)
+        if (!this.access.canReadImage(resolved)) return 'unknown'
+        try {
+          const stat = await fs.stat(resolved)
+          return stat.isDirectory() ? 'directory' : 'file'
+        } catch {
+          return 'missing'
+        }
+      })
+    )
   }
 
   async trash(target: unknown, trashItem: (p: string) => Promise<void>): Promise<void> {

@@ -1,4 +1,4 @@
-import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import {
@@ -271,4 +271,32 @@ export async function openInViewer(app: ElectronApplication, file: string): Prom
   ])
   await viewer.waitForLoadState('load')
   return viewer
+}
+
+/** Types text into the focused editor, one key at a time, as a user would. */
+export async function typeInEditor(page: Page, text: string): Promise<void> {
+  await page.keyboard.type(text)
+}
+
+/** Creates an untitled document with `content` typed in, and leaves the editor focused. */
+export async function newDocumentWith(page: Page, content = ''): Promise<void> {
+  await page.keyboard.press(`${mod}+N`)
+  await expect(page.locator('.tab.active')).toBeVisible()
+  await focusEditor(page)
+  if (content) await page.keyboard.insertText(content)
+}
+
+/**
+ * The document's exact text. Saves it with Save As to `target` (the dialog is stubbed) and reads
+ * the file back, so line endings and every character are verified, not just what is on screen.
+ */
+export async function saveAndRead(
+  app: ElectronApplication,
+  page: Page,
+  target: string
+): Promise<string> {
+  await stubSaveDialog(app, target)
+  await page.keyboard.press(`${mod}+Shift+S`)
+  await expect(page.locator('.tab.active')).not.toHaveClass(/dirty/)
+  return readFileSync(target, 'utf8')
 }

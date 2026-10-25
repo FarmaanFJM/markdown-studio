@@ -24,6 +24,11 @@ export const documentModels = {
   get(id: string | null): monaco.editor.ITextModel | null {
     return id ? (entries.get(id)?.model ?? null) : null
   },
+  /** The id of the document that owns a model, or null for foreign models. */
+  idOf(model: monaco.editor.ITextModel): string | null {
+    for (const [id, entry] of entries) if (entry.model === model) return id
+    return null
+  },
   getViewState(id: string): monaco.editor.ICodeEditorViewState | null {
     return entries.get(id)?.viewState ?? null
   },

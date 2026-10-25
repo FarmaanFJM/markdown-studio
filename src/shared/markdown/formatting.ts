@@ -487,3 +487,101 @@ export function toggleQuote(
     return `> ${text}`
   })
 }
+
+// --- Applying plans -----------------------------------------------------------------------
+
+function newlineCount(text: string): number {
+  let count = 0
+  for (const ch of text) if (ch === '\n') count++
+  return count
+}
+
+interface PlacedPlan {
+  index: number
+  /** Where the plan's replacement text starts in the edited document. */
+  start: Position
+}
+
+/** Where each plan's text lands in the document after all (non-overlapping) plans are applied. */
+function placePlans(plans: EditPlan[]): PlacedPlan[] {
+  const ordered = plans
+    .map((plan, index) => ({ plan, index }))
+    .sort(
+      (a, b) =>
+        a.plan.range.start.line - b.plan.range.start.line ||
+        a.plan.range.start.column - b.plan.range.start.column
+    )
+  const placed: PlacedPlan[] = []
+  let previousEndOriginal: Position = { line: 0, column: 0 }
+  let previousEndNew: Position = { line: 0, column: 0 }
+  for (const { plan, index } of ordered) {
+    const { start, end } = plan.range
+    const lineGap = start.line - previousEndOriginal.line
+    const newStart: Position =
+      lineGap === 0
+        ? {
+            line: previousEndNew.line,
+            column: previousEndNew.column + (start.column - previousEndOriginal.column)
+          }
+        : { line: previousEndNew.line + lineGap, column: start.column }
+    const parts = plan.text.split('\n')
+    const newEnd: Position =
+      parts.length === 1
+        ? { line: newStart.line, column: newStart.column + plan.text.length }
+        : { line: newStart.line + parts.length - 1, column: parts[parts.length - 1].length }
+    placed.push({ index, start: newStart })
+    previousEndOriginal = end
+    previousEndNew = newEnd
+  }
+  return placed
+}
+
+function positionInPlan(placed: PlacedPlan, text: string, offset: number): Position {
+  const clamped = Math.max(0, Math.min(offset, text.length))
+  const before = text.slice(0, clamped)
+  const breaks = newlineCount(before)
+  if (breaks === 0) return { line: placed.start.line, column: placed.start.column + clamped }
+  return { line: placed.start.line + breaks, column: clamped - (before.lastIndexOf('\n') + 1) }
+}
+
+/** Resolves a result's selection anchors to positions in the edited document. */
+export function resolveSelection(result: EditResult): Selection | null {
+  if (!result.select) return null
+  const placed = placePlans(result.plans)
+  const resolve = (anchor: Anchor) => {
+    const entry = placed.find((p) => p.index === anchor.plan)!
+    return positionInPlan(entry, result.plans[anchor.plan].text, anchor.offset)
+  }
+  return { start: resolve(result.select.start), end: resolve(result.select.end) }
+}
+
+/** Maps a position outside the plans' ranges to its place in the edited document. */
+export function mapPosition(plans: EditPlan[], position: Position): Position {
+  const placed = placePlans(plans)
+  let previousEndOriginal: Position = { line: 0, column: 0 }
+  let previousEndNew: Position = { line: 0, column: 0 }
+  for (const entry of placed) {
+    const plan = plans[entry.index]
+    const isBefore =
+      position.line < plan.range.start.line ||
+      (position.line === plan.range.start.line && position.column <= plan.range.start.column)
+    if (isBefore) break
+    const parts = plan.text.split('\n')
+    previousEndOriginal = plan.range.end
+    previousEndNew =
+      parts.length === 1
+        ? { line: entry.start.line, column: entry.start.column + plan.text.length }
+        : { line: entry.start.line + parts.length - 1, column: parts[parts.length - 1].length }
+    const afterEnd =
+      position.line > plan.range.end.line ||
+      (position.line === plan.range.end.line && position.column >= plan.range.end.column)
+    if (!afterEnd) return previousEndNew
+  }
+  const gap = position.line - previousEndOriginal.line
+  return gap === 0
+    ? {
+        line: previousEndNew.line,
+        column: previousEndNew.column + (position.column - previousEndOriginal.column)
+      }
+    : { line: previousEndNew.line + gap, column: position.column }
+}

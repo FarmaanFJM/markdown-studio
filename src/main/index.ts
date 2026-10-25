@@ -183,12 +183,19 @@ function registerIpc(): void {
 
   handle(IPC.fsReadDir, (dir: string) => files.readDir(dir))
   handle(IPC.fsReadText, (file: string) => files.readText(file))
-  handle(IPC.fsWriteText, (file: string, content: string, hasBom: boolean) =>
-    files.writeText(file, content, hasBom)
+  handle(
+    IPC.fsWriteText,
+    (file: string, content: string, hasBom: boolean, expectedMtimeMs?: number) =>
+      files.writeText(file, content, hasBom, expectedMtimeMs)
   )
   handle(IPC.fsCreateFile, (dir: string, name: string) => files.createFile(dir, name))
   handle(IPC.fsCreateDirectory, (dir: string, name: string) => files.createDirectory(dir, name))
   handle(IPC.fsRename, (file: string, name: string) => files.rename(file, name))
+  handle(IPC.fsMove, (file: string, directory: string) => files.move(file, directory))
+  handle(IPC.fsListFiles, (options: { extensions?: string[]; limit?: number }) =>
+    files.listFiles(options)
+  )
+  handle(IPC.fsStatMany, (paths: string[]) => files.statMany(paths))
   handle(IPC.fsTrash, (file: string) => files.trash(file, (p) => shell.trashItem(p)))
   handle(IPC.fsDeletePermanently, (file: string) => files.deletePermanently(file))
 

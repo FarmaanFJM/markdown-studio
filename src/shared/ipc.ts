@@ -22,6 +22,15 @@ export interface TextFile {
   mtimeMs: number
 }
 
+export interface FileListing {
+  /** Absolute paths of the files found. */
+  files: string[]
+  /** True when the listing stopped at the limit and more files exist. */
+  truncated: boolean
+}
+
+export type EntryState = 'file' | 'directory' | 'missing' | 'unknown'
+
 export interface ImportedImage {
   path: string
   /** False when the image already lived in the workspace and was referenced in place. */
@@ -94,6 +103,9 @@ export const IPC = {
   fsCreateFile: 'fs:create-file',
   fsCreateDirectory: 'fs:create-directory',
   fsRename: 'fs:rename',
+  fsMove: 'fs:move',
+  fsListFiles: 'fs:list-files',
+  fsStatMany: 'fs:stat-many',
   fsTrash: 'fs:trash',
   fsDeletePermanently: 'fs:delete-permanently',
   dialogOpenMarkdown: 'dialog:open-markdown',
@@ -130,10 +142,25 @@ export interface MarkdownStudioApi {
   fs: {
     readDir(path: string): Promise<DirEntry[]>
     readText(path: string): Promise<TextFile>
-    writeText(path: string, content: string, hasBom: boolean): Promise<{ mtimeMs: number }>
+    /**
+     * Writes a document. When `expectedMtimeMs` is given, the write is refused if the file was
+     * modified on disk since that time, so concurrent changes are never overwritten silently.
+     */
+    writeText(
+      path: string,
+      content: string,
+      hasBom: boolean,
+      expectedMtimeMs?: number
+    ): Promise<{ mtimeMs: number }>
     createFile(directory: string, name: string): Promise<string>
     createDirectory(directory: string, name: string): Promise<string>
     rename(path: string, newName: string): Promise<string>
+    /** Moves a file or folder into another folder of the workspace; never overwrites. */
+    move(path: string, targetDirectory: string): Promise<string>
+    /** Recursive listing of the workspace, skipping hidden and dependency folders. */
+    listFiles(options?: { extensions?: string[]; limit?: number }): Promise<FileListing>
+    /** Existence check for many paths at once; paths outside permitted areas report `unknown`. */
+    statMany(paths: string[]): Promise<EntryState[]>
     trash(path: string): Promise<void>
     deletePermanently(path: string): Promise<void>
   }

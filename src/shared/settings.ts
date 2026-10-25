@@ -41,6 +41,35 @@ export interface AppSettings {
     /** Regenerate the PDF preview automatically after edits. */
     pdfAutoRefresh: boolean
   }
+  markdown: {
+    /** Enter continues lists and quotes; Tab and Shift+Tab indent list items. */
+    smartLists: boolean
+    /** Tab and Shift+Tab move between cells (and tidy the table) inside Markdown tables. */
+    tableNavigation: boolean
+    /** Show suggestions automatically after trigger characters (`/`, link and image paths). */
+    autoSuggest: boolean
+    /** Show the formatting toolbar above the editor. */
+    toolbar: boolean
+    diagnostics: {
+      /** Missing files, images and heading anchors in local links. */
+      links: boolean
+      /** Tables the renderer does not display as written. */
+      tables: boolean
+      /** Style checks provided by markdownlint. */
+      lint: boolean
+      /** markdownlint rule ids (for example `MD012`) that are switched off. */
+      disabledRules: string[]
+    }
+    toc: {
+      /** List the document title (a leading level-1 heading) in generated tables of contents. */
+      includeTopLevel: boolean
+      maxDepth: number
+    }
+  }
+  templates: {
+    /** Last author name typed when creating a document from a template. Never guessed. */
+    author: string
+  }
   workspace: {
     restoreLastWorkspace: boolean
     lastWorkspace: string | null
@@ -54,6 +83,8 @@ export interface AppSettings {
     lastPreviewKind: PreviewKind
     /** Fraction of the editor area occupied by the preview panel. */
     previewRatio: number
+    /** The Outline section of the Explorer is expanded. */
+    outlineOpen: boolean
   }
   window: {
     bounds: WindowBounds | null
@@ -68,6 +99,15 @@ export const DEFAULT_SETTINGS: AppSettings = {
   explorer: { mode: 'tree', thumbnailSize: 96 },
   assets: { directory: 'assets' },
   preview: { pdfAutoRefresh: true },
+  markdown: {
+    smartLists: true,
+    tableNavigation: true,
+    autoSuggest: true,
+    toolbar: true,
+    diagnostics: { links: true, tables: true, lint: true, disabledRules: [] },
+    toc: { includeTopLevel: false, maxDepth: 6 }
+  },
+  templates: { author: '' },
   workspace: { restoreLastWorkspace: true, lastWorkspace: null, recent: [] },
   layout: {
     sidebarVisible: true,
@@ -75,7 +115,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     sidebarView: 'explorer',
     previewMode: 'html',
     lastPreviewKind: 'html',
-    previewRatio: 0.5
+    previewRatio: 0.5,
+    outlineOpen: true
   },
   window: { bounds: null, maximized: false }
 }
@@ -85,7 +126,10 @@ export const LIMITS = {
   thumbnailSize: { min: 64, max: 192 },
   sidebarWidth: { min: 170, max: 640 },
   previewRatio: { min: 0.15, max: 0.85 },
-  recentWorkspaces: 10
+  recentWorkspaces: 10,
+  tocDepth: { min: 1, max: 6 },
+  authorLength: 120,
+  disabledRules: 100
 } as const
 
 export type DeepPartial<T> = {
@@ -138,6 +182,16 @@ export function normalizeAssetDirectory(value: unknown): string | null {
   return segments.join('/')
 }
 
+/** Keeps well-formed markdownlint rule ids such as `MD012` (or `md012`), upper-cased and unique. */
+function ruleIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  const ids = value
+    .filter((v): v is string => typeof v === 'string')
+    .map((v) => v.trim().toUpperCase())
+    .filter((v) => /^MD\d{3}$/.test(v))
+  return [...new Set(ids)].slice(0, LIMITS.disabledRules)
+}
+
 function bounds(value: unknown): WindowBounds | null {
   if (!isObject(value)) return null
   const { x, y, width, height } = value
@@ -158,6 +212,10 @@ export function sanitizeSettings(input: unknown): AppSettings {
   const explorer = isObject(s.explorer) ? s.explorer : {}
   const assets = isObject(s.assets) ? s.assets : {}
   const preview = isObject(s.preview) ? s.preview : {}
+  const markdown = isObject(s.markdown) ? s.markdown : {}
+  const diagnostics = isObject(markdown.diagnostics) ? markdown.diagnostics : {}
+  const toc = isObject(markdown.toc) ? markdown.toc : {}
+  const templates = isObject(s.templates) ? s.templates : {}
   const workspace = isObject(s.workspace) ? s.workspace : {}
   const layout = isObject(s.layout) ? s.layout : {}
   const win = isObject(s.window) ? s.window : {}
@@ -192,6 +250,33 @@ export function sanitizeSettings(input: unknown): AppSettings {
     preview: {
       pdfAutoRefresh: bool(preview.pdfAutoRefresh, d.preview.pdfAutoRefresh)
     },
+    markdown: {
+      smartLists: bool(markdown.smartLists, d.markdown.smartLists),
+      tableNavigation: bool(markdown.tableNavigation, d.markdown.tableNavigation),
+      autoSuggest: bool(markdown.autoSuggest, d.markdown.autoSuggest),
+      toolbar: bool(markdown.toolbar, d.markdown.toolbar),
+      diagnostics: {
+        links: bool(diagnostics.links, d.markdown.diagnostics.links),
+        tables: bool(diagnostics.tables, d.markdown.diagnostics.tables),
+        lint: bool(diagnostics.lint, d.markdown.diagnostics.lint),
+        disabledRules: ruleIds(diagnostics.disabledRules)
+      },
+      toc: {
+        includeTopLevel: bool(toc.includeTopLevel, d.markdown.toc.includeTopLevel),
+        maxDepth: num(
+          toc.maxDepth,
+          d.markdown.toc.maxDepth,
+          LIMITS.tocDepth.min,
+          LIMITS.tocDepth.max
+        )
+      }
+    },
+    templates: {
+      author:
+        typeof templates.author === 'string'
+          ? templates.author.replace(/[\r\n]+/g, ' ').slice(0, LIMITS.authorLength)
+          : d.templates.author
+    },
     workspace: {
       restoreLastWorkspace: bool(workspace.restoreLastWorkspace, d.workspace.restoreLastWorkspace),
       lastWorkspace: str(workspace.lastWorkspace),
@@ -222,7 +307,8 @@ export function sanitizeSettings(input: unknown): AppSettings {
         LIMITS.previewRatio.min,
         LIMITS.previewRatio.max,
         false
-      )
+      ),
+      outlineOpen: bool(layout.outlineOpen, d.layout.outlineOpen)
     },
     window: {
       bounds: bounds(win.bounds),

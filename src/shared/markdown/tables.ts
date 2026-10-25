@@ -360,7 +360,11 @@ export function cellPosition(
   const text = formatted[lineIndex]
   const cells = splitCells(text, containerPrefix(text).length)
   const cell = cells[Math.min(column, cells.length - 1)]
-  return { line: tableStart + lineIndex, column: cell.end }
+  // An empty cell puts the caret right after its leading space, ready for typing.
+  return {
+    line: tableStart + lineIndex,
+    column: cell.text === '' ? cell.segmentStart + 1 : cell.end
+  }
 }
 
 // --- Diagnostics --------------------------------------------------------------------------

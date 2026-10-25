@@ -1,6 +1,7 @@
 import { getActiveEditor } from '../editor/models'
 import { isDialogOpen } from '../state/ui'
 import { commands } from './commands'
+import { runCommand } from './registry'
 
 export interface KeyBinding {
   /** Normalised key: a lower-case letter, digit or symbol, or a key name such as `tab`. */
@@ -12,7 +13,26 @@ export interface KeyBinding {
   run: () => unknown
   /** Bindings that defer to Monaco while the editor (or its find widget) has focus. */
   editorHandles?: boolean
+  /** Bindings that only act while the source editor has the keyboard focus. */
+  editorOnly?: boolean
+  /** The registry command this shortcut starts, so menus and the palette can show it. */
+  command?: string
 }
+
+const bind = (
+  command: string,
+  label: string,
+  key: string,
+  modifiers: Pick<KeyBinding, 'mod' | 'shift' | 'alt'>,
+  editorOnly = true
+): KeyBinding => ({
+  key,
+  ...modifiers,
+  label,
+  command,
+  editorOnly,
+  run: () => runCommand(command)
+})
 
 const isMac = window.markdownStudio.platform === 'darwin'
 
@@ -35,7 +55,27 @@ export const KEYBINDINGS: KeyBinding[] = [
   { key: 'tab', mod: true, label: 'Next tab', run: commands.nextTab },
   { key: 'tab', mod: true, shift: true, label: 'Previous tab', run: commands.previousTab },
   { key: 'pagedown', mod: true, label: 'Next tab', run: commands.nextTab },
-  { key: 'pageup', mod: true, label: 'Previous tab', run: commands.previousTab }
+  { key: 'pageup', mod: true, label: 'Previous tab', run: commands.previousTab },
+
+  bind('palette.open', 'Command palette', 'p', { mod: true, shift: true }, false),
+  bind('navigate.heading', 'Go to heading', 'o', { mod: true, shift: true }, false),
+  bind('template.newDocument', 'New file from template', 'n', { mod: true, shift: true }, false),
+  bind('markdown.bold', 'Bold', 'b', { mod: true, shift: true }),
+  bind('markdown.italic', 'Italic', 'i', { mod: true }),
+  bind('markdown.strikethrough', 'Strikethrough', 'x', { mod: true, shift: true }),
+  bind('markdown.inlineCode', 'Inline code', 'e', { mod: true }),
+  bind('insert.link', 'Insert link', 'k', { mod: true }),
+  bind('insert.image', 'Insert image', 'g', { mod: true, shift: true }),
+  bind('markdown.headingUp', 'Increase heading level', ']', { mod: true, shift: true }),
+  bind('markdown.headingDown', 'Decrease heading level', '[', { mod: true, shift: true }),
+  bind('markdown.orderedList', 'Numbered list', '7', { mod: true, shift: true }),
+  bind('markdown.bulletList', 'Bulleted list', '8', { mod: true, shift: true }),
+  bind('markdown.taskList', 'Task list', '9', { mod: true, shift: true }),
+  bind('markdown.blockquote', 'Blockquote', '.', { mod: true, shift: true }),
+  bind('insert.codeBlock', 'Insert code block', 'm', { mod: true, shift: true }),
+  bind('table.insert', 'Insert table', 't', { mod: true, shift: true }),
+  bind('table.format', 'Format table', 'f', { alt: true, shift: true }),
+  bind('table.editVisually', 'Edit table visually', 't', { alt: true, shift: true })
 ]
 
 /** Shortcuts handled by Monaco itself, listed for the shortcuts reference. */
@@ -47,7 +87,14 @@ export const EDITOR_SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'Alt+Up / Alt+Down', label: 'Move line up / down' },
   { keys: 'Shift+Alt+Up / Shift+Alt+Down', label: 'Copy line up / down' },
   { keys: `${isMac ? 'Cmd' : 'Ctrl'}+D`, label: 'Add selection to next match' },
-  { keys: 'Tab / Shift+Tab', label: 'Indent / outdent' }
+  {
+    keys: 'Tab / Shift+Tab',
+    label: 'Indent / outdent (nest list items, move between table cells)'
+  },
+  { keys: 'Enter', label: 'Continue a list or quote; Enter on an empty item ends it' },
+  { keys: 'Ctrl+Space', label: 'Show Markdown suggestions' },
+  { keys: '/ on an empty line', label: 'Slash commands (headings, tables, code blocks, ...)' },
+  { keys: 'F8 / Shift+F8', label: 'Next / previous problem' }
 ]
 
 export function formatBinding(binding: KeyBinding): string {
@@ -67,13 +114,18 @@ const CODE_KEYS: Record<string, string> = {
   NumpadSubtract: '-',
   Digit0: '0',
   Numpad0: '0',
-  Comma: ','
+  Comma: ',',
+  BracketLeft: '[',
+  BracketRight: ']',
+  Period: '.'
 }
 
 function normalisedKey(event: KeyboardEvent): string {
   if (/^[a-z]$/i.test(event.key)) return event.key.toLowerCase()
   if (CODE_KEYS[event.code]) return CODE_KEYS[event.code]
   if (/^Key[A-Z]$/.test(event.code)) return event.code.slice(3).toLowerCase()
+  // Shift changes event.key for digits ("*" for 8), but the physical key is what the shortcut names.
+  if (/^Digit[0-9]$/.test(event.code)) return event.code.slice(5)
   if (event.key === '+') return '='
   return event.key.toLowerCase()
 }
@@ -98,6 +150,7 @@ export function handleGlobalKeydown(event: KeyboardEvent): void {
       b.key === key && !!b.mod === mod && !!b.shift === event.shiftKey && !!b.alt === event.altKey
   )
   if (!binding) return
+  if (binding.editorOnly && !getActiveEditor()?.hasTextFocus()) return
   if (binding.editorHandles) {
     const editor = getActiveEditor()
     if (editor?.hasWidgetFocus() || isTextInput(event.target)) return

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+  mapPosition,
+  resolveSelection,
   setHeading,
   shiftHeading,
   toggleInline,
@@ -238,5 +240,27 @@ describe('lists and quotes', () => {
     )
     expect(result.plans).toHaveLength(1)
     expect(result.plans[0].range.start.line).toBe(2)
+  })
+})
+
+describe('applying plans', () => {
+  it('places selections after edits on the same and later lines', () => {
+    const plans = [
+      { range: sel(0, 0, 0, 1), text: 'XX' },
+      { range: sel(0, 4, 0, 4), text: '\n' },
+      { range: sel(2, 1, 2, 2), text: 'Z' }
+    ]
+    // aXXcd -> a(b)cd? the source is "abcdef\nline2\nline3"
+    expect(mapPosition(plans, { line: 2, column: 4 })).toEqual({ line: 3, column: 4 })
+    expect(mapPosition(plans, { line: 0, column: 5 })).toEqual({ line: 1, column: 0 + 1 })
+    expect(mapPosition(plans, { line: 1, column: 2 })).toEqual({ line: 2, column: 2 })
+    const selection = resolveSelection({
+      plans,
+      select: { start: { plan: 0, offset: 2 }, end: { plan: 2, offset: 1 } }
+    })
+    expect(selection).toEqual({
+      start: { line: 0, column: 2 },
+      end: { line: 3, column: 2 }
+    })
   })
 })
