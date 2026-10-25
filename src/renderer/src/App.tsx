@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, LIMITS } from '@shared/settings'
 import { api } from './bridge'
 import { runMenuCommand } from './commands/commands'
 import './commands/phase2'
+import './commands/publishing'
 import { handleGlobalKeydown } from './commands/keybindings'
 import { ContextMenu, Toasts } from './dialogs/Overlays'
 import { DialogHost } from './dialogs/DialogHost'
@@ -16,10 +17,12 @@ import { Splitter } from './layout/Splitter'
 import { StatusBar } from './layout/StatusBar'
 import { Welcome } from './layout/Welcome'
 import { PreviewPanel } from './preview/PreviewPanel'
+import { PublicationPanel } from './publishing/PublicationPanel'
 import { SettingsPanel } from './settings/SettingsPanel'
 import { confirmCloseAll, documentName, useDocuments } from './state/documents'
 import { useExportSetup } from './state/exportSetup'
 import { startPresentationStore } from './state/presentation'
+import { startProjectStore } from './state/project'
 import { flushSettings, useSettings } from './state/settings'
 import { useWorkspace } from './state/workspace'
 
@@ -98,6 +101,7 @@ export function App() {
         if (loaded.workspace.lastWorkspace)
           useWorkspace.getState().setRoot(loaded.workspace.lastWorkspace)
         startPresentationStore()
+        startProjectStore()
         void useExportSetup.getState().loadPresets()
         setReady(true)
       })
@@ -122,7 +126,13 @@ export function App() {
         {layout.sidebarVisible && (
           <>
             <aside className="sidebar" style={{ width: layout.sidebarWidth }} data-testid="sidebar">
-              {layout.sidebarView === 'settings' ? <SettingsPanel /> : <Explorer />}
+              {layout.sidebarView === 'settings' ? (
+                <SettingsPanel />
+              ) : layout.sidebarView === 'publication' ? (
+                <PublicationPanel />
+              ) : (
+                <Explorer />
+              )}
             </aside>
             <Splitter
               label="Resize sidebar"

@@ -17,7 +17,7 @@ export type ThemeName = 'dark' | 'light'
 export type ExplorerMode = 'tree' | 'thumbnails'
 export type PreviewKind = 'html' | 'pdf'
 export type PreviewMode = 'none' | PreviewKind
-export type SidebarView = 'explorer' | 'settings'
+export type SidebarView = 'explorer' | 'publication' | 'settings'
 
 export interface WindowBounds {
   x: number
@@ -301,7 +301,7 @@ export function sanitizeSettings(input: unknown): AppSettings {
       ),
       sidebarView: pick(
         layout.sidebarView,
-        ['explorer', 'settings'] as const,
+        ['explorer', 'publication', 'settings'] as const,
         d.layout.sidebarView
       ),
       previewMode: pick(layout.previewMode, ['none', 'html', 'pdf'] as const, d.layout.previewMode),

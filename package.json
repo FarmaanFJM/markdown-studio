@@ -71,5 +71,11 @@
     "monaco-editor": {
       "dompurify": "$dompurify"
     }
+  },
+  "dependencies": {
+    "@citation-js/core": "0.9.0",
+    "@citation-js/plugin-bibtex": "0.9.0",
+    "@citation-js/plugin-csl": "0.9.0",
+    "yaml": "2.9.1"
   }
 }

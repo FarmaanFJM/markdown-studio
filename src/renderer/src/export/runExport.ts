@@ -9,6 +9,7 @@ import {
   type ExportSource
 } from '../markdown/exporters'
 import { renderPresentationFor } from '../state/presentation'
+import { setupForSource } from './source'
 import { documentName, type EditorDocument } from '../state/documents'
 import { notify } from '../state/ui'
 import { useWorkspace } from '../state/workspace'
@@ -56,8 +57,9 @@ function plural(count: number, one: string, many: string): string {
 export async function runExport(
   doc: EditorDocument,
   source: ExportSource,
-  setup: ExportSetup
+  chosenSetup: ExportSetup
 ): Promise<ExportOutcome> {
+  const setup = setupForSource(chosenSetup, source)
   if (activeJob) {
     notify('info', 'An export is already running.')
     return { status: 'failed', message: 'An export is already running.' }
@@ -67,7 +69,8 @@ export async function runExport(
   try {
     const presentation = await renderPresentationFor(
       setup.overrides,
-      setup.format === 'pdf' ? setup.pdf : undefined
+      setup.format === 'pdf' ? setup.pdf : undefined,
+      source
     )
     const warnings: string[] = []
     let html: string
@@ -78,6 +81,9 @@ export async function runExport(
         warnings.push(
           plural(built.diagramProblems.length, 'diagram has an error', 'diagrams have errors')
         )
+      }
+      if (built.missingImages.length > 0) {
+        warnings.push(`images not found: ${built.missingImages.join(', ')}`)
       }
     } else {
       const built = await buildStandaloneHtml(source, presentation, setup.html)

@@ -12,12 +12,28 @@ import {
   type RenderPresentation
 } from './document'
 import type { DocumentContext } from './resolve'
+import type { DocumentColumns, DocumentSettingsData } from '@shared/publishing/documentSettings'
+import type { PublishingOptions } from '@shared/publishing/types'
+import { pathFromLocalFileUrl } from '@shared/ipc'
+import { api } from '../bridge'
 
 export interface ExportSource {
   source: string
   /** File name used for the title fallback, e.g. `README.md`. */
   fileName: string
   context: DocumentContext
+  /** Options of the publishing layer (numbering, citations, contents) for this document. */
+  publishing?: PublishingOptions
+  /**
+   * Supplies the finished body HTML instead of rendering `source` (a publication combines
+   * several chapters, each resolving its images from its own folder).
+   */
+  body?: (presentation: RenderPresentation) => string | Promise<string>
+  /** Title shown in the document and PDF header; defaults to the first heading. */
+  title?: string
+  /** The document's own settings (front matter): page, columns, theme, numbering. */
+  settings?: DocumentSettingsData
+  columns?: DocumentColumns | null
 }
 
 function blobToDataUrl(blob: Blob): Promise<string> {
@@ -29,17 +45,24 @@ function blobToDataUrl(blob: Blob): Promise<string> {
   })
 }
 
-export function titleFor({ source, fileName }: ExportSource): string {
-  return documentTitle(source, stripExtension(basename(fileName)))
+export function titleFor({ source, fileName, title }: ExportSource): string {
+  return title ?? documentTitle(source, stripExtension(basename(fileName)))
 }
 
 /** Renders the body and waits for every diagram, so the result is complete and static. */
 async function renderCompleteBody(
-  { source, context }: ExportSource,
+  { source, context, publishing, body }: ExportSource,
   presentation: RenderPresentation
-): Promise<{ container: HTMLTemplateElement; diagramProblems: DiagramProblem[] }> {
+): Promise<{
+  container: HTMLTemplateElement
+  diagramProblems: DiagramProblem[]
+  missingImages: string[]
+}> {
   const container = document.createElement('template')
-  container.innerHTML = renderDocumentBody(source, context, presentation)
+  container.innerHTML = body
+    ? await body(presentation)
+    : renderDocumentBody(source, context, presentation, publishing)
+  const missingImages = await markMissingImages(container.content)
   let diagramProblems: DiagramProblem[] = []
   if (presentation.diagrams) {
     const hydration = hydrateDiagrams(container.content, diagramStyleFor(presentation.theme), {
@@ -47,12 +70,43 @@ async function renderCompleteBody(
     })
     diagramProblems = (await hydration.done).problems
   }
-  return { container, diagramProblems }
+  return { container, diagramProblems, missingImages }
+}
+
+/**
+ * Marks images whose file does not exist, so the page says "image not found" where the picture
+ * should be (and the PDF and HTML do not silently show an empty box). Returns the references.
+ */
+async function markMissingImages(root: ParentNode): Promise<string[]> {
+  const images = [...root.querySelectorAll('img')].flatMap((img) => {
+    const path = pathFromLocalFileUrl(img.getAttribute('src') ?? '')
+    return path ? [{ img, path }] : []
+  })
+  if (images.length === 0) return []
+  let states: string[]
+  try {
+    states = await api.fs.statMany([...new Set(images.map((i) => i.path))])
+  } catch {
+    return []
+  }
+  const unique = [...new Set(images.map((i) => i.path))]
+  const missing = new Set(unique.filter((_, index) => states[index] === 'missing'))
+  const references: string[] = []
+  for (const { img, path } of images) {
+    if (!missing.has(path)) continue
+    img.classList.add('ms-img-missing')
+    const original = img.getAttribute('data-ms-src') ?? path
+    img.setAttribute('title', `Image not found: ${original}`)
+    references.push(original)
+  }
+  return [...new Set(references)]
 }
 
 export interface PdfSourceHtml {
   html: string
   diagramProblems: DiagramProblem[]
+  /** References whose image file does not exist. */
+  missingImages: string[]
 }
 
 /** HTML used for both the PDF preview and PDF export, so the two are always identical. */
@@ -68,14 +122,17 @@ export async function buildPdfSourceHtml(
         pageBackground: pdf.printBackground ? pdf.backgroundColor : null
       }
     : presentation
-  const { container, diagramProblems } = await renderCompleteBody(exportSource, adjusted)
+  const { container, diagramProblems, missingImages } = await renderCompleteBody(
+    exportSource,
+    adjusted
+  )
   const html = buildHtmlDocument({
     title: titleFor(exportSource),
     body: container.innerHTML,
     purpose: 'preview',
     presentation: adjusted
   })
-  return { html, diagramProblems }
+  return { html, diagramProblems, missingImages }
 }
 
 export interface StandaloneHtml {
@@ -107,8 +164,9 @@ export async function buildStandaloneHtml(
   presentation: RenderPresentation = DEFAULT_PRESENTATION,
   options: HtmlOptions = { embedImages: true }
 ): Promise<StandaloneHtml> {
-  const { container, diagramProblems } = await renderCompleteBody(exportSource, presentation)
-  const missingImages: string[] = []
+  const rendered = await renderCompleteBody(exportSource, presentation)
+  const { container, diagramProblems } = rendered
+  const missingImages: string[] = [...rendered.missingImages]
 
   await Promise.all(
     [...container.content.querySelectorAll('img')].map(async (img) => {
@@ -129,7 +187,7 @@ export async function buildStandaloneHtml(
         if (!response.ok) throw new Error(String(response.status))
         img.setAttribute('src', await blobToDataUrl(await response.blob()))
       } catch {
-        missingImages.push(original)
+        if (!missingImages.includes(original)) missingImages.push(original)
         img.setAttribute('src', original)
       }
     })

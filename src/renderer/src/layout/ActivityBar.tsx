@@ -1,4 +1,4 @@
-import { Files, Settings } from 'lucide-react'
+import { BookOpen, Files, Settings } from 'lucide-react'
 import type { SidebarView } from '@shared/settings'
 import logo from '../assets/logo-128.png'
 import { commands } from '../commands/commands'
@@ -43,6 +43,7 @@ export function ActivityBar() {
         <img src={logo} alt="" width={26} height={26} />
       </button>
       {item('explorer', 'Explorer', 'Ctrl+Shift+E', Files)}
+      {item('publication', 'Publication', 'Ctrl+Shift+L', BookOpen)}
       <div className="activity-spacer" />
       {item('settings', 'Settings', 'Ctrl+,', Settings)}
     </nav>

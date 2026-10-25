@@ -141,7 +141,30 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
         cmd('Table of Contents', 'toc.insert'),
         cmd('Update Table of Contents', 'toc.update'),
         { type: 'separator' },
+        cmd('Figure with Caption…', 'insert.figure', 'CmdOrCtrl+Shift+F'),
+        cmd('Table Caption…', 'insert.captionTable'),
+        cmd('Cross-reference…', 'insert.crossReference', 'CmdOrCtrl+Shift+R'),
+        cmd('Citation…', 'insert.citation', 'CmdOrCtrl+Shift+C'),
+        cmd('Automatic Table of Contents', 'insert.contents'),
+        cmd('Bibliography Here', 'insert.bibliography'),
+        cmd('List of Figures', 'insert.listOfFigures'),
+        cmd('List of Tables', 'insert.listOfTables'),
+        { type: 'separator' },
         cmd('Saved Snippet…', 'snippet.insertSaved')
+      ]
+    },
+    {
+      label: '&Publish',
+      submenu: [
+        cmd('Document Settings…', 'document.settings', 'CmdOrCtrl+Shift+D'),
+        cmd('Manage Sources…', 'sources.manage'),
+        { type: 'separator' },
+        cmd('Publication Panel', 'publication.show', 'CmdOrCtrl+Shift+L'),
+        cmd('Preview Publication', 'publication.preview'),
+        cmd('Preview Active Document', 'publication.previewDocument'),
+        cmd('Export Publication…', 'publication.export'),
+        { type: 'separator' },
+        item('Export Document…', 'file.export', 'CmdOrCtrl+Shift+U')
       ]
     },
     {

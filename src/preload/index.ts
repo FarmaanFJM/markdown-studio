@@ -42,7 +42,9 @@ const api: MarkdownStudioApi = {
   },
   dialogs: {
     openMarkdown: () => ipcRenderer.invoke(IPC.dialogOpenMarkdown),
-    saveMarkdown: (defaultPath) => ipcRenderer.invoke(IPC.dialogSaveMarkdown, defaultPath)
+    saveMarkdown: (defaultPath) => ipcRenderer.invoke(IPC.dialogSaveMarkdown, defaultPath),
+    openImage: () => ipcRenderer.invoke(IPC.dialogOpenImage),
+    openSources: () => ipcRenderer.invoke(IPC.dialogOpenSources)
   },
   assets: {
     pathForFile: (file) => {
@@ -78,6 +80,11 @@ const api: MarkdownStudioApi = {
     setWorkspace: (overrides) => ipcRenderer.invoke(IPC.presentationSetWorkspace, overrides),
     pickCss: (scope) => ipcRenderer.invoke(IPC.cssPick, scope),
     readCss: (path) => ipcRenderer.invoke(IPC.cssRead, path)
+  },
+  project: {
+    get: () => ipcRenderer.invoke(IPC.projectGet),
+    setPublication: (publication) => ipcRenderer.invoke(IPC.projectSetPublication, publication),
+    setSources: (sources) => ipcRenderer.invoke(IPC.projectSetSources, sources)
   },
   diagram: {
     render: (request) => ipcRenderer.invoke(IPC.diagramRender, request),

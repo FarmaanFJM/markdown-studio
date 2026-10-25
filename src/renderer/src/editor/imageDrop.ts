@@ -63,6 +63,54 @@ function placementFor(doc: EditorDocument): Placement | null {
   return { baseDirectory: root, assetDirectory: joinPath(root, assetFolder) }
 }
 
+export interface ImportedReference {
+  /** Absolute path of the image as it now lives in the project. */
+  absolute: string
+  /** Reference relative to the document, ready for Markdown. */
+  relative: string
+  /** True when the file was copied into the project (rather than referenced in place). */
+  copied: boolean
+}
+
+/**
+ * Makes one image usable by `doc`: external files are copied into the asset folder (never
+ * overwriting), files already in the workspace are referenced in place. Returns null after
+ * telling the user why it is not possible.
+ */
+export async function importImageForDocument(
+  doc: EditorDocument,
+  source: DropSource
+): Promise<ImportedReference | null> {
+  const placement = placementFor(doc)
+  if (!placement) {
+    notify('error', 'Save this document or open a folder before inserting images.')
+    return null
+  }
+  let absolute = source.path
+  let copied = false
+  if (source.external) {
+    try {
+      const imported = await api.assets.importImage(source.path, placement.assetDirectory)
+      absolute = imported.path
+      copied = imported.copied
+    } catch (error) {
+      notify('error', `Could not import ${basename(source.path)}: ${errorMessage(error)}`)
+      return null
+    }
+  }
+  const relative = imagePathForDocument(placement.baseDirectory, absolute)
+  if (relative === null) {
+    notify('error', `${basename(absolute)} is on a different drive than the document.`)
+    return null
+  }
+  if (copied) {
+    void useWorkspace
+      .getState()
+      .refresh([placement.assetDirectory, dirname(placement.assetDirectory)])
+  }
+  return { absolute, relative, copied }
+}
+
 /**
  * Inserts Markdown image references for the given files at `position` (or the cursor).
  *

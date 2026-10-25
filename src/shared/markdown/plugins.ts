@@ -1,6 +1,8 @@
 import createMarkdownIt, { type MarkdownIt, type Token } from 'markdown-it'
 import { diagramFences, pageBreaks } from './blocks'
 import { mathPlugin, type MathOptions } from './math'
+import { publishingPlugin } from '../publishing/plugin'
+import type { PublishingEnv } from '../publishing/types'
 import { SlugAllocator } from './slug'
 
 /** Plain text of an inline token (text and code spans only), used for heading ids and labels. */
@@ -16,9 +18,11 @@ export function inlineText(token: Token | undefined): string {
 export function headingIds(md: MarkdownIt): void {
   md.core.ruler.push('heading_ids', (state) => {
     const slugs = new SlugAllocator()
+    // Chapters of one publication get distinct prefixes so ids stay unique after merging.
+    const prefix = (state.env as PublishingEnv | undefined)?.ms?.idPrefix ?? ''
     state.tokens.forEach((token, index) => {
       if (token.type !== 'heading_open' || token.attrGet('id')) return
-      token.attrSet('id', slugs.next(inlineText(state.tokens[index + 1])))
+      token.attrSet('id', prefix + slugs.next(inlineText(state.tokens[index + 1])))
     })
   })
 }
@@ -89,5 +93,6 @@ export function createApplicationMarkdownIt(options: MarkdownItOptions = {}): Ma
   if (options.math !== false) md.use(mathPlugin, options.math ?? {})
   md.use(diagramFences, { diagrams: options.diagrams })
   md.use(pageBreaks)
+  md.use(publishingPlugin)
   return md
 }

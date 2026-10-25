@@ -8,6 +8,8 @@ import {
 } from '@shared/presentation/settings'
 import { api, errorMessage } from '../bridge'
 import { DEFAULT_PRESENTATION, type RenderPresentation } from '../markdown/document'
+import type { ExportSource } from '../markdown/exporters'
+import { resolveTheme } from '@shared/presentation/theme'
 import { NO_CSS, resolveCustomCss, type CssResult } from '../presentation/customCss'
 import { notify } from './ui'
 import { useSettings } from './settings'
@@ -114,7 +116,8 @@ export function startPresentationStore(): void {
  */
 export async function renderPresentationFor(
   overrides: ExportOverrides | null | undefined,
-  pdf?: PdfOptions
+  pdf?: PdfOptions,
+  documentLayer?: Pick<ExportSource, 'settings' | 'columns'>
 ): Promise<RenderPresentation> {
   const state = usePresentation.getState()
   const effective = resolvePresentation(
@@ -124,9 +127,18 @@ export async function renderPresentationFor(
   )
   const usesDocumentCss = effective.origin.customCss !== 'export'
   const css = usesDocumentCss ? state.css : await resolveCustomCss(effective.customCss)
+  const settings = documentLayer?.settings
+  // The document's own theme sits between the workspace and the export choices: an explicit
+  // export override (preset or dialog) still wins.
+  const theme =
+    settings?.theme && effective.origin.theme !== 'export'
+      ? resolveTheme(settings.theme, effective.customization)
+      : effective.theme
   return {
     ...DEFAULT_PRESENTATION,
-    theme: effective.theme,
+    theme,
+    columns: documentLayer?.columns ?? null,
+    numberedSections: settings?.numberSections === true,
     customCss: css.css,
     math: effective.math,
     diagrams: effective.diagrams,
