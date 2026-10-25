@@ -15,6 +15,9 @@ export const documentModels = {
   create(id: string, content: string): monaco.editor.ITextModel {
     const uri = monaco.Uri.from({ scheme: 'inmemory', path: `/document-${id}.md` })
     const model = monaco.editor.createModel(content, 'markdown', uri)
+    // Files with line breaks keep theirs. Text without any (new documents) would otherwise get
+    // the platform default; use LF everywhere so documents behave the same on every system.
+    if (!/[\r\n]/.test(content)) model.setEOL(monaco.editor.EndOfLineSequence.LF)
     entries.set(id, { model, viewState: null })
     return model
   },

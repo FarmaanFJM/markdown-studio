@@ -55,7 +55,7 @@ These are unedited captures of the application, taken by the automated test envi
 - Multiple tabs with independent undo history, unsaved-change markers and Save / Don't Save /
   Cancel prompts when closing a tab or the window.
 - Files are written exactly as edited: line endings (LF or CRLF) and a UTF-8 byte-order mark
-  are preserved, and nothing is reformatted.
+  are preserved, and nothing is reformatted. New documents use LF on every platform.
 
 **Images**
 

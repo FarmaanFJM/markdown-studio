@@ -200,16 +200,14 @@ test('find, replace and layout shortcuts', async () => {
     await expect(page.getByTestId('preview-panel')).toBeVisible()
 
     // Ctrl+= changes the editor font size.
+    // Monaco applies the font size to the line container's inline style.
     const fontSize = () =>
-      page
-        .locator('.monaco-editor .view-line')
-        .first()
-        .evaluate((el) => getComputedStyle(el).fontSize)
-    const before = await fontSize()
+      page.locator('.monaco-editor .view-lines').evaluate((el: HTMLElement) => el.style.fontSize)
+    await expect.poll(fontSize).toBe('14px')
     await page.keyboard.press(`${mod}+=`)
-    await expect.poll(fontSize).not.toBe(before)
+    await expect.poll(fontSize).toBe('15px')
     await page.keyboard.press(`${mod}+0`)
-    await expect.poll(fontSize).toBe(before)
+    await expect.poll(fontSize).toBe('14px')
   } finally {
     await closeApp(app)
   }
@@ -233,7 +231,11 @@ test('asks about unsaved documents when the window closes', async () => {
 
   const exited = waitForExit(app)
   await closeWindow()
-  await dialog.getByRole('button', { name: "Don't Save" }).click()
+  // The click quits the application, so do not wait for the page to acknowledge it.
+  await dialog
+    .getByRole('button', { name: "Don't Save" })
+    .click({ noWaitAfter: true })
+    .catch(() => undefined)
   await exited
   expect(readFileSync(path.join(sandbox.workspace, 'README.md'), 'utf8')).not.toContain('unsaved')
 })
