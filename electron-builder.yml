@@ -1,0 +1,45 @@
+# Packaging configuration. Windows is the primary target; macOS and Linux are configured so
+# they can be built from their own platforms.
+appId: com.farmaanfjm.markdownstudio
+productName: Markdown Studio
+copyright: Copyright © 2026 FarmaanFJM
+directories:
+  buildResources: resources/build
+  output: release/${version}
+# Everything is bundled by electron-vite, so the package needs only the build output.
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: resources/build/icon.ico
+  executableName: MarkdownStudio
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Markdown Studio
+  installerIcon: resources/build/icon.ico
+  uninstallerIcon: resources/build/icon.ico
+  artifactName: Markdown-Studio-Setup-${version}.${ext}
+mac:
+  target: dmg
+  category: public.app-category.productivity
+  icon: resources/build/icon.png
+  artifactName: Markdown-Studio-${version}-${arch}.${ext}
+linux:
+  target: AppImage
+  icon: resources/build/icon.png
+  category: Office
+  executableName: markdown-studio
+  artifactName: Markdown-Studio-${version}-${arch}.${ext}
+extraResources:
+  - from: LICENSE
+    to: LICENSE.MarkdownStudio.txt
+  - from: THIRD_PARTY_NOTICES.md
+    to: THIRD_PARTY_NOTICES.md

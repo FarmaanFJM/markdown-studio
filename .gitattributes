@@ -1,0 +1,8 @@
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.webp binary
+*.gif binary
+# Fixtures exercise exact line endings; never normalise them.
+tests/fixtures/** -text
