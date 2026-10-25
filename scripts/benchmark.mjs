@@ -165,7 +165,7 @@ async function measureTyping(page, count = 40) {
     )
     new PerformanceObserver((list) => list.getEntries().forEach((e) => window.__long.push(e.duration))).observe({ entryTypes: ['longtask'] })
   })
-  await page.locator('.monaco-editor textarea.inputarea').first().focus()
+  await page.locator('.monaco-editor .view-lines').first().click({ position: { x: 5, y: 5 }, force: true })
   await page.keyboard.press('Control+End')
   await page.keyboard.press('Control+End')
   const marker = `zz${Date.now() % 100000}`
@@ -268,7 +268,7 @@ try {
   const mainBefore = await mainMemory(app)
   console.error('main before', mainBefore)
   await page.screenshot({ path: '/tmp/bench-before-memory.png' })
-  await page.locator('.monaco-editor textarea.inputarea').first().focus()
+  await page.locator('.monaco-editor .view-lines').first().click({ position: { x: 5, y: 5 }, force: true })
   await page.keyboard.press('Control+End')
   const cycles = quick ? 15 : 60
   for (let i = 0; i < cycles; i++) {
