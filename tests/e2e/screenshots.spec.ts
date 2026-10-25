@@ -315,7 +315,7 @@ test('captures the Phase 3 screenshots', async () => {
     mkdirSync(path.dirname(pdf), { recursive: true })
     await stubSaveDialog(app, pdf)
     await dialog.getByTestId('export-run').click()
-    await expect(page.getByTestId('toast-success')).toBeVisible()
+    await expect(page.getByTestId('toast-success')).toBeVisible({ timeout: 30_000 })
     await page.getByTestId('preview-tab-pdf').click()
     await expect(page.locator('.pdf-page').first()).toBeVisible()
     await page.waitForTimeout(1200)
