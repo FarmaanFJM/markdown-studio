@@ -397,8 +397,10 @@ own platforms.
   `MAC_CERTIFICATE_BASE64`, `MAC_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`,
   `APPLE_TEAM_ID`) exist; without them the artifacts are plainly unsigned. See
   [docs/RELEASING.md](docs/RELEASING.md).
-- Linux and Windows are tested in CI (unit, E2E, packaged Windows application). macOS packaging
-  is configured but is not verified by a packaged-app test run.
+- CI verifies each platform as far as its job goes. Linux runs the unit and full E2E suites and
+  smoke-tests the packaged AppImage. Windows runs them against the unpacked application, silently
+  installs the installer and tests the installed application. macOS builds the DMG and runs the
+  packaged-app smoke test only (not the full E2E suite); it is unsigned and not notarised.
 
 ## Testing
 
@@ -528,8 +530,8 @@ numbered figures and tables, and multi-file book projects with EPUB. See the
   stay online.
 - Export settings are not stored inside the Markdown document by design, so a shared `.md` file
   does not carry its theme; share the workspace's `.markdown-studio` folder for that.
-- The installer is unsigned (see [Release status](#release-status)); macOS builds are
-  configured but not verified by a packaged-app test run.
+- The Windows installer is unsigned (see [Release status](#release-status)). The macOS build is
+  unsigned and not notarised, and only the packaged-app smoke test runs against it.
 
 **Phase 2**
 
