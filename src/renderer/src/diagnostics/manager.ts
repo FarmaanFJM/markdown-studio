@@ -8,6 +8,10 @@ import { analysisFor } from '../editor/markdown/model'
 import { getActiveEditor } from '../editor/models'
 import { monaco } from '../editor/monaco'
 import { useDocuments } from '../state/documents'
+import { renderDiagram } from '../markdown/diagrams'
+import { diagramStyleFor } from '../markdown/diagramStyle'
+import { checkMath } from '../markdown/math'
+import { usePresentation } from '../state/presentation'
 import { useSettings } from '../state/settings'
 import { adaptiveDelay } from '../state/timing'
 import { notify } from '../state/ui'
@@ -19,6 +23,7 @@ type Editor = monaco.editor.IStandaloneCodeEditor
 export const LINK_OWNER = 'markdown-studio-links'
 export const TABLE_OWNER = 'markdown-studio-tables'
 export const LINT_OWNER = 'markdown-studio-lint'
+export const RENDER_OWNER = 'markdown-studio-render'
 
 /** Documents larger than this are not linted: the interface stays responsive on huge files. */
 const MAX_LINT_CHARACTERS = 400_000
@@ -185,6 +190,64 @@ function lintMarkers(model: monaco.editor.ITextModel, issues: LintIssue[]) {
   })
 }
 
+// --- Rendering (math and diagrams) --------------------------------------------------------------
+
+/** Documents with more equations than this are checked up to the limit, to keep typing smooth. */
+const MAX_MATH_CHECKS = 400
+const MAX_DIAGRAM_CHECKS = 60
+
+function mathMarkers(model: monaco.editor.ITextModel) {
+  const entries: { marker: monaco.editor.IMarkerData }[] = []
+  for (const span of analysisFor(model).math.slice(0, MAX_MATH_CHECKS)) {
+    const message = checkMath(span.tex, span.display)
+    if (!message) continue
+    entries.push({
+      marker: {
+        startLineNumber: span.line + 1,
+        startColumn: span.column + 1,
+        endLineNumber: span.endLine + 1,
+        endColumn: Math.max(span.endColumn + 1, span.column + 2),
+        severity: monaco.MarkerSeverity.Error,
+        message: `Math cannot be rendered: ${message}`,
+        code: 'math',
+        source: 'Markdown Studio'
+      }
+    })
+  }
+  return entries
+}
+
+async function diagramMarkers(model: monaco.editor.ITextModel) {
+  const presentation = usePresentation.getState().render
+  const style = diagramStyleFor(presentation.theme)
+  const entries: { marker: monaco.editor.IMarkerData }[] = []
+  const fences = analysisFor(model)
+    .fences.filter((fence) => /^mermaid\b/i.test(fence.info))
+    .slice(0, MAX_DIAGRAM_CHECKS)
+  for (const fence of fences) {
+    if (fence.content.trim() === '') continue
+    const outcome = await renderDiagram(fence.content, style)
+    if (outcome.ok) continue
+    const contentLines = fence.content.split('\n').length
+    const inside = Math.min(outcome.line ?? 1, contentLines)
+    // Line 1 of the diagram is the line after the opening fence marker.
+    const line = Math.min(fence.start + 1 + inside, model.getLineCount())
+    entries.push({
+      marker: {
+        startLineNumber: line,
+        startColumn: 1,
+        endLineNumber: line,
+        endColumn: model.getLineMaxColumn(line),
+        severity: monaco.MarkerSeverity.Error,
+        message: `Diagram cannot be drawn: ${outcome.message.split('\n')[0]}`,
+        code: 'diagram',
+        source: 'Markdown Studio'
+      }
+    })
+  }
+  return entries
+}
+
 // --- Orchestration ---------------------------------------------------------------------------------
 
 async function validate(editor: Editor): Promise<void> {
@@ -209,6 +272,25 @@ async function validate(editor: Editor): Promise<void> {
     )
   } else {
     clear(model, LINK_OWNER)
+  }
+
+  const { math, diagrams } = usePresentation.getState().effective
+  if (math) setMarkers(model, RENDER_OWNER, mathMarkers(model))
+  else clear(model, RENDER_OWNER)
+  if (diagrams) {
+    jobs.push(
+      diagramMarkers(model).then(
+        (entries) => {
+          if (!current()) return
+          const keep = monaco.editor
+            .getModelMarkers({ resource: model.uri, owner: RENDER_OWNER })
+            .filter((m) => m.code === 'math')
+            .map((marker) => ({ marker }))
+          setMarkers(model, RENDER_OWNER, [...keep, ...entries])
+        },
+        () => undefined
+      )
+    )
   }
 
   if (diagnostics.lint && model.getValueLength() <= MAX_LINT_CHARACTERS) {
@@ -249,6 +331,16 @@ export function installDiagnostics(editor: Editor): monaco.IDisposable {
   const unsubscribeSettings = useSettings.subscribe((state, previous) => {
     if (state.settings.markdown.diagnostics !== previous.settings.markdown.diagnostics) schedule(0)
   })
+  // A different theme, or switching math or diagrams, changes what can be rendered.
+  const unsubscribePresentation = usePresentation.subscribe((state, previous) => {
+    if (
+      state.effective.math !== previous.effective.math ||
+      state.effective.diagrams !== previous.effective.diagrams ||
+      state.effective.theme !== previous.effective.theme
+    ) {
+      schedule(100)
+    }
+  })
   // Renamed or saved documents and changed files can fix or break links without any typing.
   const unsubscribeDocuments = useDocuments.subscribe((state, previous) => {
     const path = (s: typeof state) => s.documents.find((d) => d.id === s.activeId)?.path
@@ -262,6 +354,7 @@ export function installDiagnostics(editor: Editor): monaco.IDisposable {
       if (timer) clearTimeout(timer)
       disposables.forEach((d) => d.dispose())
       unsubscribeSettings()
+      unsubscribePresentation()
       unsubscribeDocuments()
       offWorkspace()
     }

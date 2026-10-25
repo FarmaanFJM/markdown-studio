@@ -17,7 +17,7 @@ import { useDocuments } from '../state/documents'
 import { usePresentation } from '../state/presentation'
 import { adaptiveDelay } from '../state/timing'
 import { useWorkspace } from '../state/workspace'
-import { handlePreviewClick } from './links'
+import { handlePreviewClick, jumpToPreviewSource } from './links'
 
 const RENDER_DELAY_MS = 120
 
@@ -91,7 +91,13 @@ export function HtmlPreview() {
       handlePreviewClick(event, frameDocument, contextRef.current)
     const onAuxClick = (event: MouseEvent) => event.preventDefault()
     // Keyboard shortcuts keep working while the preview has focus.
-    const onKeyDown = (event: KeyboardEvent) => handleGlobalKeydown(event)
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Enter' && jumpToPreviewSource(event.target as Element)) {
+        event.preventDefault()
+        return
+      }
+      handleGlobalKeydown(event)
+    }
     frameDocument.addEventListener('click', onClick)
     frameDocument.addEventListener('auxclick', onAuxClick)
     frameDocument.addEventListener('keydown', onKeyDown, true)

@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     include: ['tests/unit/**/*.test.ts'],
     environment: 'node',
-    // The document stylesheet is imported with ?raw and must reach the tests intact.
-    css: { include: [/document\.css/] }
+    // KaTeX's stylesheet is imported with ?raw and must reach the tests intact.
+    css: { include: [/katex.*\.css/] }
   }
 })

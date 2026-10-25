@@ -15,6 +15,8 @@ export interface DiagramStyle {
   variant: DiagramVariant
   fontFamily: string
   accent: string
+  text: string
+  background: string
 }
 
 export type DiagramOutcome =
@@ -34,7 +36,7 @@ export function diagramBaseId(source: string): string {
 }
 
 function styleKey(style: DiagramStyle): string {
-  return `${style.variant}|${hashText(style.fontFamily)}|${style.accent}`
+  return `${style.variant}|${hashText(style.fontFamily)}|${style.accent}|${style.text}|${style.background}`
 }
 
 export function diagramKey(source: string, style: DiagramStyle): string {
@@ -104,6 +106,8 @@ export function renderDiagram(
       variant: style.variant,
       fontFamily: style.fontFamily,
       accent: style.accent,
+      text: style.text,
+      background: style.background,
       svgId: diagramBaseId(source)
     })
     .then(toOutcome)
@@ -162,6 +166,9 @@ function applyOutcome(
 ): DiagramProblem | null {
   clearGenerated(figure)
   const fenceLine = Number(figure.getAttribute('data-ms-line')) || 0
+  // Mermaid reports an unexpected end of text one line past the last line.
+  const lastLine = source.split('\n').length
+  if (!outcome.ok && outcome.line !== null) outcome = { ...outcome, line: Math.min(outcome.line, lastLine) }
   if (outcome.ok) {
     figure.setAttribute('data-ms-state', 'ready')
     const holder = figure.ownerDocument.createElement('div')
@@ -184,6 +191,12 @@ function applyOutcome(
   const box = figure.ownerDocument.createElement('div')
   box.className = 'ms-diagram-error'
   box.setAttribute('role', 'note')
+  if (fenceLine) {
+    // Activating the box moves the editor to the offending line.
+    box.setAttribute('data-ms-source-line', String(fenceLine + (outcome.line ?? 0)))
+    box.setAttribute('tabindex', '0')
+    box.setAttribute('title', 'Go to the diagram in the editor')
+  }
   box.innerHTML = `<strong>Diagram error${escapeText(where)}</strong><pre>${escapeText(outcome.message)}</pre>`
   figure.insertBefore(box, figure.firstChild)
   return {
@@ -252,7 +265,7 @@ export function hydrateDiagrams(
           requested.push(id)
           void renderDiagram(source, style, id).then((outcome) => {
             // Text that was replaced while this drew is not touched.
-            if (!cancelled && figure.isConnected !== false) {
+            if (!cancelled && (root as Node).contains(figure)) {
               const problem = applyOutcome(figure, source, baseId, occurrence, outcome)
               if (problem) problems.push(problem)
             }

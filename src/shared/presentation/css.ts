@@ -81,6 +81,8 @@ const SAFE_DATA_URL =
 export interface CssOptions {
   /** Allow `url(#id)` references to elements of the same document (SVG paint, markers). */
   fragmentUrls?: boolean
+  /** Skip the size limit (for audits of generated stylesheets that embed fonts). */
+  unlimited?: boolean
 }
 
 export function isSafeDataUrl(value: string): boolean {
@@ -218,7 +220,7 @@ export function analyzeCss(
   context: 'stylesheet' | 'declarations' = 'stylesheet',
   options: CssOptions = {}
 ): CssAnalysis {
-  if (text.length > CSS_LIMITS.bytes) {
+  if (!options.unlimited && text.length > CSS_LIMITS.bytes) {
     return {
       css: '',
       problems: [problem(`The CSS is larger than ${CSS_LIMITS.bytes / 1024} KB.`)]
@@ -299,15 +301,20 @@ export function sanitizeStyleAttribute(value: string, options: CssOptions = {}):
   const result =
     isPlainDeclarationList(value) && !/behavior|binding|expression/i.test(value)
       ? value.trim()
-      : analyzeCss(value, 'declarations', options).css
+      : cleaned(value, analyzeCss(value, 'declarations', options))
   if (styleCache.size >= STYLE_CACHE_LIMIT) styleCache.delete(styleCache.keys().next().value!)
   styleCache.set(key, result)
   return result
 }
 
 /** For `<style>` blocks of Markdown HTML and Mermaid output: offending rules are dropped. */
-export function sanitizeStylesheet(text: string): string {
-  return analyzeCss(text, 'stylesheet').css
+export function sanitizeStylesheet(text: string, options: CssOptions = {}): string {
+  return cleaned(text, analyzeCss(text, 'stylesheet', options))
+}
+
+/** Text that passed the policy untouched keeps its authored formatting. */
+function cleaned(original: string, analysis: CssAnalysis): string {
+  return analysis.problems.length === 0 ? original.trim() : analysis.css
 }
 
 export function formatCssProblem(item: CssProblem): string {

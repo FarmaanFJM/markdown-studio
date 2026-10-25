@@ -1,5 +1,5 @@
 import DOMPurify from 'dompurify'
-import { analyzeCss, sanitizeStyleAttribute } from '@shared/presentation/css'
+import { sanitizeStyleAttribute, sanitizeStylesheet } from '@shared/presentation/css'
 
 /**
  * Sanitiser for diagram SVG.
@@ -40,8 +40,7 @@ purifier.addHook('afterSanitizeAttributes', (node) => {
 purifier.addHook('uponSanitizeElement', (node, data) => {
   if (data.tagName === 'style') {
     const element = node as Element
-    const analysis = analyzeCss(element.textContent ?? '', 'stylesheet', { fragmentUrls: true })
-    element.textContent = analysis.css
+    element.textContent = sanitizeStylesheet(element.textContent ?? '', { fragmentUrls: true })
   }
 })
 

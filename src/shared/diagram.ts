@@ -21,6 +21,9 @@ export interface DiagramRenderRequest {
   fontFamily: string
   /** Document accent colour (`#rrggbb`). */
   accent: string
+  /** Text and page colours, so diagrams sit naturally on the document page. */
+  text: string
+  background: string
   /**
    * Stable SVG element id prefix. Equal sources always produce equal ids, which keeps exports
    * reproducible and styles of different diagrams from colliding.
@@ -68,7 +71,9 @@ export function validateDiagramRequest(input: unknown): DiagramRequestValidation
     return { ok: false, error: 'Invalid font.' }
   }
   const accent = normalizeColor(v.accent)
-  if (!accent) return { ok: false, error: 'Invalid colour.' }
+  const text = normalizeColor(v.text)
+  const background = normalizeColor(v.background)
+  if (!accent || !text || !background) return { ok: false, error: 'Invalid colour.' }
   if (typeof v.svgId !== 'string' || !SVG_ID.test(v.svgId))
     return { ok: false, error: 'Invalid id.' }
   return {
@@ -79,6 +84,8 @@ export function validateDiagramRequest(input: unknown): DiagramRequestValidation
       variant: v.variant,
       fontFamily: v.fontFamily,
       accent,
+      text,
+      background,
       svgId: v.svgId
     }
   }

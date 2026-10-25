@@ -7,6 +7,8 @@ export function diagramStyleFor(theme: ResolvedTheme): DiagramStyle {
     variant: diagramVariant(theme),
     // Mermaid measures text with this font; it must be a real, installed font stack.
     fontFamily: theme.bodyFont,
-    accent: theme.accent
+    accent: theme.accent,
+    text: theme.text,
+    background: theme.background
   }
 }

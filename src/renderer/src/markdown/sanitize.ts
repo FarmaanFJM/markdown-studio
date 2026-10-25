@@ -35,6 +35,11 @@ const CONFIG: Config = {
   // these two wrappers by default.
   ADD_TAGS: ['semantics', 'annotation'],
   ALLOW_UNKNOWN_PROTOCOLS: false,
+  // Heading ids such as "title" or "images" are also names of `document` properties, which
+  // DOMPurify's DOM-clobbering protection would silently strip, breaking `#title` links. The
+  // sanitised HTML is only ever placed in script-free documents (the preview frame and exports),
+  // and the application reads those with methods, never with `document[name]`.
+  SANITIZE_DOM: false,
   FORCE_BODY: true
 }
 
