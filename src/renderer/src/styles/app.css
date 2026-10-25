@@ -11,8 +11,8 @@
   --border: #2b2e31;
   --border-subtle: #1e2124;
   --text: #eceeef;
-  --text-2: #8d9298;
-  --text-3: #62676d;
+  --text-2: #9ca2a8;
+  --text-3: #8a9097;
   --accent: #12c98e;
   --accent-strong: #2bd9a1;
   --accent-text: #052b1f;
@@ -37,14 +37,14 @@
   --border: #d9dddf;
   --border-subtle: #e4e7e8;
   --text: #1b1f22;
-  --text-2: #5d646b;
-  --text-3: #8a9097;
+  --text-2: #565d64;
+  --text-3: #5f666d;
   --accent: #0a9d6e;
-  --accent-strong: #08875e;
+  --accent-strong: #077a55;
   --accent-text: #ffffff;
   --accent-soft: rgba(10, 157, 110, 0.13);
   --accent-softer: rgba(10, 157, 110, 0.07);
-  --danger: #c93c3c;
+  --danger: #b83030;
   --danger-soft: rgba(201, 60, 60, 0.1);
   --editor-bg: #ffffff;
   --shadow: 0 12px 32px rgba(15, 23, 30, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.06);
@@ -2672,5 +2672,17 @@ summary:focus-visible,
 
   .export-preview {
     min-height: 300px;
+  }
+}
+
+/* Small windows: keep the source editor usable (at least ~320 px) by narrowing the sidebar and
+   the preview. The user's saved sizes apply again when the window is wide enough. */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 200px !important;
+  }
+
+  .preview-slot {
+    flex-basis: 36% !important;
   }
 }
