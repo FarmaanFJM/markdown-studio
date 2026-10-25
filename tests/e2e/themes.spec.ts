@@ -216,6 +216,11 @@ test('workspace appearance overrides are shown, persisted, and independent of th
     await panel.getByTestId('theme-card-editorial').click()
     await expect(panel.getByTestId('effective-summary')).toContainText('Technical (from workspace)')
     expect((await themeFacts(page))?.theme).toBe('technical')
+    // Settings are written shortly after a change; wait for the file before restarting.
+    const settingsFile = path.join(sandbox.userData, 'settings.json')
+    await expect
+      .poll(() => JSON.parse(readFileSync(settingsFile, 'utf8')).document?.theme)
+      .toBe('editorial')
 
     // The override survives a restart; the Markdown is untouched.
     await closeApp(app)
