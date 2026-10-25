@@ -371,3 +371,20 @@ export async function clickMenuItem(
     [menu, ...path]
   )
 }
+
+/**
+ * Exports through the Export dialog: opens it for the format, optionally adjusts it, and starts
+ * the export (the save dialog is stubbed by the caller).
+ */
+export async function exportViaDialog(
+  page: Page,
+  format: 'pdf' | 'html',
+  adjust?: (dialog: Locator) => Promise<void>
+): Promise<void> {
+  await page.getByRole('button', { name: format === 'pdf' ? 'Export as PDF' : 'Export as HTML' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Export' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByTestId(`export-format-${format}`)).toHaveAttribute('aria-checked', 'true')
+  if (adjust) await adjust(dialog)
+  await dialog.getByTestId('export-run').click()
+}

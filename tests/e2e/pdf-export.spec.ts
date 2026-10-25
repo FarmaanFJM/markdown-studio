@@ -4,6 +4,7 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   closeApp,
   createSandbox,
+  exportViaDialog,
   focusEditor,
   launchWithWorkspace,
   mod,
@@ -108,7 +109,7 @@ test('PDF export writes the same document as the preview, with local images', as
     const target = path.join(sandbox.base, 'exports', 'README.pdf')
     mkdirSync(path.dirname(target), { recursive: true })
     await stubSaveDialog(app, target)
-    await page.getByRole('button', { name: 'Export as PDF' }).click()
+    await exportViaDialog(page, 'pdf')
     await expect(page.getByTestId('toast-success')).toContainText('README.pdf')
 
     const bytes = readFileSync(target)
@@ -132,8 +133,8 @@ test('HTML export produces a valid standalone document with embedded images', as
     const target = path.join(sandbox.base, 'exports', 'guide.html')
     mkdirSync(path.dirname(target), { recursive: true })
     await stubSaveDialog(app, target)
-    // Through the File menu command path (same as the menu item).
-    await page.getByRole('button', { name: 'Export as HTML' }).click()
+    // The toolbar button opens the Export dialog (the File menu command does the same).
+    await exportViaDialog(page, 'html')
     await expect(page.getByTestId('toast-success')).toContainText('guide.html')
 
     const html = readFileSync(target, 'utf8')
@@ -169,7 +170,7 @@ test('HTML export keeps tables, code, task lists and inline HTML', async () => {
     await openFromTree(page, 'README.md')
     const target = path.join(sandbox.base, 'README.html')
     await stubSaveDialog(app, target)
-    await page.getByRole('button', { name: 'Export as HTML' }).click()
+    await exportViaDialog(page, 'html')
     await expect(page.getByTestId('toast-success')).toBeVisible()
 
     const viewer = await openInViewer(app, target)
