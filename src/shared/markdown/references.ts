@@ -340,3 +340,86 @@ export function classifyReference(value: string): ReferenceTarget {
     fragment: hash < 0 ? null : suffix.slice(hash + 1)
   }
 }
+
+// --- Rewriting ------------------------------------------------------------------------------
+
+const NEEDS_PERCENT_ENCODING = /[\s()<>%#?]/
+
+function percentEncodePath(path: string): string {
+  return path.replace(
+    /[\s()<>%#?]/g,
+    (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`
+  )
+}
+
+/**
+ * The text that replaces `reference.raw` so the reference points at `newPath` (a plain path, not
+ * percent-encoded) while keeping `suffix` (`#fragment` and `?query`) as it was. The original
+ * style is kept where possible: angle brackets stay, percent-encoding stays, HTML attributes
+ * stay quoted-attribute safe.
+ */
+export function renderDestination(
+  reference: Pick<DocReference, 'kind' | 'raw' | 'wrapped'>,
+  newPath: string,
+  suffix: string
+): string {
+  if (reference.kind === 'html-img' || reference.kind === 'html-link') {
+    return `${newPath}${suffix}`.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+  }
+  const hadPercentEscapes = /%[0-9A-Fa-f]{2}/.test(reference.raw)
+  if (reference.wrapped) {
+    // Inside <...> only the brackets and backslashes need care.
+    return `<${`${newPath}${suffix}`.replace(/[\\<>]/g, (ch) => `\\${ch}`)}>`
+  }
+  if (hadPercentEscapes) return `${percentEncodePath(newPath)}${suffix}`
+  if (/[\s()<>]/.test(newPath)) {
+    return `<${`${newPath}${suffix}`.replace(/[\\<>]/g, (ch) => `\\${ch}`)}>`
+  }
+  return `${newPath.replace(/%/g, '%25')}${suffix}`
+}
+
+export function needsEncoding(path: string): boolean {
+  return NEEDS_PERCENT_ENCODING.test(path)
+}
+
+export interface TextReplacement {
+  /** 0-based range in the document; `endColumn` is exclusive. */
+  line: number
+  column: number
+  endLine: number
+  endColumn: number
+  text: string
+}
+
+/**
+ * Applies replacements to `source`. Only the replaced ranges change; line endings elsewhere are
+ * preserved byte for byte.
+ */
+export function applyReplacements(source: string, replacements: TextReplacement[]): string {
+  if (replacements.length === 0) return source
+  const lineStarts = [0]
+  for (const match of source.matchAll(/\r\n|\r|\n/g)) lineStarts.push(match.index + match[0].length)
+  const offset = (line: number, column: number) => (lineStarts[line] ?? source.length) + column
+  const ordered = [...replacements].sort(
+    (a, b) => offset(b.line, b.column) - offset(a.line, a.column)
+  )
+  let result = source
+  for (const r of ordered) {
+    result =
+      result.slice(0, offset(r.line, r.column)) +
+      r.text +
+      result.slice(offset(r.endLine, r.endColumn))
+  }
+  return result
+}
+
+/** A replacement that swaps one reference's destination for `text`. */
+export function replacementFor(reference: DocReference, text: string): TextReplacement {
+  return {
+    line: reference.line,
+    column: reference.column,
+    endLine: reference.endLine,
+    endColumn: reference.endColumn,
+    text
+  }
+}

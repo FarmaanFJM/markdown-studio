@@ -22,7 +22,7 @@ const fileManagerName =
       ? 'File Explorer'
       : 'File Manager'
 
-function validateName(value: string): string | null {
+export function validateName(value: string): string | null {
   const name = value.trim()
   if (!name) return 'A name is required.'
   if (/[/\\]/.test(name)) return 'Names cannot contain "/" or "\\".'

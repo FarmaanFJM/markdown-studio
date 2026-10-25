@@ -3,12 +3,51 @@
  * outline...). Imported once by the application shell so the registry is complete before the
  * editor builds its menus.
  */
+import { startTemplateStore } from '../templates/store'
+import { templateCommands } from '../templates/flows'
 import { insertTableOfContents, updateTableOfContents } from '../outline/toc'
 import { openCommandPalette, openHeadingPicker } from '../palette/openPalette'
 import { editTableVisually, insertTableVisually } from '../tables/openTableEditor'
 import { registerCommands } from './registry'
 
+startTemplateStore()
+
 registerCommands([
+  {
+    id: 'template.newDocument',
+    title: 'New File from Template…',
+    category: 'Templates',
+    run: templateCommands.newDocument,
+    keywords: 'create document readme notes report'
+  },
+  {
+    id: 'template.manage',
+    title: 'Manage Templates and Snippets…',
+    category: 'Templates',
+    run: templateCommands.manage,
+    keywords: 'edit rename duplicate delete'
+  },
+  {
+    id: 'template.saveDocument',
+    title: 'Save Document as Template…',
+    category: 'Templates',
+    run: templateCommands.saveDocument,
+    needsDocument: true
+  },
+  {
+    id: 'template.saveSelection',
+    title: 'Save Selection as Snippet or Template…',
+    category: 'Templates',
+    run: templateCommands.saveSelection,
+    needsDocument: true
+  },
+  {
+    id: 'snippet.insertSaved',
+    title: 'Insert Saved Snippet…',
+    category: 'Templates',
+    run: templateCommands.insertSnippet,
+    needsDocument: true
+  },
   {
     id: 'palette.open',
     title: 'Show All Commands',

@@ -7,13 +7,14 @@ import {
   ListCollapse,
   RefreshCw
 } from 'lucide-react'
-import { basename, dirname, pathsEqual } from '@shared/paths'
+import { basename } from '@shared/paths'
 import { LIMITS } from '@shared/settings'
 import { commands } from '../commands/commands'
 import { OutlineSection } from '../outline/Outline'
 import { useSettings } from '../state/settings'
 import { useWorkspace } from '../state/workspace'
 import { createFileIn, createFolderIn } from './actions'
+import { targetDirectory } from './target'
 import { ThumbnailView } from './ThumbnailView'
 import { TreeView } from './TreeView'
 
@@ -44,18 +45,6 @@ function NoFolder() {
       )}
     </div>
   )
-}
-
-/** Directory that receives new files: the selected folder, the selected file's folder, or the root. */
-function targetDirectory(root: string): string {
-  const { selected, folder, directories } = useWorkspace.getState()
-  const mode = useSettings.getState().settings.explorer.mode
-  if (mode === 'thumbnails') return folder ?? root
-  if (!selected) return root
-  const isDir = Object.values(directories).some((d) =>
-    d.entries?.some((e) => e.kind === 'directory' && pathsEqual(e.path, selected))
-  )
-  return isDir ? selected : dirname(selected)
 }
 
 export function Explorer() {

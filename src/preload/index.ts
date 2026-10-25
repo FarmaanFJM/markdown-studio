@@ -55,6 +55,11 @@ const api: MarkdownStudioApi = {
     importImage: (sourcePath, targetDirectory) =>
       ipcRenderer.invoke(IPC.assetsImportImage, sourcePath, targetDirectory)
   },
+  templates: {
+    list: () => ipcRenderer.invoke(IPC.templatesList),
+    save: (scope, template) => ipcRenderer.invoke(IPC.templatesSave, scope, template),
+    delete: (scope, id) => ipcRenderer.invoke(IPC.templatesDelete, scope, id)
+  },
   render: {
     pdf: (html) => ipcRenderer.invoke(IPC.renderPdf, html),
     exportPdf: (html, defaultPath) => ipcRenderer.invoke(IPC.exportPdf, html, defaultPath),

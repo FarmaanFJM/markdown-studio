@@ -20,6 +20,7 @@ import { FileService } from './services/fileService'
 import { PdfService } from './services/pdfService'
 import { MsFileProtocol, registerSchemePrivileges } from './services/protocol'
 import { SettingsService } from './services/settingsService'
+import { TemplateService } from './services/templateService'
 import { WorkspaceWatcher } from './services/workspaceWatcher'
 
 // Automated tests and portable setups can isolate all application data.
@@ -35,6 +36,7 @@ const access = new AccessControl()
 const files = new FileService(access)
 const assets = new AssetService(access)
 const settings = new SettingsService(path.join(app.getPath('userData'), 'settings.json'))
+const templates = new TemplateService(access, path.join(app.getPath('userData'), 'templates'))
 const msfile = new MsFileProtocol(access)
 const pdf = new PdfService(msfile)
 
@@ -198,6 +200,10 @@ function registerIpc(): void {
   handle(IPC.fsStatMany, (paths: string[]) => files.statMany(paths))
   handle(IPC.fsTrash, (file: string) => files.trash(file, (p) => shell.trashItem(p)))
   handle(IPC.fsDeletePermanently, (file: string) => files.deletePermanently(file))
+
+  handle(IPC.templatesList, () => templates.list())
+  handle(IPC.templatesSave, (scope: unknown, template: unknown) => templates.save(scope, template))
+  handle(IPC.templatesDelete, (scope: unknown, id: unknown) => templates.delete(scope, id))
 
   handle(IPC.dialogOpenMarkdown, async () => {
     if (!mainWindow) return []

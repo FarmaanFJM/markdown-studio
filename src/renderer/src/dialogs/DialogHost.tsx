@@ -267,10 +267,7 @@ function ShortcutsDialog({ request }: { request: Extract<DialogRequest, { kind: 
   )
 }
 
-/** Renders the front-most pending dialog. */
-export function DialogHost() {
-  const request = useUi((s) => s.dialogs[0])
-  if (!request) return null
+function DialogView({ request }: { request: DialogRequest }) {
   switch (request.kind) {
     case 'unsaved':
       return <UnsavedDialog request={request} />
@@ -287,4 +284,21 @@ export function DialogHost() {
     case 'custom':
       return <>{request.render(request.resolve)}</>
   }
+}
+
+/**
+ * Renders every open dialog, newest on top. Dialogs below the top one stay mounted (so a
+ * manager window keeps its state while a confirmation is shown) but cannot be interacted with.
+ */
+export function DialogHost() {
+  const requests = useUi((s) => s.dialogs)
+  return (
+    <>
+      {requests.map((request, index) => (
+        <div key={index} inert={index < requests.length - 1}>
+          <DialogView request={request} />
+        </div>
+      ))}
+    </>
+  )
 }

@@ -5,6 +5,7 @@
  * validated again in the main process; the renderer is never given raw Node.js or Electron APIs.
  */
 import type { AppSettings, SettingsPatch } from './settings'
+import type { StoredTemplate, TemplateScope } from './templates'
 
 export interface DirEntry {
   name: string
@@ -27,6 +28,13 @@ export interface FileListing {
   files: string[]
   /** True when the listing stopped at the limit and more files exist. */
   truncated: boolean
+}
+
+export interface TemplateListing {
+  global: StoredTemplate[]
+  workspace: StoredTemplate[]
+  /** False when no folder is open, so workspace templates cannot be saved. */
+  workspaceAvailable: boolean
 }
 
 export type EntryState = 'file' | 'directory' | 'missing' | 'unknown'
@@ -111,6 +119,9 @@ export const IPC = {
   dialogOpenMarkdown: 'dialog:open-markdown',
   dialogSaveMarkdown: 'dialog:save-markdown',
   assetsImportImage: 'assets:import-image',
+  templatesList: 'templates:list',
+  templatesSave: 'templates:save',
+  templatesDelete: 'templates:delete',
   renderPdf: 'render:pdf',
   exportPdf: 'export:pdf',
   exportHtml: 'export:html',
@@ -172,6 +183,12 @@ export interface MarkdownStudioApi {
     /** Absolute path of a file dropped from the operating system, or '' if unavailable. */
     pathForFile(file: File): string
     importImage(sourcePath: string, targetDirectory: string): Promise<ImportedImage>
+  }
+  templates: {
+    list(): Promise<TemplateListing>
+    /** Creates the template (empty `id`) or updates the stored one with that id. */
+    save(scope: TemplateScope, template: Partial<StoredTemplate>): Promise<StoredTemplate>
+    delete(scope: TemplateScope, id: string): Promise<void>
   }
   render: {
     pdf(html: string): Promise<Uint8Array>
