@@ -176,6 +176,8 @@ export function inPreview<T>(page: Page, fn: (doc: Document) => T): Promise<T> {
     `(() => {
       const doc = document.querySelector('iframe.html-preview')?.contentDocument
       if (!doc) throw new Error('Preview is not available')
+      // Available to the function: computed style as seen by the preview frame's own window.
+      const css = (d, element) => d.defaultView.getComputedStyle(element)
       return (${fn.toString()})(doc)
     })()`
   ) as Promise<T>
@@ -387,4 +389,56 @@ export async function exportViaDialog(
   await expect(dialog.getByTestId(`export-format-${format}`)).toHaveAttribute('aria-checked', 'true')
   if (adjust) await adjust(dialog)
   await dialog.getByTestId('export-run').click()
+}
+
+/** Writes documents into the sandbox workspace before the application starts. */
+export function seedDocuments(sandbox: Sandbox, files: Record<string, string>): void {
+  for (const [name, content] of Object.entries(files)) {
+    const target = path.join(sandbox.workspace, name)
+    mkdirSync(path.dirname(target), { recursive: true })
+    writeFileSync(target, content)
+  }
+}
+
+/** The documents used by the Phase 3 specs. */
+export const MIXED_DOCUMENT = `# Release Notes
+
+Euler's identity is $e^{i\\pi} + 1 = 0$, and a price is $5 or $10.
+
+$$
+\\int_{0}^{\\infty} e^{-x^2}\\,dx
+=
+\\frac{\\sqrt{\\pi}}{2}
+$$
+
+\`\`\`mermaid
+flowchart TD
+    A[Write Markdown] --> B[Live Preview]
+    B --> C[Export PDF]
+    B --> D[Export HTML]
+\`\`\`
+
+| Feature | Status |
+| ------- | ------ |
+| Math    | done   |
+| Diagrams | done  |
+
+\`\`\`ts
+const answer: number = 42
+\`\`\`
+`
+
+/** Waits until every diagram in the HTML preview has been drawn (or has failed with a message). */
+export async function waitForDiagrams(page: Page, expected: number): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        inPreview(page, (doc) =>
+          [...doc.querySelectorAll('figure.ms-diagram')].filter((f) =>
+            ['ready', 'error'].includes(f.getAttribute('data-ms-state') ?? '')
+          ).length
+        ),
+      { timeout: 30_000 }
+    )
+    .toBe(expected)
 }

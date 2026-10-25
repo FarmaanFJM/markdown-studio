@@ -59,6 +59,9 @@ export function CssSettings({
 }) {
   const uid = useId()
   const [draft, setDraft] = useState(value.text)
+  // "Use a CSS file" is shown as soon as it is chosen, before a file has been picked.
+  const [pendingFile, setPendingFile] = useState(false)
+  const source: CssSource = pendingFile && value.source === 'none' ? 'file' : value.source
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const latest = useRef(value)
   latest.current = value
@@ -79,7 +82,10 @@ export function CssSettings({
   const pick = async () => {
     try {
       const file = await api.presentation.pickCss(scope)
-      if (file) onChange({ ...value, source: 'file', path: file.path })
+      if (file) {
+        setPendingFile(false)
+        onChange({ ...value, source: 'file', path: file.path })
+      }
     } catch (error) {
       notify('error', errorMessage(error))
     }
@@ -107,17 +113,25 @@ export function CssSettings({
   return (
     <div className="css-settings" data-testid={`${idPrefix}-css`}>
       <div className="segmented" role="radiogroup" aria-label="Custom CSS source">
-        {SOURCES.map((source) => (
+        {SOURCES.map((option) => (
           <button
-            key={source.value}
+            key={option.value}
             type="button"
             role="radio"
-            aria-checked={value.source === source.value}
-            className={value.source === source.value ? 'active' : ''}
-            data-testid={`${idPrefix}-css-${source.value}`}
-            onClick={() => onChange({ ...value, source: source.value })}
+            aria-checked={source === option.value}
+            className={source === option.value ? 'active' : ''}
+            data-testid={`${idPrefix}-css-${option.value}`}
+            onClick={() => {
+              if (option.value === 'file' && !value.path) {
+                setPendingFile(true)
+                if (value.source !== 'none') onChange({ ...value, source: 'none' })
+                return
+              }
+              setPendingFile(false)
+              onChange({ ...value, source: option.value })
+            }}
           >
-            {source.label}
+            {option.label}
           </button>
         ))}
       </div>
@@ -126,7 +140,7 @@ export function CssSettings({
           Settings and workspace CSS are used unless you choose another source.
         </p>
       )}
-      {value.source === 'inline' && (
+      {source === 'inline' && (
         <div className="stacked">
           <label htmlFor={`${idPrefix}-css-text-${uid}`} className="visually-hidden">
             Custom CSS
@@ -151,7 +165,7 @@ export function CssSettings({
           />
         </div>
       )}
-      {value.source === 'file' && (
+      {source === 'file' && (
         <div className="css-file">
           <code className="css-path" data-testid={`${idPrefix}-css-path`} title={value.path ?? ''}>
             {value.path ?? 'No file chosen'}
