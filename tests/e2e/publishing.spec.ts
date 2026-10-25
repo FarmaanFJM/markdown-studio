@@ -345,7 +345,12 @@ test('export presets: built-ins, custom presets, editing, deleting, restoring an
     await dialog.getByTestId('preset-save').click()
     await expect(page.getByTestId('toast-success').last()).toContainText('Board report')
     const file = path.join(sandbox.userData, 'export-presets', 'board-report.json')
-    await expect.poll(() => existsSync(file)).toBe(true)
+    // The file already exists from "Save as", so wait for the edited margin to be written.
+    await expect
+      .poll(() =>
+        existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')).data.pdf.margins.top : 0
+      )
+      .toBe(30)
     const stored = JSON.parse(readFileSync(file, 'utf8'))
     expect(stored).toMatchObject({
       id: 'board-report',
