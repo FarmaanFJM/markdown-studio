@@ -377,7 +377,6 @@ test('export presets: built-ins, custom presets, editing, deleting, restoring an
     // Custom presets survive a restart.
     await closeApp(app)
     ;({ app, page } = await launch(sandbox))
-    await page.getByTestId('activity-explorer').click()
     await openFromTree(page, 'report.md')
     await page.getByRole('button', { name: 'Export as PDF' }).click()
     dialog = page.getByRole('dialog', { name: 'Export' })
