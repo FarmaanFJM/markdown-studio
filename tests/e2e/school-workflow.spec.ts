@@ -676,11 +676,11 @@ test('11. combines several chapters into one publication with shared contents, n
   await page.getByTestId('chapter-up-2').click()
   await expect(page.getByTestId('chapter-1')).toContainText('Health UI in games')
 
-  const stored = JSON.parse(
-    readFileSync(path.join(project, '.markdown-studio', 'publication.json'), 'utf8')
-  )
-  expect(stored.chapters[0]).toBe('01-Research/Health UI in games.md')
-  expect(stored.title).toBe('Health UI research')
+  const storedPublication = () =>
+    JSON.parse(readFileSync(path.join(project, '.markdown-studio', 'publication.json'), 'utf8'))
+  // The panel saves in the background, so the file is polled rather than read once.
+  await expect.poll(() => storedPublication().chapters[0]).toBe('01-Research/Health UI in games.md')
+  expect(storedPublication().title).toBe('Health UI research')
 
   await page.getByTestId('publication-preview').click()
   await expect
