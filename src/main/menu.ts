@@ -159,7 +159,7 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
         cmd('Document Settings…', 'document.settings', 'CmdOrCtrl+Shift+D'),
         cmd('Manage Sources…', 'sources.manage'),
         { type: 'separator' },
-        cmd('Publication Panel', 'publication.show', 'CmdOrCtrl+Shift+L'),
+        cmd('Publication Panel', 'publication.show', 'CmdOrCtrl+Shift+J'),
         cmd('Preview Publication', 'publication.preview'),
         cmd('Preview Active Document', 'publication.previewDocument'),
         cmd('Export Publication…', 'publication.export'),

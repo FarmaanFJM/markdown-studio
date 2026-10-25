@@ -329,6 +329,47 @@ application.
 - **Benchmarks** (`scripts/benchmark.mjs`) against representative documents, compared with the
   Phase 2 baseline (`docs/PERFORMANCE.md`).
 
+## Levels 1 and 2: documents, publishing and safety
+
+```
+src/shared/publishing/        pure TypeScript, tested in Node
+  frontMatter.ts   split/read/update YAML front matter (yaml Document API keeps keys and comments)
+  documentSettings.ts  document settings ↔ front matter, page overrides on PdfOptions
+  plugin.ts        markdown-it plugin: front matter block, {#id .class} attributes, figures,
+                   table captions, @-references, citations, [TOC]/[LOF]/[LOT]/::: {#refs}
+  types.ts         labels, numbering counters, options and results (env.ms in/out)
+  citations.ts     citeproc-js with the bundled APA 7 style; one call per document/publication
+  sources.ts       CSL JSON validation, completeness, keys     importSources.ts  BibTeX/CSL import
+  project.ts       publication configuration (chapters, options, layout)
+  analyze.ts       parse-only analysis (labels, problems) for pickers and diagnostics
+src/main/services/projectService.ts   publication.json and sources.json, validated, atomic
+src/main/services/recoveryService.ts  crash-recovery copies of unsaved text
+src/renderer/src/publishing/          dialogs, panel, build.ts (chapters → one document)
+```
+
+- **One pipeline still.** The publishing plugin is part of `createApplicationMarkdownIt`; options
+  go in and results come out through `env.ms`, so the preview, PDF and HTML export, the editor
+  diagnostics and the pickers all read the same numbers. Captions and numbers are decided by a
+  pure pass over the token stream (`collect` in `plugin.ts`), never by rendering order.
+- **Publications** are built in two passes (`publishing/build.ts`): the first walks every
+  chapter in order to assign numbers, labels and citation clusters (counters carry from chapter to
+  chapter via `NumberingStart`); the second renders each chapter with that shared knowledge and
+  its own document directory, so image paths resolve per chapter, and heading ids get a
+  per-chapter prefix to stay unique. One citeproc call serves the whole publication.
+- **Precedence of settings:** application defaults → workspace → document front matter → explicit
+  export overrides for theme; the document's page fields override the export preset's page setup
+  (`applyDocumentPage`), which the Export dialog announces.
+- **Data safety:** documents remember the file's modification time and pass it back on save
+  (`FileConflictError` → Save As / Overwrite / Reload); `FileService.writeText` writes through
+  `writeFileAtomic`; `RecoveryService` stores debounced copies of dirty documents under the user
+  data folder; the session (open files) is kept in the settings.
+- **Security:** new IPC methods (`project:*`, `recovery:*`, `dialog:open-image`,
+  `dialog:open-sources`, `assets:save-clipboard-image`) validate every argument in the main
+  process behind the existing sender check; clipboard images are checked against their file
+  signature and stored only below granted folders; sources and publication files are parsed as
+  data with size limits, never evaluated. Sandboxing, context isolation and the CSP are unchanged;
+  citeproc runs in the renderer without `eval`.
+
 ## Security model
 
 - Renderer: `contextIsolation`, `sandbox`, no Node integration, no `<webview>`, strict CSP

@@ -43,7 +43,7 @@ export function ActivityBar() {
         <img src={logo} alt="" width={26} height={26} />
       </button>
       {item('explorer', 'Explorer', 'Ctrl+Shift+E', Files)}
-      {item('publication', 'Publication', 'Ctrl+Shift+L', BookOpen)}
+      {item('publication', 'Publication', 'Ctrl+Shift+J', BookOpen)}
       <div className="activity-spacer" />
       {item('settings', 'Settings', 'Ctrl+,', Settings)}
     </nav>

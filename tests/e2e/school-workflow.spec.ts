@@ -45,6 +45,7 @@ let page: Page
 
 async function shot(name: string): Promise<void> {
   if (SHOTS) {
+    await page.waitForTimeout(500)
     mkdirSync(SHOTS, { recursive: true })
     await page.screenshot({ path: path.join(SHOTS, `${name}.png`) })
   }
@@ -378,6 +379,7 @@ test('6. adds captions, cross-references, sources, citations and a bibliography'
   await sources.getByTestId('source-key').fill('healthbars')
   // No author, year or URL were typed: the form says what is missing and invents nothing.
   await expect(sources.getByTestId('source-missing')).toContainText('no author')
+  await shot('workflow-sources')
   await sources.getByTestId('source-save').click()
   await expect(sources.getByTestId('sources-message')).toContainText('Saved')
   await sources.getByTestId('sources-close').click()
@@ -396,6 +398,7 @@ test('6. adds captions, cross-references, sources, citations and a bibliography'
   const picker = page.getByRole('dialog', { name: 'Insert Citation' })
   await picker.getByTestId('picker-item-smith2020').click()
   await picker.getByTestId('citation-locator').fill('p. 33')
+  await shot('workflow-citation-picker')
   await picker.getByTestId('picker-confirm').click()
   await expect(picker).toBeHidden()
   await expect.poll(() => editorText(page)).toContain('[@smith2020, p. 33]')
@@ -432,6 +435,7 @@ test('6. adds captions, cross-references, sources, citations and a bibliography'
   expect(
     facts.bibliography.some((e) => e?.includes('Health bars explained') && e.includes('n.d.'))
   ).toBe(true)
+  await page.keyboard.press(`${mod}+Home`)
   await shot('workflow-citations')
 })
 
@@ -442,6 +446,7 @@ test('7. generates a table of contents and keeps numbers and references current 
   await expect(settings).toBeVisible()
   await settings.getByLabel('Automatic table of contents').check()
   await settings.getByLabel('Number sections').check()
+  await shot('workflow-document-settings')
   await settings.getByTestId('document-settings-apply').click()
   await expect(settings).toBeHidden()
   await page.keyboard.press(`${mod}+S`)
@@ -465,6 +470,7 @@ test('7. generates a table of contents and keeps numbers and references current 
     )
   const before = await readToc()
   expect(before.find((t) => t.includes('Scope and method'))).toMatch(/^2 /)
+  await page.keyboard.press(`${mod}+Home`)
   await shot('workflow-toc')
 
   // Change the structure: a new section before "Scope and method" pushes everything down.
@@ -644,7 +650,7 @@ test('10. lays out a two-column document with real columns', async () => {
 })
 
 test('11. combines several chapters into one publication with shared contents, numbering, references and assets', async () => {
-  await page.keyboard.press(`${mod}+Shift+L`)
+  await page.keyboard.press(`${mod}+Shift+J`)
   await expect(page.getByTestId('publication-empty')).toBeVisible()
   await page.getByTestId('publication-create').click()
   await expect(page.getByTestId('publication-panel')).toBeVisible()
@@ -664,6 +670,7 @@ test('11. combines several chapters into one publication with shared contents, n
   }
   await picker.getByTestId('picker-confirm').click()
   await expect(page.getByTestId('chapter-3')).toBeVisible()
+  await shot('workflow-publication-panel')
   // Reorder: the Health UI chapter goes first.
   await page.getByTestId('chapter-up-2').click()
   await expect(page.getByTestId('chapter-1')).toContainText('Health UI in games')

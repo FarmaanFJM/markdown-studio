@@ -5,6 +5,42 @@ each development phase raises the minor version, fixes raise the patch version, 
 reserved for the first stable, code-signed release. The version in `package.json` stayed at 0.1.0
 through Phases 1 and 2; Phase 3 is the first release to be versioned and packaged as a candidate.
 
+## 0.4.0 — Level 1 (core) and Level 2 (professional publishing) (unreleased)
+
+### Added
+
+- Safe writing: crash recovery of unsaved text, restoring open documents, detection of files
+  changed by other programs (follow or ask; never overwritten silently), atomic document writes,
+  visible failed-save state.
+- Pasting images from the clipboard; relinking relative paths on _Save As_; "image not found"
+  reporting in the preview and exports; table size chosen when inserting a table; heading, list and
+  quote buttons that insert their marker on an empty line.
+- YAML front matter, hidden in the output, with a Document Settings dialog (page, margins, header,
+  footer, columns, theme, language, contents, section numbering).
+- Figure and table captions with automatic numbers, cross-references to figures, tables and
+  sections, `[TOC]`, `[LOF]`, `[LOT]`, numbered sections, identifier diagnostics and `@` completion.
+- Sources manager (project library or per-document), BibTeX and CSL JSON import, citations and an
+  automatic APA Style 7th edition reference list through citeproc-js.
+- Real two-column documents (whole document), full-width figures and tables.
+- Publications: several Markdown chapters combined with shared contents, numbering,
+  cross-references and bibliography; Publication panel with preview and export.
+- Templates: Research report, Onderzoeksverslag (Nederlands), Health UI research (Playful Tech),
+  Two-column article.
+- Print layout: wide tables stay inside the page, small tables are kept whole, wide tables span
+  both columns.
+- Documentation: [Writing publications](docs/PUBLICATIONS.md), [Level 1 and 2 status](docs/LEVEL_1_2_STATUS.md).
+
+### Changed
+
+- Exports that refer to missing images now report them (an info notice instead of success).
+- Documents opened from disk remember their modification time; saving checks it.
+- README statements about settings never being stored in a document were corrected.
+
+### Dependencies
+
+- Added `@citation-js/core`, `@citation-js/plugin-csl`, `@citation-js/plugin-bibtex` (MIT),
+  `yaml` (ISC); citeproc-js (CPAL-1.0 OR AGPL) comes with them. See `THIRD_PARTY_NOTICES.md`.
+
 ## 0.3.0 — Phase 3: Professional polish and release (unreleased)
 
 ### Added

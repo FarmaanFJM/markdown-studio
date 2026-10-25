@@ -7,6 +7,7 @@ import {
 import type { Source } from '@shared/publishing/sources'
 import { relativePath } from '@shared/paths'
 import type { ProjectState } from '@shared/ipc'
+import { warmUpCitations } from '@shared/publishing/citations'
 import { api, errorMessage } from '../bridge'
 import { notify } from './ui'
 import { useWorkspace } from './workspace'
@@ -41,7 +42,23 @@ export const useProject = create<ProjectStore>((set, get) => ({
 
   async load() {
     try {
-      set(apply(await api.project.get()))
+      const state = await api.project.get()
+      set(apply(state))
+      // A project with sources will cite them: prepare the formatter while the window is idle,
+      // so the first preview does not wait for it.
+      if (state.sources.length > 0) {
+        const idle = (window as unknown as { requestIdleCallback?: (cb: () => void) => void })
+          .requestIdleCallback
+        const run = () => {
+          try {
+            warmUpCitations()
+          } catch {
+            // The first citation will report a real problem, if there is one.
+          }
+        }
+        if (idle) idle(run)
+        else setTimeout(run, 1500)
+      }
     } catch (error) {
       notify('error', `The project settings could not be loaded: ${errorMessage(error)}`)
       set({ loaded: true, available: false, publication: null, sources: [], problems: [] })

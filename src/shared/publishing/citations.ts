@@ -81,12 +81,13 @@ function missingMarker(id: string): string {
   return `<span class="ms-cite ms-cite-missing" title="No source with the key ${escapeHtml(id)}. Add it under Sources.">(${escapeHtml(id)}?)</span>`
 }
 
-/** Stable text used to decide whether the provider can be reused. */
-function fingerprint(sources: readonly Source[]): string {
-  return JSON.stringify(sources)
+/**
+ * Creates the formatting engine ahead of the first citation. Building it parses the APA style and
+ * takes about a second, so the application does this while idle after start-up.
+ */
+export function warmUpCitations(lang?: string): void {
+  engineFor(cslLocale(lang))
 }
-
-let lastFingerprint = ''
 
 /**
  * A provider bound to a set of sources. Calling it formats the given clusters in order and
@@ -109,12 +110,6 @@ export function createCitationProvider(
   }
 
   function format(clusters: CitationCluster[]): CitationResult {
-    const print = fingerprint(sources)
-    if (print !== lastFingerprint) {
-      // New data: engines keep per-item caches, so start them afresh.
-      engines.clear()
-      lastFingerprint = print
-    }
     holder = { items: byId }
     const missing = new Set<string>()
     const requests: unknown[] = []

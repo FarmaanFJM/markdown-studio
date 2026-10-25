@@ -1,7 +1,10 @@
 # Roadmap: scientific writing and book publishing
 
-> **Status: planned. Nothing in this document is implemented.** It describes a possible future
-> direction for Markdown Studio. What exists today is documented in the
+> **Status: partly implemented.** Items 5 (citations and bibliography, APA 7 only, BibTeX/CSL JSON
+> import, no CSL file loading), 6 (numbered figures, tables and sections with cross-references)
+> and 7 (book projects as a chapter list with shared numbering and one PDF/HTML; no EPUB) are
+> implemented in a reduced form, see [PUBLICATIONS.md](PUBLICATIONS.md); the equation items 1–4 are
+> not. Everything else in this document is a possible future direction for Markdown Studio. What exists today is documented in the
 > [mathematics guide](MATHEMATICS.md), the [authoring guide](AUTHORING.md) and the
 > [publishing guide](PUBLISHING.md). Phase 3 deliberately stops at manual equation tags
 > (`\tag{…}`), KaTeX rendering, Mermaid diagrams, themes, and PDF/HTML export.

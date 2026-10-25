@@ -78,7 +78,7 @@ export const KEYBINDINGS: KeyBinding[] = [
   bind('insert.crossReference', 'Insert cross-reference', 'r', { mod: true, shift: true }),
   bind('insert.citation', 'Insert citation', 'c', { mod: true, shift: true }),
   bind('document.settings', 'Document settings', 'd', { mod: true, shift: true }, false),
-  bind('publication.show', 'Publication panel', 'l', { mod: true, shift: true }, false),
+  bind('publication.show', 'Publication panel', 'j', { mod: true, shift: true }, false),
   bind('table.insert', 'Insert table', 't', { mod: true, shift: true }),
   bind('table.format', 'Format table', 'f', { alt: true, shift: true }),
   bind('table.editVisually', 'Edit table visually', 't', { alt: true, shift: true })

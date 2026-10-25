@@ -137,3 +137,37 @@ describe('buildPublication', () => {
     expect(html).toContain('data-newpage="true"')
   })
 })
+
+describe('export of a publication', () => {
+  it('produces a standalone HTML document that passes the safety audit and keeps the structure', async () => {
+    ;(globalThis as unknown as { markdownStudio: unknown }).markdownStudio = {
+      platform: 'linux',
+      diagram: {
+        render: async () => ({ ok: false, message: 'none' }),
+        cancel: async () => undefined
+      }
+    }
+    const { buildStandaloneHtml } = await import('../../src/renderer/src/markdown/exporters')
+    const { DEFAULT_PRESENTATION } = await import('../../src/renderer/src/markdown/document')
+    const build = ctx()
+    const built = await buildStandaloneHtml(
+      {
+        source: '',
+        fileName: 'publication.md',
+        context: { documentDirectory: '/p', workspaceRoot: '/p' },
+        body: (presentation) => build.body(presentation),
+        title: build.title
+      },
+      { ...DEFAULT_PRESENTATION, columns: { count: 2, gapMm: 6 }, numberedSections: true },
+      { embedImages: false }
+    )
+    const html = norm(built.html)
+    expect(html).toContain('<title>Health UI research</title>')
+    expect(html).toContain('data-columns="2"')
+    expect(html).toContain('data-numbered="true"')
+    expect(html).toContain('<figure class="ms-figure" id="fig-bars">')
+    expect(html).toContain('Figure 2.1:')
+    expect(html).not.toContain('msfile:')
+    expect(built.brokenAnchors).toEqual([])
+  })
+})

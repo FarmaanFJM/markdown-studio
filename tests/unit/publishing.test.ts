@@ -271,3 +271,50 @@ describe('chapter ids', () => {
     expect(html).toContain('<h2 id="sec-x">')
   })
 })
+
+describe('citation engine reuse', () => {
+  const cluster = [
+    {
+      items: [{ id: 'a', prefix: '', suffix: '', suppressAuthor: false }],
+      narrative: false,
+      line: 0
+    }
+  ]
+  it('reflects changed sources when the formatter is reused', () => {
+    const first = createCitationProvider(
+      [
+        {
+          id: 'a',
+          type: 'book',
+          title: 'First title',
+          author: [{ family: 'X' }],
+          issued: { 'date-parts': [[2000]] }
+        }
+      ],
+      'en'
+    )(cluster)
+    const second = createCitationProvider(
+      [
+        {
+          id: 'a',
+          type: 'book',
+          title: 'Second title',
+          author: [{ family: 'Y' }],
+          issued: { 'date-parts': [[2001]] }
+        }
+      ],
+      'en'
+    )(cluster)
+    expect(first.bibliography[0]).toContain('First title')
+    expect(second.bibliography[0]).toContain('Second title')
+    expect(second.html[0]).toContain('(Y, 2001)')
+  })
+
+  it('does not format again while the citations are unchanged', () => {
+    const provider = createCitationProvider(
+      [{ id: 'a', type: 'book', title: 'T', author: [{ family: 'X' }] }],
+      'en'
+    )
+    expect(provider(cluster)).toBe(provider(cluster))
+  })
+})

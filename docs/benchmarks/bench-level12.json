@@ -1,0 +1,244 @@
+{
+  "environment": {
+    "date": "2026-10-25T21:49:43.808Z",
+    "os": "linux 6.18.44-fc-v153",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz × 4",
+    "memoryGb": 16,
+    "node": "v22.22.0",
+    "appDir": "/tmp/benchapp",
+    "quick": false,
+    "electron": "44.9.3 (Chromium 152.0.7977.167)"
+  },
+  "documents": {
+    "small notes": {
+      "openMs": 280,
+      "renderTime": {
+        "count": 4,
+        "lastMs": 2.7,
+        "maxMs": 20.1
+      },
+      "keyToFrameP50": 28.7,
+      "keyToFrameP95": 41.2,
+      "keyToFrameMax": 44,
+      "longTasks": 0,
+      "longTaskTotalMs": 0,
+      "previewLatencyAfterLastKeyMs": 122,
+      "typedMs": 491,
+      "renderAfterTyping": {
+        "count": 5,
+        "lastMs": 3.4,
+        "maxMs": 20.1
+      },
+      "pdfPreviewMs": 487
+    },
+    "medium technical (60 KB)": {
+      "openMs": 651,
+      "renderTime": {
+        "count": 7,
+        "lastMs": 218.6,
+        "maxMs": 283.9
+      },
+      "keyToFrameP50": 29.9,
+      "keyToFrameP95": 49.3,
+      "keyToFrameMax": 52.7,
+      "longTasks": 4,
+      "longTaskTotalMs": 536,
+      "previewLatencyAfterLastKeyMs": 321,
+      "typedMs": 825,
+      "renderAfterTyping": {
+        "count": 8,
+        "lastMs": 192.3,
+        "maxMs": 283.9
+      },
+      "pdfPreviewMs": 1174
+    },
+    "large (400 KB)": {
+      "openMs": 2513,
+      "renderTime": {
+        "count": 9,
+        "lastMs": 1003.4,
+        "maxMs": 1003.4
+      },
+      "keyToFrameP50": 50.8,
+      "keyToFrameP95": 175.9,
+      "keyToFrameMax": 183,
+      "longTasks": 24,
+      "longTaskTotalMs": 5484,
+      "previewLatencyAfterLastKeyMs": 1754,
+      "typedMs": 1877,
+      "renderAfterTyping": {
+        "count": 10,
+        "lastMs": 926.5,
+        "maxMs": 1003.4
+      },
+      "pdfPreviewMs": 5655
+    },
+    "huge (1.1 MB)": {
+      "openMs": 5347,
+      "renderTime": {
+        "count": 11,
+        "lastMs": 2551.4,
+        "maxMs": 2551.4
+      },
+      "keyToFrameP50": 116.3,
+      "keyToFrameP95": 183.3,
+      "keyToFrameMax": 208,
+      "longTasks": 136,
+      "longTaskTotalMs": 25288,
+      "previewLatencyAfterLastKeyMs": 4119,
+      "typedMs": 3884,
+      "renderAfterTyping": {
+        "count": 12,
+        "lastMs": 2521.7,
+        "maxMs": 2551.4
+      },
+      "pdfPreviewMs": 32185
+    },
+    "tables and headings (300 tables)": {
+      "openMs": 1390,
+      "renderTime": {
+        "count": 13,
+        "lastMs": 487.5,
+        "maxMs": 2551.4
+      },
+      "keyToFrameP50": 40.7,
+      "keyToFrameP95": 80.6,
+      "keyToFrameMax": 108.8,
+      "longTasks": 25,
+      "longTaskTotalMs": 4590,
+      "previewLatencyAfterLastKeyMs": 738,
+      "typedMs": 1632,
+      "renderAfterTyping": {
+        "count": 14,
+        "lastMs": 534.6,
+        "maxMs": 2551.4
+      },
+      "pdfPreviewMs": 2625
+    },
+    "diagrams (10 Mermaid)": {
+      "openMs": 246,
+      "renderTime": {
+        "count": 16,
+        "lastMs": 5.4,
+        "maxMs": 2551.4
+      },
+      "keyToFrameP50": 26.4,
+      "keyToFrameP95": 33.2,
+      "keyToFrameMax": 35.8,
+      "longTasks": 0,
+      "longTaskTotalMs": 0,
+      "previewLatencyAfterLastKeyMs": 128,
+      "typedMs": 451,
+      "renderAfterTyping": {
+        "count": 17,
+        "lastMs": 6.7,
+        "maxMs": 2551.4
+      },
+      "pdfPreviewMs": 910
+    },
+    "math (500 expressions)": {
+      "openMs": 2897,
+      "renderTime": {
+        "count": 19,
+        "lastMs": 153.1,
+        "maxMs": 2551.4
+      },
+      "keyToFrameP50": 26.7,
+      "keyToFrameP95": 36.8,
+      "keyToFrameMax": 42.1,
+      "longTasks": 14,
+      "longTaskTotalMs": 3269,
+      "previewLatencyAfterLastKeyMs": 236,
+      "typedMs": 466,
+      "renderAfterTyping": {
+        "count": 20,
+        "lastMs": 122.7,
+        "maxMs": 2551.4
+      },
+      "pdfPreviewMs": 3210
+    },
+    "large images (4 x 2400 px)": {
+      "openMs": 214,
+      "renderTime": {
+        "count": 21,
+        "lastMs": 3.6,
+        "maxMs": 2551.4
+      },
+      "keyToFrameP50": 26.7,
+      "keyToFrameP95": 36,
+      "keyToFrameMax": 78.8,
+      "longTasks": 8,
+      "longTaskTotalMs": 576,
+      "previewLatencyAfterLastKeyMs": 126,
+      "typedMs": 330,
+      "renderAfterTyping": {
+        "count": 23,
+        "lastMs": 2.8,
+        "maxMs": 2551.4
+      },
+      "pdfPreviewMs": 4066
+    },
+    "publishing report (captions, citations, numbering)": {
+      "openMs": 1720,
+      "renderTime": {
+        "count": 25,
+        "lastMs": 109.5,
+        "maxMs": 2551.4
+      },
+      "keyToFrameP50": 26.4,
+      "keyToFrameP95": 71.2,
+      "keyToFrameMax": 71.5,
+      "longTasks": 9,
+      "longTaskTotalMs": 792,
+      "previewLatencyAfterLastKeyMs": 207,
+      "typedMs": 604,
+      "renderAfterTyping": {
+        "count": 26,
+        "lastMs": 88.4,
+        "maxMs": 2551.4
+      },
+      "pdfPreviewMs": 1555
+    },
+    "mixed (diagrams, tables, math, code)": {
+      "openMs": 1050,
+      "renderTime": {
+        "count": 28,
+        "lastMs": 555.7,
+        "maxMs": 2551.4
+      },
+      "keyToFrameP50": 27.4,
+      "keyToFrameP95": 91.4,
+      "keyToFrameMax": 145.2,
+      "longTasks": 30,
+      "longTaskTotalMs": 8120,
+      "previewLatencyAfterLastKeyMs": 747,
+      "typedMs": 1107,
+      "renderAfterTyping": {
+        "count": 29,
+        "lastMs": 424.3,
+        "maxMs": 2551.4
+      },
+      "pdfPreviewMs": 4058
+    }
+  },
+  "memoryGrowth": {
+    "cycles": 60,
+    "rendererHeapBeforeMb": 124.9,
+    "rendererHeapAfterMb": 124.9,
+    "rendererHeapGrowthMb": 0,
+    "allProcessesGrowthMb": -0.3
+  },
+  "tabSwitching": {
+    "switches": 60,
+    "totalMs": 14082,
+    "perSwitchMs": 234.7,
+    "activeDocument": "mixed.md",
+    "previewMatchesActiveDocument": true
+  },
+  "repeatedExports": {
+    "runs": 10,
+    "medianMs": 2137,
+    "maxMs": 2789,
+    "allProcessesGrowthMb": 0
+  }
+}

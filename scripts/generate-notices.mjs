@@ -17,7 +17,11 @@ const BUNDLED = [
   'lucide-react',
   'katex',
   'mermaid',
-  'css-tree'
+  'css-tree',
+  '@citation-js/core',
+  '@citation-js/plugin-csl',
+  '@citation-js/plugin-bibtex',
+  'yaml'
 ]
 
 function packageDir(name, from = ROOT) {
@@ -48,6 +52,12 @@ let out = `# Third-party notices
 Markdown Studio is distributed under the MIT License (see \`LICENSE\`). It bundles the
 following open-source packages. Electron and Chromium notices are shipped alongside the
 executable as \`LICENSE\` and \`LICENSES.chromium.html\`.
+
+Citations are formatted with citeproc-js, which is offered under the Common Public Attribution
+License 1.0 (CPAL) or the GNU AGPL 3.0; this application uses it under the CPAL, and the
+attribution below applies. The APA citation style and the CSL locales bundled by
+\`@citation-js/plugin-csl\` come from the Citation Style Language project
+(https://citationstyles.org) and are licensed CC BY-SA 3.0 (styles) and CC BY-SA 3.0 (locales).
 
 | Package | Version | License |
 | ------- | ------- | ------- |

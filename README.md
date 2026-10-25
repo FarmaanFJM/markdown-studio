@@ -30,21 +30,25 @@ with equations and diagrams, and anyone producing reports, handbooks or articles
 HTML without leaving a plain-text workflow.
 
 **Markdown first.** The Markdown file is always the source of truth. The editor is a source
-editor — never rich text or WYSIWYG — and nothing about appearance or export (themes, page
-setup, presets, custom CSS) is ever written into your document. Previews and exports are
-generated from the text; they are never edited directly.
+editor — never rich text or WYSIWYG. Themes, presets and custom CSS stay outside your
+documents. Settings that belong to one document (page layout, columns, language, contents,
+numbering) can be saved in its YAML **front matter**, which other Markdown tools ignore, and
+sources and publications live in a `.markdown-studio` folder; documents stay ordinary Markdown
+files. Previews and exports are generated from the text; they are never edited directly.
 
 **Offline and private.** No accounts, cloud storage, telemetry, external rendering services or
 CDNs. Diagrams, equations, fonts and styles are bundled with the application and embedded in
 exports.
 
-> **Status:** Phases 1, 2 and 3 are implemented on the `claude/markdown-studio-phase-3-…`
-> branch and its pull request; release builds are **unsigned** (see
+> **Status:** Phases 1–3 are merged. The roadmap's **Level 1 (Markdown Studio Core)** and
+> **Level 2 (Professional Publishing Foundations)** are implemented on top of them (version
+> 0.4.0, unreleased); what is verified and what is not is in
+> [docs/LEVEL_1_2_STATUS.md](docs/LEVEL_1_2_STATUS.md). Release builds are **unsigned** (see
 > [Release status](#release-status)). The guides:
-> [Authoring](docs/AUTHORING.md) · [Mathematics](docs/MATHEMATICS.md) ·
-> [Publishing](docs/PUBLISHING.md) · [Architecture](docs/ARCHITECTURE.md) ·
-> [Performance](docs/PERFORMANCE.md) · [Product roadmap](docs/ROADMAP.md) · [Academic publishing roadmap](docs/ACADEMIC_PUBLISHING_ROADMAP.md)
-> (future work, not implemented).
+> [Authoring](docs/AUTHORING.md) · [Publications](docs/PUBLICATIONS.md) ·
+> [Mathematics](docs/MATHEMATICS.md) · [Publishing](docs/PUBLISHING.md) ·
+> [Architecture](docs/ARCHITECTURE.md) · [Performance](docs/PERFORMANCE.md) ·
+> [Product roadmap](docs/ROADMAP.md) · [Academic publishing roadmap](docs/ACADEMIC_PUBLISHING_ROADMAP.md).
 
 ## Screenshots
 
@@ -96,6 +100,45 @@ Phase 2 (captured by `npm run screenshots` from the running application):
 ![The command palette](docs/screenshots/command-palette.png)
 
 ![Renaming a file offers to update the Markdown references to it](docs/screenshots/rename-references.png)
+
+## Features (Levels 1 and 2): core and professional publishing
+
+Full guide: [Writing publications](docs/PUBLICATIONS.md).
+
+**Core (Level 1)**
+
+- **Safe writing.** Unsaved text is mirrored to the application's data folder and offered back
+  after a crash; open documents are restored at the next start; files changed by another program
+  are never overwritten silently (follow, or ask: Save As / Overwrite / Reload); files are
+  written atomically; failed saves keep the text open and mark the tab.
+- **Images.** Paste screenshots and copied pictures (<kbd>Ctrl</kbd>+<kbd>V</kbd>) or drag files
+  from the file explorer; they are stored in the project's asset folder (never overwriting) and
+  referenced relatively. _Save As_ into another folder offers to update the relative paths; a
+  missing image is reported in the preview and exports.
+- **Tables.** Insert with a chosen number of rows and columns, edit cells, add and delete rows
+  and columns, set column alignment, reformat existing tables without losing content, with
+  undo/redo (grid editor and source commands).
+- **Writing help.** Toolbar and shortcuts for headings, bold/italic, lists, links, quotes and
+  code (they insert their marker on an empty line); completions for `@` references and
+  citations; a shortcut overview in the Help menu.
+- **Print layout.** Wide tables stay inside the page, small tables are not split, long tables
+  repeat their header, large images and long code lines fit.
+
+**Professional publishing (Level 2)**
+
+- **Document settings** in front matter: page size, margins, header, footer and page numbers,
+  one or two columns, theme, language, automatic contents, section numbering — with a dialog.
+- **Figures and tables** with captions and automatic numbers, **cross-references** (`@fig-…`,
+  `@tbl-…`, `@sec-…`) that renumber when the document changes, duplicate and missing-target
+  diagnostics, lists of figures and tables.
+- **Sources and citations** with a source manager (add, edit, import BibTeX/CSL JSON), citation
+  syntax `[@key, p. 3]`, and an automatic **APA Style 7th edition** reference list (citeproc-js).
+- **Two-column layout** (whole document) with full-width headings, figures and tables.
+- **Templates:** research report (English and Dutch), Health UI research (Playful Tech), and a
+  two-column article.
+- **Publications:** combine several Markdown documents as chapters, in a chosen order, into one
+  publication with a shared contents list, numbering, cross-references, bibliography and
+  per-chapter image paths; chapters remain separate, editable files.
 
 ## Features (Phase 3): publishing
 
@@ -316,6 +359,8 @@ On macOS use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>.
 | Command palette                           | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>                                                                |
 | Go to heading                             | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>                                                                |
 | New file from template                    | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd>                                                                |
+| Document settings                         | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>                                                                |
+| Publication panel                         | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd>                                                                |
 | Toggle word wrap                          | <kbd>Alt</kbd>+<kbd>Z</kbd>                                                                                  |
 | Editor font size larger / smaller / reset | <kbd>Ctrl</kbd>+<kbd>=</kbd> / <kbd>Ctrl</kbd>+<kbd>-</kbd> / <kbd>Ctrl</kbd>+<kbd>0</kbd>                   |
 
@@ -335,6 +380,9 @@ in VS Code. Export, Open Folder and the layout options are in the menus and tool
 | Numbered / bulleted / task list    | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>7</kbd> / <kbd>8</kbd> / <kbd>9</kbd>                             |
 | Blockquote                         | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>.</kbd>                                                           |
 | Insert code block                  | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd>                                                           |
+| Insert figure with caption         | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>                                                           |
+| Insert cross-reference             | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>                                                           |
+| Insert citation                    | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>                                                           |
 | Insert table (grid)                | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd>                                                           |
 | Format table / edit table visually | <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> / <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd>             |
 | Next table cell / previous         | <kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> (inside a table)                                       |
@@ -388,7 +436,7 @@ own platforms.
 
 ## Release status
 
-- Version 0.1.0 pre-release builds are produced by CI as GitHub Actions artifacts and, when a
+- Version 0.4.0 pre-release builds are produced by CI as GitHub Actions artifacts and, when a
   release tag is pushed, attached to a **draft** GitHub release for manual review. No release is
   published automatically.
 - **The Windows installer is not code-signed.** Windows SmartScreen will warn on first launch.
@@ -433,6 +481,16 @@ window, export presets, cancel/failure recovery, hostile Markdown, diagram-rende
 IPC validation, keyboard and focus behaviour, contrast, reduced motion and small windows. Unit
 tests cover the CSS policy, math and Mermaid parsing, themes, page options, presets, services and
 the examples of the mathematics guide.
+
+Levels 1 and 2 add `data-safety.spec.ts` (paste, conflicts, crash recovery, session restore,
+relinking on Save As, moved project folder, missing images), `publishing-core.spec.ts`,
+`layout-stress.spec.ts` (140-row and 12-column tables, large images and long code lines in one and
+two columns, checked on the rasterised PDF) and `school-workflow.spec.ts`, which drives the whole
+Playful Tech workflow through the real interface — project, formatted writing, pasted and
+dragged images, tables, captions, citations, contents, restart, multi-page PDF, two columns and
+a three-chapter publication. Unit tests cover front matter, document settings, labels and
+numbering, cross-references, citations and APA output, sources, BibTeX import, the publication
+builder and the templates.
 
 On Linux without a display, run it under Xvfb:
 
@@ -504,14 +562,33 @@ in a `templates` folder.
 **Phase 3 — Professional polish and release:** implemented (see above). Signed release builds
 need signing credentials that are not part of the repository.
 
-**Beyond Phase 3 (planned, not implemented):** the long-term direction (school-ready core,
-two-column layouts, structured documents, an extension system, chess and academic extensions,
-book projects) is in the [product roadmap](docs/ROADMAP.md). In detail: automatic equation numbering and
-cross-references, reusable definitions, a reference manager with citations and bibliographies,
-numbered figures and tables, and multi-file book projects with EPUB. See the
+**Level 1 — Markdown Studio Core** and **Level 2 — Professional Publishing Foundations:**
+implemented (see above and [LEVEL_1_2_STATUS.md](docs/LEVEL_1_2_STATUS.md)).
+
+**Beyond Level 2 (planned, not implemented):** an extension system, chess and other specialist
+extensions, equation numbering and reusable definitions, EPUB, footnotes, section-level columns
+and other citation styles. See the [product roadmap](docs/ROADMAP.md) and the
 [academic publishing roadmap](docs/ACADEMIC_PUBLISHING_ROADMAP.md).
 
 ### Known limitations
+
+**Levels 1 and 2**
+
+- Columns (one or two) apply to a whole document or publication, not to sections. A heading
+  directly above a full-width table or figure can end up at the bottom of the previous column.
+- The table of contents has links but no page numbers; there are no footnotes and no automatic
+  equation numbering.
+- Citations are formatted as APA Style 7th edition only; a locator after a narrative citation
+  (`@key [p. 3]`) is not supported (use `[@key, p. 3]`).
+- A publication takes the layout from its own settings; chapter front matter `studio:` settings
+  are ignored inside it. Links to other files from a chapter resolve from the active document in
+  the preview.
+- The PDF is produced by Chromium's print engine (see Phase 3); tables with many columns are
+  shrunk and may break long words.
+- Recovery copies, session restore and the conflict check were verified by automated tests on
+  Linux; no human test on Windows or macOS has been done.
+- citeproc-js is used under the CPAL licence (attribution in About and in
+  `THIRD_PARTY_NOTICES.md`); review this if you plan to distribute the application commercially.
 
 **Phase 3**
 
@@ -528,8 +605,9 @@ numbered figures and tables, and multi-file book projects with EPUB. See the
   additional document fonts.
 - Standalone HTML keeps links to other local files as written (and reports them); remote images
   stay online.
-- Export settings are not stored inside the Markdown document by design, so a shared `.md` file
-  does not carry its theme; share the workspace's `.markdown-studio` folder for that.
+- Export presets and the document theme from Settings are not stored inside the Markdown
+  document; a shared `.md` file carries only what you put in its front matter (Document
+  Settings), so share the workspace's `.markdown-studio` folder for the rest.
 - The Windows installer is unsigned (see [Release status](#release-status)). The macOS build is
   unsigned and not notarised, and only the packaged-app smoke test runs against it.
 
@@ -558,8 +636,9 @@ numbered figures and tables, and multi-file book projects with EPUB. See the
 
 - Documents are read and written as UTF-8. Mixed line endings within one file are
   normalised to the file's dominant style by the editor.
-- A file changed on disk while it is open is not reloaded automatically.
-- Images dropped into an unsaved document are referenced relative to the workspace root.
+- (Level 1 reloads unmodified documents when their file changes and asks when there are edits.)
+- Images dropped into an unsaved document are referenced relative to the workspace root (and
+  _Save As_ offers to update them).
 - Images referenced from outside the workspace (or outside an opened file's folder) are not
   displayed, by design.
 - Remote images (`https://…`) are loaded in the preview and in PDFs, and are left as links in

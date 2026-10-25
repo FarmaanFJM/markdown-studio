@@ -2,7 +2,7 @@
  * Settings that belong to one document and are stored in its front matter.
  *
  * Standard keys keep their Pandoc/Quarto meaning (`title`, `author`, `date`, `lang`, `toc`,
- * `toc-depth`, `number-sections`, `bibliography`). Everything specific to Markdown Studio lives
+ * `toc-depth`, `number-sections`; `bibliography` is kept but not loaded). Everything specific to Markdown Studio lives
  * under one `studio:` key, which other tools ignore:
  *
  * ```yaml
@@ -151,8 +151,13 @@ export function readDocumentSettings(data: Record<string, unknown>): ReadSetting
     else problems.push('number-sections must be true or false.')
   }
   const bibliography = Array.isArray(data.bibliography) ? data.bibliography[0] : data.bibliography
-  if (typeof bibliography === 'string' && bibliography.trim())
+  if (typeof bibliography === 'string' && bibliography.trim()) {
     settings.bibliography = bibliography.trim()
+    // The key is kept for other tools (Pandoc, Quarto), but Markdown Studio does not read the file.
+    problems.push(
+      `bibliography: "${settings.bibliography}" is not loaded by Markdown Studio. Import the file under Manage Sources to use it here.`
+    )
+  }
 
   const studio = data.studio
   if (studio !== undefined && !isObject(studio)) {

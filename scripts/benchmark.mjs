@@ -120,6 +120,23 @@ const documents = {
     file: 'images.md',
     text: '# Images\n\n' + [1, 2, 3, 4].map((i) => `![photo ${i}](img/photo${i}.png)\n\n`).join('')
   },
+  'publishing report (captions, citations, numbering)': {
+    file: 'publishing.md',
+    text:
+      '---\nlang: en\ntoc: true\nnumber-sections: true\n---\n\n# Publishing report\n\n' +
+      Array.from(
+        { length: 40 },
+        (_, i) =>
+          `## Section ${i + 1} {#sec-s${i + 1}}\n\nAs argued by @source${(i % 30) + 1} and [@source${((i + 7) % 30) + 1}, p. ${i + 1}; @source${((i + 13) % 30) + 1}], see @tbl-t${i + 1}${i % 3 === 0 ? ` and @fig-f${i + 1}` : ''}.\n\n` +
+          `| Name | Value |\n| ---- | ----: |\n| a | ${i} |\n| b | ${i * 2} |\n\n: Table ${i + 1} {#tbl-t${i + 1}}\n\n` +
+          (i % 3 === 0 ? `![Figure ${i + 1}](img/photo1.png){#fig-f${i + 1}}\n\n` : '') +
+          section(i + 1)
+            .split('\n')
+            .slice(2)
+            .join('\n')
+      ).join(''),
+    newFeature: true
+  },
   'mixed (diagrams, tables, math, code)': {
     file: 'mixed.md',
     text: grow(
@@ -145,6 +162,20 @@ mkdirSync(userData, { recursive: true })
 for (const doc of Object.values(documents)) writeFileSync(path.join(workspace, doc.file), doc.text)
 for (let i = 1; i <= 4; i++)
   writeFileSync(path.join(workspace, 'img', `photo${i}.png`), png(quick ? 800 : 2400))
+mkdirSync(path.join(workspace, '.markdown-studio'), { recursive: true })
+writeFileSync(
+  path.join(workspace, '.markdown-studio', 'sources.json'),
+  JSON.stringify(
+    Array.from({ length: 30 }, (_, i) => ({
+      id: `source${i + 1}`,
+      type: 'book',
+      title: `Source book ${i + 1}`,
+      author: [{ family: `Author${i + 1}`, given: 'A' }],
+      issued: { 'date-parts': [[1990 + i]] },
+      publisher: 'Press'
+    }))
+  )
+)
 writeFileSync(
   path.join(userData, 'settings.json'),
   JSON.stringify({

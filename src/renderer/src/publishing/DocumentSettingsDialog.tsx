@@ -99,7 +99,7 @@ export function DocumentSettingsDialog({
             className="text-input"
             data-testid="doc-date"
             value={settings.date ?? ''}
-            placeholder="2026-10-28"
+            placeholder={new Date().toISOString().slice(0, 10)}
             onChange={(e) => patch({ date: e.target.value || undefined })}
           />
         </Field>
