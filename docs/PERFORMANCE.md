@@ -70,8 +70,8 @@ processes.
   the huge document (19 → 29 s) because the PDF now includes the theme, KaTeX styles and
   rendered diagrams. For small and medium documents the difference is a fraction of a second.
 - **Export is slower per run.** The median repeated PDF export went from 243 ms to 1617 ms. The
-  Phase 3 figure includes the export dialog round trip, the print options and PDF validation, and
-  the baseline exported directly with the preview's cached result. This is a regression in
+  Phase 3 figure includes the Export dialog step, print options and PDF validation, which the
+  baseline did not have; the split between these costs was not profiled. This is a regression in
   absolute terms.
 - **Diagrams** are rendered in a separate sandboxed window, serially, and are cached; typing in a
   document with ten diagrams showed no long tasks.
