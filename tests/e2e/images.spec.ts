@@ -165,7 +165,9 @@ test('references from nested documents use ../ paths, including from thumbnail m
       page.locator('.thumb-tile', { hasText: 'photo.webp' }),
       await lineCoordinates(page, 4)
     )
-    expect((await editorText(page)).split('\n')[3]).toBe('![Photo](../assets/photo.webp)')
+    await expect
+      .poll(async () => (await editorText(page)).split('\n')[3])
+      .toBe('![Photo](../assets/photo.webp)')
     await expect
       .poll(
         async () =>

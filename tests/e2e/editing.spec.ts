@@ -24,7 +24,7 @@ test('opens, edits, saves and reopens a document', async () => {
   try {
     await openFromTree(page, 'README.md')
     await expect(page.locator('.monaco-editor')).toBeVisible()
-    expect(await editorText(page)).toContain('# Project Atlas')
+    await expect.poll(() => editorText(page)).toContain('# Project Atlas')
     await expect(page).toHaveTitle('README.md — Atlas Project — Markdown Studio')
 
     await focusEditor(page)
@@ -47,7 +47,7 @@ test('opens, edits, saves and reopens a document', async () => {
   ;({ app, page } = await launchWithWorkspace(sandbox))
   try {
     await openFromTree(page, 'README.md')
-    expect(await editorText(page)).toMatch(/^<!-- edited -->\n# Project Atlas/)
+    await expect.poll(() => editorText(page)).toMatch(/^<!-- edited -->\n# Project Atlas/)
   } finally {
     await closeApp(app)
   }
@@ -69,6 +69,8 @@ test('keeps CRLF line endings and independent state per tab', async () => {
     await expect(page.locator('.tab')).toHaveCount(2)
     await expect(page.locator('.tab[data-name="windows-notes.md"]')).toHaveClass(/dirty/)
     await expect(page.locator('.tab[data-name="README.md"]')).not.toHaveClass(/dirty/)
+    // Wait for README to render before checking the other tab's text is absent.
+    await expect.poll(() => editorText(page)).toContain('# Project Atlas')
     expect(await editorText(page)).not.toContain('Appended line.')
 
     // Undo in README does not affect the other document's history.
@@ -82,7 +84,7 @@ test('keeps CRLF line endings and independent state per tab', async () => {
     await page.keyboard.press(`${mod}+Z`)
 
     await page.locator('.tab[data-name="windows-notes.md"]').click()
-    expect(await editorText(page)).toContain('Appended line.')
+    await expect.poll(() => editorText(page)).toContain('Appended line.')
     await page.keyboard.press(`${mod}+S`)
     await expect(page.locator('.tab[data-name="windows-notes.md"]')).not.toHaveClass(/dirty/)
     expect(readFileSync(crlfPath, 'utf8')).toBe(
