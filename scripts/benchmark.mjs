@@ -333,7 +333,9 @@ try {
   }
   console.error('exports:', JSON.stringify(result.repeatedExports))
 } finally {
-  await app.close().catch(() => app.process().kill('SIGKILL'))
+  // Unsaved edits would keep a normal close waiting on a prompt: do not wait for it.
+  await Promise.race([app.close(), sleep(5000)]).catch(() => undefined)
+  app.process().kill('SIGKILL')
 }
 
 if (outFile) writeFileSync(outFile, JSON.stringify(result, null, 2))
