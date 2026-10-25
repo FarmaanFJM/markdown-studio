@@ -10,6 +10,7 @@ import {
 import { basename, dirname, pathsEqual } from '@shared/paths'
 import { LIMITS } from '@shared/settings'
 import { commands } from '../commands/commands'
+import { OutlineSection } from '../outline/Outline'
 import { useSettings } from '../state/settings'
 import { useWorkspace } from '../state/workspace'
 import { createFileIn, createFolderIn } from './actions'
@@ -164,6 +165,7 @@ export function Explorer() {
           <ThumbnailView root={root} />
         )}
       </div>
+      <OutlineSection />
     </section>
   )
 }

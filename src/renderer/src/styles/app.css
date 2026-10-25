@@ -1735,3 +1735,111 @@ input[type='range'] {
   padding: 12px;
   color: var(--text-2);
 }
+
+/* ---------- Outline ---------- */
+
+.outline-section {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  max-height: 45%;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.outline-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+
+.outline-header:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.outline-body {
+  min-height: 48px;
+  overflow: auto;
+  padding-bottom: 6px;
+}
+
+.outline-empty {
+  margin: 6px 12px;
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.outline-tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outline-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding-right: 8px;
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.outline-item:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+.outline-item:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.outline-item.current {
+  background: var(--accent-softer);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.outline-twisty {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.outline-twisty.hidden {
+  visibility: hidden;
+}
+
+.outline-level {
+  flex: none;
+  min-width: 18px;
+  color: var(--text-3);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.outline-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

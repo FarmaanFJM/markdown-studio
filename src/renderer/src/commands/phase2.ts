@@ -3,6 +3,7 @@
  * outline...). Imported once by the application shell so the registry is complete before the
  * editor builds its menus.
  */
+import { insertTableOfContents, updateTableOfContents } from '../outline/toc'
 import { openCommandPalette, openHeadingPicker } from '../palette/openPalette'
 import { editTableVisually, insertTableVisually } from '../tables/openTableEditor'
 import { registerCommands } from './registry'
@@ -21,6 +22,22 @@ registerCommands([
     run: openHeadingPicker,
     needsDocument: true,
     keywords: 'outline section jump'
+  },
+  {
+    id: 'toc.insert',
+    title: 'Insert Table of Contents',
+    category: 'Insert',
+    run: insertTableOfContents,
+    needsDocument: true,
+    keywords: 'contents headings'
+  },
+  {
+    id: 'toc.update',
+    title: 'Update Table of Contents',
+    category: 'Insert',
+    run: () => void updateTableOfContents(),
+    needsDocument: true,
+    keywords: 'contents headings refresh'
   },
   {
     id: 'table.insert',
