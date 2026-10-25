@@ -130,7 +130,8 @@ test('dragging a project image inserts a relative reference at the drop point', 
     expected.splice(README_BLANK_LINE - 1, 0, '![Dashboard](assets/screenshot.jpg)')
     // The drop happened at the start of the empty line, so the line itself now holds the reference.
     expected.splice(README_BLANK_LINE, 1)
-    expect(readme(sandbox)).toBe(expected.join('\n'))
+    // Saving is asynchronous, so the file on disk is polled rather than read once.
+    await expect.poll(() => readme(sandbox)).toBe(expected.join('\n'))
     expect(readdirSync(path.join(sandbox.workspace, 'assets'))).toHaveLength(5)
 
     // One undo removes the whole insertion (the typed alt text is undone first).
