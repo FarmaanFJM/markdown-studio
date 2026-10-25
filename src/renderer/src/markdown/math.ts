@@ -1,5 +1,6 @@
 import katex from 'katex'
 import { escapeHtml } from '@shared/markdown/blocks'
+import { sanitizeHtml } from './sanitize'
 
 /**
  * Mathematical notation, rendered by KaTeX (bundled; no network).
@@ -45,7 +46,10 @@ export function checkMath(tex: string, display = false): string | null {
   }
 }
 
-/** Renders TeX to HTML; invalid input produces a visible, explained error element. */
+/**
+ * Renders TeX to sanitised HTML; invalid input produces a visible, explained error element.
+ * Each distinct expression is rendered and sanitised once and then served from the cache.
+ */
 export function renderMath(tex: string, display: boolean): string {
   const key = `${display ? 'D' : 'I'}${tex}`
   const cached = cache.get(key)
@@ -59,6 +63,7 @@ export function renderMath(tex: string, display: boolean): string {
       `<span class="ms-math-error" role="note" title="${escapeHtml(message)}">` +
       `<strong>Math error:</strong> ${escapeHtml(message)} <code>${escapeHtml(tex.trim().slice(0, 120))}</code></span>`
   }
+  html = sanitizeHtml(html, { resolveImage: () => null })
   if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value!)
   cache.set(key, html)
   return html

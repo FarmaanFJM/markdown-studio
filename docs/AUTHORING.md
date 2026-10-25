@@ -232,3 +232,40 @@ References_, _Without Updating_ or _Cancel_.
 | Style checks / Style rules         | markdownlint notes, and which rules are on                                  |
 | Include the document title / depth | Table-of-contents contents                                                  |
 | Author name                        | Offered when a template asks for an author                                  |
+
+## Mathematics, diagrams and page breaks (Phase 3)
+
+Mathematics uses `$…$` for inline and `$$…$$` for display equations; the
+[Mathematics guide](MATHEMATICS.md) has a cookbook (fractions, integrals, matrices, piecewise and
+aligned equations), manual numbering with `\tag{…}`, and the exact limits compared with LaTeX.
+
+```markdown
+Euler's identity is $e^{i\pi} + 1 = 0$, and a price like $5 or $10 stays text.
+
+$$
+\int_{0}^{\infty} e^{-x^2}\,dx = \frac{\sqrt{\pi}}{2} \tag{1}
+$$
+```
+
+Diagrams are fenced blocks tagged `mermaid`. Type ` ```mermaid ` and press <kbd>Ctrl</kbd>+<kbd>Space</kbd>
+inside the empty block for starters (flowchart, sequence, class, state, ER, Gantt, pie), or insert
+one from **Insert → Mermaid Flowchart**:
+
+````markdown
+```mermaid
+flowchart TD
+    A[Write Markdown] --> B[Live Preview]
+    B --> C[Export PDF]
+    B --> D[Export HTML]
+```
+````
+
+A malformed diagram or equation never breaks the rest of the document: the preview shows what is
+wrong (click it to jump to the source), and the same problem appears in the editor's problem list
+(<kbd>F8</kbd>).
+
+A line containing only `<!-- pagebreak -->` starts a new page in the PDF (**Insert → Page
+Break**). Themes, custom CSS, page setup, headers, footers and export presets are covered in the
+[Publishing guide](PUBLISHING.md).
+
+Slash commands now include `/equation`, `/mermaid` and `/page`.

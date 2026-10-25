@@ -15,12 +15,15 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Signing is optional. Without the signing secrets the artifacts are produced unsigned and the
+# workflow says so; nothing is ever signed with a substitute certificate (see docs/RELEASING.md).
+
 jobs:
   linux:
-    name: Lint, unit and desktop E2E (Linux)
+    name: Quality gates and desktop E2E (Linux)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -28,13 +31,38 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npm run format:check
-      - run: npm run typecheck
-      - run: npm run test:unit
-      - run: npm run build
+      - name: Lint
+        run: npm run lint
+      - name: Formatting check
+        run: npm run format:check
+      - name: TypeScript typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test:unit
+      - name: Application build
+        run: npm run build
       # Real Electron windows on a virtual display.
-      - run: xvfb-run -a -s "-screen 0 1440x900x24" npm run test:e2e
+      - name: Security regression tests (unit and Electron)
+        run: xvfb-run -a -s "-screen 0 1440x900x24" npm run test:security
+      - name: Export rendering tests (math, diagrams, themes, PDF, HTML, presets)
+        run: xvfb-run -a -s "-screen 0 1440x900x24" npm run test:e2e:export
+      - name: Core editor E2E tests (Phase 1 and 2)
+        run: xvfb-run -a -s "-screen 0 1440x900x24" npm run test:e2e:core
+      - name: Package the Linux AppImage
+        run: npx electron-builder --linux --publish never
+      - name: Test the packaged Linux application
+        run: |
+          APPIMAGE="$(ls release/*/Markdown-Studio-*.AppImage | head -1)"
+          chmod +x "$APPIMAGE"
+          (cd release && "../$APPIMAGE" --appimage-extract >/dev/null)
+          MARKDOWN_STUDIO_EXECUTABLE="$PWD/release/squashfs-root/markdown-studio" \
+            xvfb-run -a -s "-screen 0 1440x900x24" npm run test:e2e:packaged
+      - uses: actions/upload-artifact@v4
+        with:
+          name: markdown-studio-linux-appimage
+          path: release/*/Markdown-Studio-*.AppImage
+          if-no-files-found: error
+          retention-days: 14
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -42,11 +70,33 @@ jobs:
           path: test-results/
           retention-days: 7
 
+  performance:
+    name: Performance benchmark (Linux, informational)
+    needs: linux
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: xvfb-run -a -s "-screen 0 1440x900x24" npm run benchmark -- --quick --out benchmark.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark.json
+          retention-days: 30
+
   windows:
-    name: Desktop E2E and installer (Windows)
+    name: Desktop E2E, installer and packaged-app tests (Windows)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: windows-latest
-    timeout-minutes: 40
+    timeout-minutes: 80
     defaults:
       run:
         shell: bash
@@ -59,13 +109,52 @@ jobs:
       - run: npm ci
       - run: npm run test:unit
       - run: npm run build
-      - run: npm run test:e2e
+      - name: Security regression tests (unit and Electron)
+        run: npm run test:security
+      - name: Export rendering tests
+        run: npm run test:e2e:export
+      - name: Core editor E2E tests
+        run: npm run test:e2e:core
       - name: Build the Windows installer
+        env:
+          # electron-builder signs only when a certificate is provided.
+          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
         run: npx electron-builder --win --publish never
-      - name: Run the E2E suite against the packaged application
+      - name: Report the signing status of the installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem release\*\Markdown-Studio-Setup-*.exe | Select-Object -First 1
+          $signature = Get-AuthenticodeSignature $installer.FullName
+          "Installer: $($installer.Name)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          "Signature status: $($signature.Status)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          if ($signature.Status -eq 'Valid') {
+            "Signed by: $($signature.SignerCertificate.Subject)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          } else {
+            "The installer is UNSIGNED (no signing certificate is configured). Windows SmartScreen will warn." | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          }
+      - name: Run the E2E suite against the unpacked application
         run: |
           export MARKDOWN_STUDIO_EXECUTABLE="$(ls -d "$PWD"/release/*/win-unpacked)/MarkdownStudio.exe"
           npm run test:e2e
+      - name: Install the installer silently and launch the installed application
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem release\*\Markdown-Studio-Setup-*.exe | Select-Object -First 1).FullName
+          $target = Join-Path $env:RUNNER_TEMP 'MarkdownStudioInstalled'
+          $process = Start-Process -FilePath $installer -ArgumentList '/S', "/D=$target" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "Installer exited with $($process.ExitCode)" }
+          $exe = Join-Path $target 'MarkdownStudio.exe'
+          if (-not (Test-Path $exe)) { throw "MarkdownStudio.exe was not installed" }
+          $info = (Get-Item $exe).VersionInfo
+          "Installed: $($info.ProductName) $($info.ProductVersion)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          if ($info.ProductName -ne 'Markdown Studio') { throw "Unexpected product name: $($info.ProductName)" }
+          $startMenu = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Filter 'Markdown Studio*.lnk' -Recurse -ErrorAction SilentlyContinue
+          if (-not $startMenu) { throw 'No Start Menu shortcut was created' }
+          "Start Menu shortcut: $($startMenu[0].Name)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          "MARKDOWN_STUDIO_INSTALLED=$exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+      - name: Test the installed application
+        run: MARKDOWN_STUDIO_EXECUTABLE="$MARKDOWN_STUDIO_INSTALLED" npm run test:e2e:packaged
       - uses: actions/upload-artifact@v4
         with:
           name: markdown-studio-windows-installer
@@ -79,21 +168,73 @@ jobs:
           path: test-results/
           retention-days: 7
 
+  macos:
+    name: Package and smoke-test (macOS)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: macos-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Package the application (unsigned unless a certificate is configured)
+        env:
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CERTIFICATE_BASE64 != '' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          EXTRA=""
+          # Notarisation needs a Developer ID certificate and the Apple credentials together.
+          if [ -n "$CSC_LINK" ] && [ -n "$APPLE_ID" ]; then EXTRA="-c.mac.notarize=true"; fi
+          npx electron-builder --mac --publish never $EXTRA
+      - name: Smoke-test the packaged application
+        run: |
+          APP="$(ls -d release/*/mac*/'Markdown Studio.app' | head -1)"
+          MARKDOWN_STUDIO_EXECUTABLE="$PWD/$APP/Contents/MacOS/Markdown Studio" npm run test:e2e:packaged
+      - uses: actions/upload-artifact@v4
+        with:
+          name: markdown-studio-macos-dmg
+          path: release/*/Markdown-Studio-*.dmg
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: macos-test-results
+          path: test-results/
+          retention-days: 7
+
   release:
     name: Draft GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows]
+    needs: [linux, windows, macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/download-artifact@v4
         with:
-          name: markdown-studio-windows-installer
           path: dist
-      - name: Create a draft release with the installer
+      - name: Compose the release notes
+        run: node scripts/release-notes.mjs "$GITHUB_REF_NAME" > release-notes.md
+      - name: Create a DRAFT release with the installers (nothing is published automatically)
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/*/Markdown-Studio-Setup-*.exe \
-            --repo "$GITHUB_REPOSITORY" --draft --title "Markdown Studio $GITHUB_REF_NAME" --generate-notes
+          gh release create "$GITHUB_REF_NAME" \
+            dist/markdown-studio-windows-installer/*/Markdown-Studio-Setup-*.exe \
+            dist/markdown-studio-linux-appimage/*/Markdown-Studio-*.AppImage \
+            dist/markdown-studio-macos-dmg/*/Markdown-Studio-*.dmg \
+            --repo "$GITHUB_REPOSITORY" --draft --prerelease \
+            --title "Markdown Studio ${GITHUB_REF_NAME#v}" --notes-file release-notes.md

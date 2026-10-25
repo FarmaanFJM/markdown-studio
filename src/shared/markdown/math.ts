@@ -19,7 +19,7 @@ import type { StateBlock, StateInline } from 'markdown-it'
  */
 export interface MathOptions {
   /** Renders TeX to an HTML string. Must escape its own output. */
-  render?: (tex: string, display: boolean) => string
+  render?: (tex: string, display: boolean, env?: unknown) => string
 }
 
 const DOLLAR = 0x24
@@ -197,13 +197,13 @@ export function mathPlugin(md: MarkdownIt, options: MathOptions = {}): void {
     alt: ['paragraph', 'reference', 'blockquote', 'list']
   })
 
-  md.renderer.rules.math_inline = (tokens: Token[], index: number) => {
+  md.renderer.rules.math_inline = (tokens: Token[], index: number, _options, env) => {
     const token = tokens[index]
-    return render(token.content, Boolean(token.meta?.display))
+    return render(token.content, Boolean(token.meta?.display), env)
   }
-  md.renderer.rules.math_block = (tokens: Token[], index: number) => {
+  md.renderer.rules.math_block = (tokens: Token[], index: number, _options, env) => {
     const token = tokens[index]
     const line = token.map ? ` data-ms-line="${token.map[0] + 1}"` : ''
-    return `<div class="ms-math-block"${line}>${render(token.content, true)}</div>\n`
+    return `<div class="ms-math-block"${line}>${render(token.content, true, env)}</div>\n`
   }
 }

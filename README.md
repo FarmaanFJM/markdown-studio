@@ -5,7 +5,7 @@
 <h1 align="center">Markdown Studio</h1>
 
 <p align="center">
-  A dedicated Markdown IDE: write with intelligent assistance, preview live, export anywhere.
+  A dedicated Markdown IDE: write with intelligent assistance, preview live, publish professionally.
 </p>
 
 Markdown Studio is a standalone desktop application for Markdown authoring. It will feel
@@ -22,9 +22,29 @@ It also has visual asset management: browse a project's images as thumbnails and
 straight into a document to get a correct, relative image reference. Images dragged in from
 Windows File Explorer are copied into the project for you.
 
-> **Status:** Phases 1 (foundation and core editor) and 2 (Markdown intelligence and
-> productivity) of three. See [Roadmap](#roadmap) for what is planned and not yet implemented.
-> The authoring features are described in the [Authoring guide](docs/AUTHORING.md).
+## What it is, and who it is for
+
+Markdown Studio is for people who write in Markdown and care how the result looks: developers
+and technical writers documenting software, researchers and students writing notes and papers
+with equations and diagrams, and anyone producing reports, handbooks or articles as PDF or
+HTML without leaving a plain-text workflow.
+
+**Markdown first.** The Markdown file is always the source of truth. The editor is a source
+editor — never rich text or WYSIWYG — and nothing about appearance or export (themes, page
+setup, presets, custom CSS) is ever written into your document. Previews and exports are
+generated from the text; they are never edited directly.
+
+**Offline and private.** No accounts, cloud storage, telemetry, external rendering services or
+CDNs. Diagrams, equations, fonts and styles are bundled with the application and embedded in
+exports.
+
+> **Status:** Phases 1, 2 and 3 are implemented on the `claude/markdown-studio-phase-3-…`
+> branch and its pull request; release builds are **unsigned** (see
+> [Release status](#release-status)). The guides:
+> [Authoring](docs/AUTHORING.md) · [Mathematics](docs/MATHEMATICS.md) ·
+> [Publishing](docs/PUBLISHING.md) · [Architecture](docs/ARCHITECTURE.md) ·
+> [Performance](docs/PERFORMANCE.md) · [Academic publishing roadmap](docs/ACADEMIC_PUBLISHING_ROADMAP.md)
+> (future work, not implemented).
 
 ## Screenshots
 
@@ -36,6 +56,30 @@ These are unedited captures of the application, taken by the automated test envi
 ![Thumbnail Explorer next to the editor](docs/screenshots/thumbnail-explorer.png)
 
 ![PDF preview with page and zoom controls](docs/screenshots/pdf-preview.png)
+
+Phase 3 — publishing (captured by `npm run screenshots` from the running application):
+
+![Editor and live preview with math, a Mermaid diagram, a table and code](docs/screenshots/phase3-editor-preview.png)
+
+![Mermaid diagrams: sequence, class, state and entity-relationship](docs/screenshots/diagram-rendering.png)
+
+![Mathematical notation: inline, display, matrices, cases, aligned equations](docs/screenshots/math-html-preview.png)
+
+![Choosing a document theme and a workspace override in Settings](docs/screenshots/theme-selection.png)
+
+![The four document themes applied to the same document](docs/screenshots/theme-comparison.png)
+
+![The Export dialog: preset, page setup, live PDF preview](docs/screenshots/export-dialog.png)
+
+![A multi-page PDF in the PDF preview](docs/screenshots/pdf-preview-multipage.png)
+
+![Pages of the exported PDF, rendered to images](docs/screenshots/pdf-pages.png)
+
+![A finished document: the Professional Report preset, page 1 of the exported PDF](docs/screenshots/final-document.png)
+
+![Export presets](docs/screenshots/export-presets.png)
+
+![Unsafe custom CSS is rejected with explanations](docs/screenshots/custom-css-rejected.png)
 
 Phase 2 (captured by `npm run screenshots` from the running application):
 
@@ -52,6 +96,48 @@ Phase 2 (captured by `npm run screenshots` from the running application):
 ![The command palette](docs/screenshots/command-palette.png)
 
 ![Renaming a file offers to update the Markdown references to it](docs/screenshots/rename-references.png)
+
+## Features (Phase 3): publishing
+
+**Diagrams and mathematics** — see the [Mathematics guide](docs/MATHEMATICS.md).
+
+- ` ```mermaid ` blocks render flowcharts, sequence, class, state, entity-relationship, Gantt,
+  pie and other Mermaid diagrams as static SVG in the preview, PDF and HTML export. Mermaid
+  runs in a separate, sandboxed, network-less window; results are sanitised and cached, and a
+  broken diagram shows an explained error (with a link to its source line) without affecting
+  the rest of the document.
+- `$…$`, `$$…$$`, `\(…\)` and `\[…\]` render with KaTeX (fonts bundled). Currency like `$5 and
+  $10` stays text; code is never touched. Manual numbering with `\tag{…}` works in all four
+  outputs. Invalid equations are explained in the preview and as editor problems.
+- Completion for mermaid fences and starters, snippets and commands for inline math, display
+  equations, diagrams and page breaks.
+
+**Document themes** — see the [Publishing guide](docs/PUBLISHING.md).
+
+- Four built-in document themes (Minimal, Technical, Editorial, Professional Report), fully
+  customisable (fonts, sizes, colours, tables, code, quotes), independent of the application's
+  dark/light theme. Global defaults with workspace overrides; theme changes never disturb your
+  editing position.
+- Custom CSS (written or from a file), validated with a real CSS parser, applied to documents
+  only; unsafe CSS (remote or file URLs, `@import`, …) is rejected with line-numbered messages.
+
+**PDF and HTML export**
+
+- One pipeline for preview and export. PDF: A4, A5, Letter, Legal or custom size, portrait or
+  landscape, margins in mm/cm/in, headers and footers with `{title}`, `{date}`, `{page}`,
+  `{pages}` (real pagination), backgrounds, scale, explicit page breaks
+  (`<!-- pagebreak -->`) and print-aware pagination.
+- Standalone HTML: self-contained and offline, with theme, fonts, math, diagrams and embedded
+  images; audited before writing.
+- Export presets (five built in; custom, duplicate, rename, delete, restore; global or
+  per-workspace) and a keyboard-accessible Export dialog (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd>)
+  with a live preview. Exports are written atomically; cancelling or failing never damages an
+  existing file.
+
+**Accessibility and reliability** — WCAG AA colour contrast in the application, modal focus
+trapping and restoration, screen-reader labels and live regions, reduced-motion support, a
+small-window layout; debounced, cached and cancellable rendering (see
+[Performance](docs/PERFORMANCE.md)).
 
 ## Features (Phase 2): authoring assistance
 
@@ -226,6 +312,7 @@ On macOS use <kbd>Cmd</kbd> instead of <kbd>Ctrl</kbd>.
 | Toggle sidebar / show Explorer            | <kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>                                 |
 | Toggle preview                            | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd>                                                                |
 | Settings                                  | <kbd>Ctrl</kbd>+<kbd>,</kbd>                                                                                 |
+| Export (dialog)                           | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>U</kbd>                                                                |
 | Command palette                           | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>                                                                |
 | Go to heading                             | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>                                                                |
 | New file from template                    | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd>                                                                |
@@ -299,6 +386,20 @@ SmartScreen will warn on first launch.
 `npm run package:linux` (AppImage) and `npm run package:mac` (DMG) are configured for their
 own platforms.
 
+## Release status
+
+- Version 0.1.0 pre-release builds are produced by CI as GitHub Actions artifacts and, when a
+  release tag is pushed, attached to a **draft** GitHub release for manual review. No release is
+  published automatically.
+- **The Windows installer is not code-signed.** Windows SmartScreen will warn on first launch.
+  The release workflow contains a signing path that activates only when the repository secrets
+  `WINDOWS_CERTIFICATE_BASE64` and `WINDOWS_CERTIFICATE_PASSWORD` (and, for macOS,
+  `MAC_CERTIFICATE_BASE64`, `MAC_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`,
+  `APPLE_TEAM_ID`) exist; without them the artifacts are plainly unsigned. See
+  [docs/RELEASING.md](docs/RELEASING.md).
+- Linux and Windows are tested in CI (unit, E2E, packaged Windows application). macOS packaging
+  is configured but is not verified by a packaged-app test run.
+
 ## Testing
 
 | Command                | What it runs                                                                                                                                                                                                                     |
@@ -309,7 +410,8 @@ own platforms.
 | `npm run test:unit`    | Vitest: paths, image references, rendering and sanitisation, file, asset and template services, settings, and the Markdown tooling (analysis, tables, lists, formatting, references, rename planning, TOC, link checks, linting) |
 | `npm run test:e2e`     | Playwright driving the real Electron app (run `npm run build` first)                                                                                                                                                             |
 | `npm test`             | Unit tests, build, then E2E                                                                                                                                                                                                      |
-| `npm run screenshots`  | Rebuilds and recaptures the Phase 2 screenshots in `docs/screenshots/` from the running application                                                                                                                              |
+| `npm run screenshots`  | Rebuilds and recaptures the Phase 2 and Phase 3 screenshots in `docs/screenshots/` from the running application                                                                                                                  |
+| `npm run benchmark`    | Performance benchmark (typing latency, render and PDF time, memory growth, tab switching, repeated exports); see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)                                                                       |
 
 The end-to-end suite launches the application with an isolated settings folder and a copy of
 `tests/fixtures/`, and covers opening folders, editing and saving, unsaved-change prompts,
@@ -320,6 +422,15 @@ formatting and the graphical table editor, templates (scopes, variables, restart
 the outline and table of contents, link and image completion, problem markers and quick
 fixes, reference-aware rename and move (including drag-and-drop, unsaved documents and
 on-disk conflicts), the toolbar, menus, palette and settings, and CRLF/BOM preservation.
+
+Phase 3 adds E2E coverage for math and Mermaid rendering (including malformed input and
+diagram caching), document themes and persistence, workspace overrides, custom CSS (valid, unsafe
+and file-based), PDF page sizes and orientations, headers, footers and real page numbers (read
+back from the PDF with PDF.js and rasterised to images), standalone HTML export opened in a plain
+window, export presets, cancel/failure recovery, hostile Markdown, diagram-renderer isolation,
+IPC validation, keyboard and focus behaviour, contrast, reduced motion and small windows. Unit
+tests cover the CSS policy, math and Mermaid parsing, themes, page options, presets, services and
+the examples of the mathematics guide.
 
 On Linux without a display, run it under Xvfb:
 
@@ -346,7 +457,10 @@ process and a sandboxed React renderer. A short overview:
 | Image import                     | `src/main/services/assetService.ts`                                                                                                                          |
 | Template storage                 | `src/main/services/templateService.ts`                                                                                                                       |
 | Local image protocol, thumbnails | `src/main/services/protocol.ts`                                                                                                                              |
-| PDF generation                   | `src/main/services/pdfService.ts`                                                                                                                            |
+| PDF generation, export jobs      | `src/main/services/pdfService.ts`, `exportService.ts`, `atomicWrite.ts`                                                                                      |
+| Mermaid renderer (isolated)      | `src/main/services/diagramService.ts`, `src/renderer/src/diagram-host/`                                                                                      |
+| Presets, workspace appearance    | `src/main/services/presetService.ts`, `presentationService.ts`                                                                                               |
+| Themes, CSS policy, page options | `src/shared/presentation/`, `src/shared/export/`                                                                                                             |
 | Settings persistence             | `src/main/services/settingsService.ts`                                                                                                                       |
 | Preload bridge (the only API)    | `src/preload/index.ts`, contract in `src/shared/ipc.ts`                                                                                                      |
 | Shared, process-neutral logic    | `src/shared/` (paths, settings schema, image references)                                                                                                     |
@@ -385,12 +499,35 @@ in a `templates` folder.
 
 **Phase 2 — Markdown intelligence and productivity:** implemented (see above).
 
-**Phase 3 — Professional polish and release (planned, not implemented):** advanced PDF
-settings (page sizes, headers, footers), document and export themes, custom CSS, Mermaid
-diagrams, math notation, export presets, accessibility and performance work, broader
-end-to-end coverage, documentation and signed release builds.
+**Phase 3 — Professional polish and release:** implemented (see above). Signed release builds
+need signing credentials that are not part of the repository.
+
+**Beyond Phase 3 (planned, not implemented):** automatic equation numbering and
+cross-references, reusable definitions, a reference manager with citations and bibliographies,
+numbered figures and tables, and multi-file book projects with EPUB. See the
+[academic publishing roadmap](docs/ACADEMIC_PUBLISHING_ROADMAP.md).
 
 ### Known limitations
+
+**Phase 3**
+
+- Equations are typeset by KaTeX, which is not complete LaTeX: no automatic document-wide
+  numbering, `\label`/`\ref`, persistent macros or packages. Manual `\tag{…}` works; see the
+  [Mathematics guide](docs/MATHEMATICS.md#what-is-not-supported).
+- Mermaid diagrams are limited to 50,000 characters and a 20-second drawing time; very large
+  diagrams are reported as errors rather than drawn. Diagram text uses system fonts.
+- PDFs are produced by Chromium's print engine: pagination can differ slightly between
+  computers that have different fonts installed; a single element taller than a page is split
+  where the engine must; header and footer text is plain (no images or HTML).
+- Custom CSS rejects remote and local file references by design; to use an image, embed it as a
+  `data:` URL. Fonts for themes are system fonts; there is no font download or bundling of
+  additional document fonts.
+- Standalone HTML keeps links to other local files as written (and reports them); remote images
+  stay online.
+- Export settings are not stored inside the Markdown document by design, so a shared `.md` file
+  does not carry its theme; share the workspace's `.markdown-studio` folder for that.
+- The installer is unsigned (see [Release status](#release-status)); macOS builds are
+  configured but not verified by a packaged-app test run.
 
 **Phase 2**
 
@@ -425,7 +562,8 @@ end-to-end coverage, documentation and signed release builds.
   HTML exports rather than embedded.
 - Image thumbnails are generated by the operating system on Windows and macOS; on Linux the
   original image is scaled by the browser engine.
-- PDF output is A4 with fixed 18 mm margins.
+- (Phase 1 limited PDF output to A4 with fixed margins; Phase 3 replaces this with the page
+  setup described above.)
 
 ## License
 

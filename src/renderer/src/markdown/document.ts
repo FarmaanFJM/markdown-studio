@@ -6,7 +6,7 @@ import {
   type ResolvedTheme
 } from '@shared/presentation/theme'
 import { katexStylesheet } from './katexCss'
-import { ALL_FEATURES, renderMarkdown } from './render'
+import { ALL_FEATURES, fillMathSlots, renderMarkdownSlots } from './render'
 import { resolveImageSource, type DocumentContext } from './resolve'
 import { sanitizeHtml } from './sanitize'
 
@@ -50,9 +50,9 @@ export function renderDocumentBody(
   context: DocumentContext,
   presentation: Pick<RenderPresentation, 'math' | 'diagrams'> = ALL_FEATURES
 ): string {
-  return sanitizeHtml(renderMarkdown(source, presentation), {
-    resolveImage: (src) => resolveImageSource(src, context)
-  })
+  const { html, slots } = renderMarkdownSlots(source, presentation)
+  const clean = sanitizeHtml(html, { resolveImage: (src) => resolveImageSource(src, context) })
+  return fillMathSlots(clean, slots)
 }
 
 export interface DocumentShell {

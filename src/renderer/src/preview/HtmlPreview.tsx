@@ -121,9 +121,12 @@ export function HtmlPreview() {
         hydration.current?.cancel()
         hydration.current = null
         const model = documentModels.get(activeId)
+        // Marks let the benchmark suite measure full-document render time.
+        performance.mark('ms:render-start')
         main.innerHTML = model
           ? renderDocumentBody(model.getValue(), contextRef.current, presentation)
           : ''
+        performance.measure('ms:preview-render', 'ms:render-start')
         if (model && presentation.diagrams) {
           hydration.current = hydrateDiagrams(main, diagramStyleFor(presentation.theme), {
             immediate: false

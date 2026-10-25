@@ -1,8 +1,9 @@
 # Markdown Studio architecture
 
-This document describes how Markdown Studio is put together (Phase 1 foundation, Phase 2
-Markdown intelligence), why, and where the features planned for Phase 3 are meant to plug in.
-The user-facing description of the Phase 2 tools is in [AUTHORING.md](AUTHORING.md).
+This document describes how Markdown Studio is put together: the Phase 1 foundation, the Phase 2
+Markdown intelligence and the Phase 3 presentation and publishing pipeline. The user-facing
+descriptions are in [AUTHORING.md](AUTHORING.md), [MATHEMATICS.md](MATHEMATICS.md) and
+[PUBLISHING.md](PUBLISHING.md); measured performance is in [PERFORMANCE.md](PERFORMANCE.md).
 
 ## Technology
 
@@ -13,6 +14,9 @@ The user-facing description of the Phase 2 tools is in [AUTHORING.md](AUTHORING.
 | Source editor     | Monaco Editor, bundled locally (no CDN)                                                                                    |
 | Markdown          | markdown-it (CommonMark + GFM tables, strikethrough, autolinks) with small in-house plugins for task lists and heading ids |
 | Code highlighting | highlight.js (common languages)                                                                                            |
+| Mathematics       | KaTeX (bundled, fonts embedded as data URIs); in-house markdown-it plugin for the delimiters                               |
+| Diagrams          | Mermaid, in an isolated hidden `BrowserWindow`; SVG output sanitised and cached                                            |
+| CSS policy        | css-tree (a real CSS parser) behind one validation module                                                                  |
 | Sanitisation      | DOMPurify                                                                                                                  |
 | PDF generation    | Chromium printing (`webContents.printToPDF`)                                                                               |
 | PDF display       | PDF.js (`pdfjs-dist`)                                                                                                      |
@@ -73,8 +77,11 @@ file-type detection, image-reference formatting and the IPC contract.
 - **MsFileProtocol** (`msfile:`) is the only way rendered documents reach local files. It
   serves image types only, after the access check, plus cached thumbnails (system thumbnail
   provider on Windows/macOS) and one-off HTML documents for PDF printing.
-- **PdfService** loads a document in a hidden window with JavaScript disabled and prints it to
-  A4. Jobs are serialised.
+- **PdfService** loads a document in a hidden window with JavaScript disabled and prints it with
+  the validated page options (size, margins, scale, header/footer templates). Jobs are serialised
+  and cancellable. **ExportService** writes results atomically; **DiagramService** hosts Mermaid;
+  **PresetService** and **PresentationService** store presets and workspace appearance (Phase 3,
+  below).
 - **SettingsService** stores validated JSON in the user-data folder with debounced atomic
   writes and a synchronous flush when the application quits.
 
@@ -102,9 +109,10 @@ replace the body in place after a 120 ms pause, which keeps the scroll position.
 intercepted by the parent: fragments scroll, `.md` links open tabs, `http(s)`/`mailto` links go
 to the system browser through a validated IPC call, and the iframe never navigates.
 
-**PDF.** The renderer builds the standalone HTML, the main process prints it to PDF bytes and
-PDF.js renders the pages to canvases lazily. Export prints the identical HTML and writes the
-bytes to the file chosen in the save dialog.
+**PDF.** The renderer builds the document HTML (theme, math, diagrams, page height), the main
+process prints it to PDF bytes with the configured page options, and PDF.js renders the pages to
+canvases lazily. Export prints the identical HTML with the identical options and writes the
+bytes atomically to the file chosen in the save dialog.
 
 **HTML export.** The body is rendered, local images are fetched through `msfile:` and embedded
 as data URIs, and the result is wrapped with the stylesheet and a restrictive CSP.
@@ -213,19 +221,113 @@ hidden.
 manager; `dialogs.custom` hosts feature dialogs (table editor, palette, templates, folder
 picker) with the shared `Modal` (focus in, focus restored, Escape cancels).
 
-### Extension points for Phase 3
+## Phase 3: the document-presentation pipeline
 
-- **Mermaid and math** — `DocumentAnalysis.fences` already records each fence's info string;
-  render plugins go in `shared/markdown/plugins.ts` (so the preview, exports and the tooling stay
-  in agreement), and language names are suggested from `FENCE_LANGUAGES` in `completions.ts`.
-- **New commands, menus, palette entries** — `registerCommands`; a shortcut is a
-  `bind(commandId, …)` line in `commands/keybindings.ts`.
-- **Template-like assets** (export presets, document themes) — the template store, scopes
-  (global/workspace) and validation in `shared/templates.ts` are generic over `kind`.
-- **More diagnostics** — add a producer next to `diagnostics/manager.ts` with its own marker
-  owner; fixes attach to markers the same way.
-- **Document transformations** — add a pure function returning edit plans in
-  `shared/markdown/formatting.ts` and an adapter command next to `editor/markdown/commands.ts`.
+One pipeline produces every output, so the four of them (HTML preview, HTML export, PDF preview,
+PDF export) cannot disagree about what a document means:
+
+```
+Markdown source
+  → shared markdown-it parse (src/shared/markdown/plugins.ts: headings, tasks, math, mermaid, page breaks)
+  → render extensions: KaTeX (cached, sanitised once per expression) · Mermaid placeholders
+  → sanitisation (DOMPurify; inline styles and <style> go through the CSS policy)
+  → diagram stage: placeholders → cached SVG from the isolated renderer (sanitised again)
+  → document presentation: theme CSS + math CSS + validated custom CSS + variant attributes
+  → HTML preview │ standalone HTML (audited) │ PDF source → Chromium print → PDF preview / export
+```
+
+Presentation differences come from explicit settings, never from separate Markdown code paths.
+
+### Modules and dependency boundaries
+
+```
+src/shared/                              pure TypeScript, no Node/DOM; unit-tested in Node
+  markdown/math.ts, blocks.ts            delimiter rules; mermaid fences; <!-- pagebreak -->
+  presentation/css.ts                    THE CSS security policy (css-tree)
+  presentation/theme.ts, themeCss.ts     tokens, validation, resolution, stylesheets of 4 themes
+  presentation/settings.ts               DocumentSettings, workspace overrides, layered resolve
+  export/pdf.ts                          page sizes, margins, header/footer placeholders, inches
+  export/presets.ts, setup.ts, job.ts    presets (validate, migrate, built-ins), export setups, job contract
+  diagram.ts                             request validation for the isolated Mermaid renderer
+src/main/services/
+  diagramService.ts                      hidden sandboxed window, serial queue, cancel, timeouts
+  pdfService.ts, exportService.ts        serialised print jobs; temp file + atomic rename; cancellation
+  presetService.ts, presentationService.ts   preset files; workspace overrides; CSS file reads (gated)
+src/renderer/src/
+  markdown/   render (slots) · math · svg · diagrams (client+cache) · document · exporters · audit
+  presentation/  dialogs and form components (Export dialog, appearance, CSS, page setup, presets)
+  state/presentation.ts, exportSetup.ts  effective presentation; active export setup; presets
+  diagram-host/                          the page loaded inside the isolated Mermaid window
+```
+
+- `shared/` knows nothing about Electron or the DOM; the renderer builds documents; the main
+  process owns files, windows and printing. The renderer never receives a file-system handle:
+  every new capability is a typed, validated IPC method (`src/shared/ipc.ts`).
+- **Settings layering.** `resolvePresentation(defaults, workspace, exportOverrides)` applies three
+  layers in order (application defaults, `.markdown-studio/presentation.json`, export-specific
+  overrides) and records the origin of each value for the UI. Nothing is stored in a document.
+- **Themes** are data: design tokens + variant attributes (`data-table`, `data-code`, …) + a theme
+  stylesheet; customisation is validated (hex colours, ranges, font keys or safe family names).
+  Mermaid receives the same colours and font, so diagrams match the page, light or dark.
+- **Math.** The markdown-it plugin recognises `$…$`, `$$…$$`, `\(…\)`, `\[…\]` with Pandoc's
+  conservative rules and emits tokens only; the host supplies the renderer. The editor tooling
+  parses with the same plugin (so `$` never confuses link or table analysis) and uses the token
+  positions for diagnostics. KaTeX runs with `trust: false`, a macro-expansion cap and
+  `throwOnError`; each distinct expression is rendered and sanitised once, and documents carry
+  only slots (with an unforgeable per-session marker) that are filled after sanitisation.
+- **Mermaid** never runs in the application's renderer. `DiagramService` creates one hidden
+  window (sandbox, context isolation, no preload, no Node, private session whose network requests
+  are limited to the bundled host page) and calls `window.msDiagram.render` through
+  `executeJavaScript` with a validated request. Labels are SVG text (`htmlLabels: false`), so
+  output is static; the SVG is sanitised again (scripts, handlers, external references, `use`,
+  `image`, animation and policy-violating CSS removed) and cached by source + presentation.
+  Requests are serial, cancellable while queued, time out after 20 s and are limited to 50,000
+  characters. Hydration discards answers for text that has been replaced, so a slow diagram never
+  appears in the wrong place, and diagram edits are debounced.
+- **PDF.** `PdfOptions` (mm) are validated once (`validatePdfOptions`) and converted to
+  `printToPDF` arguments in inches. Headers and footers are expanded from escaped placeholders;
+  `{page}` and `{pages}` use Chromium's own page-number elements. Print CSS keeps headings with
+  their text, repeats table headers, wraps code and fits images, diagrams and equations to the
+  printable area (`--ms-page-height`). The preview and the export call the same code with the
+  same options. Jobs are serialised; a cancelled job destroys its window and leaves the queue
+  usable; the result must be a structurally complete PDF.
+- **Export jobs** (`ExportService`) return values instead of throwing for expected failures
+  (`saved`, `cancelled`, `failed`). The file is written beside its destination and renamed into
+  place, so cancellation or failure leaves existing files untouched.
+- **Standalone HTML** embeds fonts (KaTeX WOFF2 as data URIs), SVG, images (optional) and the
+  validated CSS, carries a CSP without scripts, and is **audited** (`markdown/audit.ts`) before it
+  is written: scripts, frames, handlers, active URLs, remote CSS and private-protocol references
+  refuse the export; links and images that cannot work after moving the file are reported.
+- **Presets** are one validated JSON file each (global: user-data folder; workspace:
+  `.markdown-studio/export-presets/`). Unknown fields are ignored, future versions are read with
+  the fields we know, damaged files are skipped and never rewritten. An edited built-in is stored
+  under the built-in's id (shown as "modified"); restoring deletes the copy.
+
+### The CSS security boundary
+
+All CSS that can reach a document passes through `shared/presentation/css.ts`: user CSS (strict:
+anything the policy removes rejects the stylesheet and is reported with line numbers), `<style>`
+blocks and `style` attributes inside Markdown (lenient: offending rules/declarations are dropped),
+and the styles inside Mermaid SVG. The policy parses with css-tree and allows only a small set of
+at-rules, `url()` only for embedded `data:` images and fonts, no resource-loading functions,
+no escaped function names, and serialises from the syntax tree with `<` escaped so a string can
+never close the `<style>` element. Custom CSS reaches the document through a dedicated
+`<style id="ms-custom-css">` inside the preview frame or export file, so it cannot style the
+application.
+
+### Test strategy
+
+- **Unit** (Vitest, Node + jsdom): markdown plugins, CSS policy (accepted, rejected, escaped,
+  serialisation), themes and layering, page options and placeholders, presets and services
+  (temporary directories), export job recovery, SVG and document sanitisation, an audit of
+  hostile documents, KaTeX behaviour and the executable examples of the mathematics guide.
+- **E2E** (Playwright's Electron driver): the real application renders math and diagrams, exports
+  PDF and HTML, restarts, and is attacked with hostile input. PDFs are checked with PDF.js (page
+  sizes, positioned text for headers/footers/numbers) **and rasterised to images** (ink inside
+  margins; screenshots are inspected). IPC channels can be observed from the main process to
+  assert caching and debouncing.
+- **Benchmarks** (`scripts/benchmark.mjs`) against representative documents, compared with the
+  Phase 2 baseline (`docs/PERFORMANCE.md`).
 
 ## Security model
 
@@ -242,21 +344,23 @@ picker) with the shared `Modal` (focus in, focus restored, Escape cancels).
   preview iframe has no script permission and its own CSP; links are handled by the
   application; `msfile:` serves only images the user may read.
 - PDF printing: hidden window with JavaScript disabled, sandboxed, with the document CSP.
-- Exported HTML: carries a CSP that forbids scripts.
+- Exported HTML: carries a CSP that forbids scripts and is audited before it is written.
+- Mermaid: isolated window without preload or Node, private network-less session, validated
+  requests, sanitised SVG. KaTeX: untrusted commands disabled, output sanitised.
+- Custom CSS and Markdown styles: one parser-based policy (no files, no network, no `@import`).
+- IPC additions (`export:*`, `presets:*`, `presentation:*`, `css:*`, `diagram:*`) validate every
+  argument in the main process; CSS files are readable only inside the workspace or when chosen
+  in the file dialog.
+- DOMPurify's DOM-clobbering protection is off (`SANITIZE_DOM: false`) so heading ids such as
+  `#title` keep working; output is only placed in script-free documents, which the application
+  reads with methods, never with `document[name]`.
 
-## Extension points for later phases
+## Extension points for later work
 
-These boundaries exist so later phases can add features without restructuring Phase 1:
-
-- **Phase 2 (delivered)** — see _Phase 2: Markdown language tooling_ above. The completion
-  provider, formatting commands, outline and link checks all build on the shared token stream
-  and `resolveLocalPath`.
-- **Phase 3 Mermaid and math** — additional markdown-it plugins in `markdown/render.ts`; the
-  sanitiser configuration is centralised in `markdown/sanitize.ts`.
-- **Phase 3 themes and custom CSS** — document styling lives only in `markdown/document.css`
-  and is injected by `buildHtmlDocument`, independent of the UI theme.
-- **Phase 3 print settings** — page size and margins are defined once in `PDF_OPTIONS`
-  (`main/services/pdfService.ts`).
-- **Image tooling** (resizing, optimisation, clipboard screenshots) — all asset writes go
-  through `AssetService` and all references through `imageReference.ts`; updating references
-  after file operations is done by `shared/markdown/moves.ts`.
+See the [academic publishing roadmap](ACADEMIC_PUBLISHING_ROADMAP.md) (not implemented):
+labels and cross-references would extend the markdown-it configuration with attribute parsing and
+a pure numbering function; definitions would extend the macro table handed to KaTeX (and the
+render-cache key); a reference manager would add parsers in `shared/` and a CSL engine in the
+renderer; book projects would build on the export pipeline and the reference-aware file moves.
+- **Image tooling** (resizing, optimisation, clipboard screenshots) — all asset writes go through
+  `AssetService` and all references through `imageReference.ts`.
