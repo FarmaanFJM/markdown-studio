@@ -1,0 +1,223 @@
+{
+  "environment": {
+    "date": "2026-10-25T18:31:06.645Z",
+    "os": "linux 6.18.44-fc-v153",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz × 4",
+    "memoryGb": 16,
+    "node": "v22.22.0",
+    "appDir": "/home/user/markdown-studio",
+    "quick": false,
+    "electron": "44.9.3 (Chromium 152.0.7977.167)"
+  },
+  "documents": {
+    "small notes": {
+      "openMs": 236,
+      "renderTime": {
+        "count": 3,
+        "lastMs": 18.4,
+        "maxMs": 18.4
+      },
+      "keyToFrameP50": 26.8,
+      "keyToFrameP95": 40.8,
+      "keyToFrameMax": 42.7,
+      "longTasks": 0,
+      "longTaskTotalMs": 0,
+      "previewLatencyAfterLastKeyMs": 127,
+      "typedMs": 269,
+      "renderAfterTyping": {
+        "count": 4,
+        "lastMs": 2,
+        "maxMs": 18.4
+      },
+      "pdfPreviewMs": 440
+    },
+    "medium technical (60 KB)": {
+      "openMs": 524,
+      "renderTime": {
+        "count": 5,
+        "lastMs": 250.7,
+        "maxMs": 250.7
+      },
+      "keyToFrameP50": 29.7,
+      "keyToFrameP95": 37.5,
+      "keyToFrameMax": 38.1,
+      "longTasks": 4,
+      "longTaskTotalMs": 386,
+      "previewLatencyAfterLastKeyMs": 279,
+      "typedMs": 638,
+      "renderAfterTyping": {
+        "count": 6,
+        "lastMs": 137.9,
+        "maxMs": 250.7
+      },
+      "pdfPreviewMs": 1691
+    },
+    "large (400 KB)": {
+      "openMs": 1898,
+      "renderTime": {
+        "count": 7,
+        "lastMs": 843.6,
+        "maxMs": 843.6
+      },
+      "keyToFrameP50": 39.7,
+      "keyToFrameP95": 103.9,
+      "keyToFrameMax": 106.2,
+      "longTasks": 9,
+      "longTaskTotalMs": 3543,
+      "previewLatencyAfterLastKeyMs": 1586,
+      "typedMs": 1269,
+      "renderAfterTyping": {
+        "count": 8,
+        "lastMs": 756.7,
+        "maxMs": 843.6
+      },
+      "pdfPreviewMs": 5199
+    },
+    "huge (1.1 MB)": {
+      "openMs": 4088,
+      "renderTime": {
+        "count": 9,
+        "lastMs": 2136.6,
+        "maxMs": 2136.6
+      },
+      "keyToFrameP50": 92.4,
+      "keyToFrameP95": 128.4,
+      "keyToFrameMax": 129.9,
+      "longTasks": 124,
+      "longTaskTotalMs": 19524,
+      "previewLatencyAfterLastKeyMs": 3789,
+      "typedMs": 2815,
+      "renderAfterTyping": {
+        "count": 10,
+        "lastMs": 2186.2,
+        "maxMs": 2186.2
+      },
+      "pdfPreviewMs": 28693
+    },
+    "tables and headings (300 tables)": {
+      "openMs": 1077,
+      "renderTime": {
+        "count": 11,
+        "lastMs": 436.6,
+        "maxMs": 2186.2
+      },
+      "keyToFrameP50": 32.7,
+      "keyToFrameP95": 61.4,
+      "keyToFrameMax": 77.9,
+      "longTasks": 15,
+      "longTaskTotalMs": 2870,
+      "previewLatencyAfterLastKeyMs": 582,
+      "typedMs": 1281,
+      "renderAfterTyping": {
+        "count": 12,
+        "lastMs": 381.6,
+        "maxMs": 2186.2
+      },
+      "pdfPreviewMs": 1866
+    },
+    "diagrams (10 Mermaid)": {
+      "openMs": 201,
+      "renderTime": {
+        "count": 13,
+        "lastMs": 6.7,
+        "maxMs": 2186.2
+      },
+      "keyToFrameP50": 26.6,
+      "keyToFrameP95": 31.7,
+      "keyToFrameMax": 35.2,
+      "longTasks": 0,
+      "longTaskTotalMs": 0,
+      "previewLatencyAfterLastKeyMs": 129,
+      "typedMs": 316,
+      "renderAfterTyping": {
+        "count": 14,
+        "lastMs": 3.1,
+        "maxMs": 2186.2
+      },
+      "pdfPreviewMs": 878
+    },
+    "math (500 expressions)": {
+      "openMs": 1880,
+      "renderTime": {
+        "count": 15,
+        "lastMs": 1238.6,
+        "maxMs": 2186.2
+      },
+      "keyToFrameP50": 25.9,
+      "keyToFrameP95": 32,
+      "keyToFrameMax": 32,
+      "longTasks": 14,
+      "longTaskTotalMs": 3171,
+      "previewLatencyAfterLastKeyMs": 224,
+      "typedMs": 427,
+      "renderAfterTyping": {
+        "count": 16,
+        "lastMs": 108.1,
+        "maxMs": 2186.2
+      },
+      "pdfPreviewMs": 2648
+    },
+    "large images (4 x 2400 px)": {
+      "openMs": 194,
+      "renderTime": {
+        "count": 17,
+        "lastMs": 2.1,
+        "maxMs": 2186.2
+      },
+      "keyToFrameP50": 25.6,
+      "keyToFrameP95": 32.7,
+      "keyToFrameMax": 32.8,
+      "longTasks": 0,
+      "longTaskTotalMs": 0,
+      "previewLatencyAfterLastKeyMs": 129,
+      "typedMs": 294,
+      "renderAfterTyping": {
+        "count": 18,
+        "lastMs": 1.8,
+        "maxMs": 2186.2
+      },
+      "pdfPreviewMs": 3468
+    },
+    "mixed (diagrams, tables, math, code)": {
+      "openMs": 1078,
+      "renderTime": {
+        "count": 19,
+        "lastMs": 600.4,
+        "maxMs": 2186.2
+      },
+      "keyToFrameP50": 32.8,
+      "keyToFrameP95": 90.2,
+      "keyToFrameMax": 96.7,
+      "longTasks": 18,
+      "longTaskTotalMs": 6219,
+      "previewLatencyAfterLastKeyMs": 766,
+      "typedMs": 805,
+      "renderAfterTyping": {
+        "count": 20,
+        "lastMs": 442.3,
+        "maxMs": 2186.2
+      },
+      "pdfPreviewMs": 4057
+    }
+  },
+  "memoryGrowth": {
+    "cycles": 60,
+    "rendererHeapBeforeMb": 61,
+    "rendererHeapAfterMb": 61,
+    "rendererHeapGrowthMb": 0,
+    "allProcessesGrowthMb": -0.4
+  },
+  "tabSwitching": {
+    "switches": 60,
+    "totalMs": 10766,
+    "perSwitchMs": 179.4,
+    "activeDocument": "diagrams.md",
+    "previewMatchesActiveDocument": true
+  },
+  "repeatedExports": {
+    "runs": 10,
+    "medianMs": 1617,
+    "maxMs": 1942,
+    "allProcessesGrowthMb": 0.3
+  }
+}
