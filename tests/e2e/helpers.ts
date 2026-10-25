@@ -300,3 +300,42 @@ export async function saveAndRead(
   await expect(page.locator('.tab.active')).not.toHaveClass(/dirty/)
   return readFileSync(target, 'utf8')
 }
+
+/** Runs a command from the command palette by (part of) its title, checking the match first. */
+export async function runPaletteCommand(
+  page: Page,
+  title: string,
+  expected = title
+): Promise<void> {
+  await page.keyboard.press(`${mod}+Shift+P`)
+  const input = page.getByTestId('palette-input')
+  await expect(input).toBeVisible()
+  await input.fill(title)
+  await expect(page.locator('.palette-item.selected')).toContainText(expected)
+  await page.keyboard.press('Enter')
+  await expect(input).toBeHidden()
+}
+
+/**
+ * Gives the source editor keyboard focus while a modal dialog covers it. A real click would hit
+ * the dialog backdrop, so the mouse events are dispatched to the editor directly, which is how
+ * Monaco takes focus.
+ */
+export async function focusEditorBehindDialog(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const target = document.querySelector('.monaco-editor .view-lines')!
+    const box = target.getBoundingClientRect()
+    for (const type of ['mousedown', 'mouseup', 'click']) {
+      target.dispatchEvent(
+        new MouseEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+          buttons: type === 'mousedown' ? 1 : 0,
+          clientX: box.left + 5,
+          clientY: box.top + 5
+        })
+      )
+    }
+  })
+}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { create } from 'zustand'
 
 export type ToastKind = 'info' | 'success' | 'error'
@@ -36,6 +37,22 @@ export type DialogRequest =
       confirmLabel: string
       validate?: (value: string) => string | null
       resolve: (value: string | null) => void
+    }
+  | {
+      kind: 'choice'
+      title: string
+      message: string
+      detail?: string
+      items?: string[]
+      options: { value: string; label: string; primary?: boolean; danger?: boolean }[]
+      /** The chosen option's value, or null when the dialog was cancelled. */
+      resolve: (value: string | null) => void
+    }
+  | {
+      kind: 'custom'
+      /** Renders the dialog; call `done` with its result (or null) to close it. */
+      render: (done: (value: unknown) => void) => ReactNode
+      resolve: (value: unknown) => void
     }
   | { kind: 'about'; resolve: () => void }
   | { kind: 'shortcuts'; resolve: () => void }
@@ -91,6 +108,14 @@ export const dialogs = {
     openDialog<boolean>({ kind: 'confirm', ...options }),
   prompt: (options: Omit<Extract<DialogRequest, { kind: 'prompt' }>, 'kind' | 'resolve'>) =>
     openDialog<string | null>({ kind: 'prompt', ...options }),
+  choice: (options: Omit<Extract<DialogRequest, { kind: 'choice' }>, 'kind' | 'resolve'>) =>
+    openDialog<string | null>({ kind: 'choice', ...options }),
+  /** Shows a dialog rendered by the caller; resolves with whatever the dialog passes to `done`. */
+  custom: <T>(render: (done: (value: T | null) => void) => ReactNode) =>
+    openDialog<T | null>({
+      kind: 'custom',
+      render: render as (done: (value: unknown) => void) => ReactNode
+    }),
   about: () => openDialog<void>({ kind: 'about' }),
   shortcuts: () => openDialog<void>({ kind: 'shortcuts' })
 }

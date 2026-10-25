@@ -1,50 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { AppInfo } from '@shared/ipc'
 import { api } from '../bridge'
 import logo from '../assets/logo-128.png'
 import { EDITOR_SHORTCUTS, formatBinding, KEYBINDINGS } from '../commands/keybindings'
 import { useUi, type DialogRequest } from '../state/ui'
-
-interface ModalProps {
-  title: string
-  onCancel(): void
-  children: ReactNode
-  footer: ReactNode
-  wide?: boolean
-}
-
-function Modal({ title, onCancel, children, footer, wide }: ModalProps) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null
-    const first = ref.current?.querySelector<HTMLElement>('[data-autofocus]') ?? ref.current
-    first?.focus()
-    return () => previous?.focus?.()
-  }, [])
-
-  return (
-    <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
-      <div
-        ref={ref}
-        className={`modal${wide ? ' wide' : ''}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        tabIndex={-1}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            e.preventDefault()
-            onCancel()
-          }
-        }}
-      >
-        <h2 className="modal-title">{title}</h2>
-        <div className="modal-body">{children}</div>
-        <div className="modal-footer">{footer}</div>
-      </div>
-    </div>
-  )
-}
+import { Modal } from './Modal'
 
 function UnsavedDialog({ request }: { request: Extract<DialogRequest, { kind: 'unsaved' }> }) {
   const many = request.fileNames.length > 1
@@ -177,6 +137,48 @@ function PromptDialog({ request }: { request: Extract<DialogRequest, { kind: 'pr
   )
 }
 
+function ChoiceDialog({ request }: { request: Extract<DialogRequest, { kind: 'choice' }> }) {
+  return (
+    <Modal
+      title={request.title}
+      wide
+      onCancel={() => request.resolve(null)}
+      footer={
+        <>
+          {request.options.map((option, index) => (
+            <button
+              key={option.value}
+              type="button"
+              className={`button${option.primary ? ' primary' : ''}${option.danger ? ' danger' : ''}`}
+              data-autofocus={
+                option.primary || (index === 0 && !request.options.some((o) => o.primary))
+                  ? ''
+                  : undefined
+              }
+              onClick={() => request.resolve(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+          <button type="button" className="button" onClick={() => request.resolve(null)}>
+            Cancel
+          </button>
+        </>
+      }
+    >
+      <p>{request.message}</p>
+      {request.items && request.items.length > 0 && (
+        <ul className="file-list scroll-list">
+          {request.items.map((item, i) => (
+            <li key={`${item}-${i}`}>{item}</li>
+          ))}
+        </ul>
+      )}
+      {request.detail && <p className="muted pre-line">{request.detail}</p>}
+    </Modal>
+  )
+}
+
 function AboutDialog({ request }: { request: Extract<DialogRequest, { kind: 'about' }> }) {
   const [info, setInfo] = useState<AppInfo | null>(null)
   useEffect(() => {
@@ -280,5 +282,9 @@ export function DialogHost() {
       return <AboutDialog request={request} />
     case 'shortcuts':
       return <ShortcutsDialog request={request} />
+    case 'choice':
+      return <ChoiceDialog request={request} />
+    case 'custom':
+      return <>{request.render(request.resolve)}</>
   }
 }
