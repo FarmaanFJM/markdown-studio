@@ -179,6 +179,10 @@ test('2. writes a game analysis with headings, lists, links and text formatting 
   await page.keyboard.type('https://example.org/game-a')
   // End, not Tab: a path suggestion may still be open after the slash and Tab would accept it.
   await page.keyboard.press('End')
+  // Keystrokes are applied asynchronously on a busy machine, so wait for the last one.
+  await expect
+    .poll(() => editorText(page))
+    .toContain('[Reference page](https://example.org/game-a)')
   const text = await editorText(page)
   expect(text).toContain('# Game A health UI')
   expect(text).toContain('**top-left corner**')
