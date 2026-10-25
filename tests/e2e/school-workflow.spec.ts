@@ -14,7 +14,7 @@ import {
   closeApp,
   createSandbox,
   dropExternalFiles,
-  editorText,
+  editorText as renderedEditorText,
   exportViaDialog,
   inPreview,
   launch,
@@ -33,6 +33,18 @@ import { readPdf } from './support/pdfText'
 test.describe.configure({ mode: 'serial' })
 
 const SHOTS = process.env.MS_SCREENSHOTS ? path.resolve(__dirname, '../../docs/screenshots') : null
+/** The editor's rendered text once it stopped changing: Monaco paints a moment after the model. */
+async function editorText(target: Page): Promise<string> {
+  let previous = await renderedEditorText(target)
+  for (let attempt = 0; attempt < 20; attempt++) {
+    await target.waitForTimeout(150)
+    const current = await renderedEditorText(target)
+    if (current === previous) return current
+    previous = current
+  }
+  return previous
+}
+
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
   'base64'
@@ -286,8 +298,8 @@ test('4. builds a comparison table: size, cells, rows, columns and alignment', a
   await edit.getByRole('button', { name: 'Align right, column 3' }).click()
   await edit.getByTestId('table-editor-apply').click()
   await expect(edit).toBeHidden()
+  await expect.poll(() => editorText(page)).toContain('Hearts (3 containers)')
   const table = await editorText(page)
-  expect(table).toContain('Hearts (3 containers)')
   expect(table).toContain('Game D')
   expect(table).toContain('Readability')
   expect(table).not.toContain('Placement')
