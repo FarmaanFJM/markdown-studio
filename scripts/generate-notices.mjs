@@ -14,7 +14,10 @@ const BUNDLED = [
   'dompurify',
   'highlight.js',
   'pdfjs-dist',
-  'lucide-react'
+  'lucide-react',
+  'katex',
+  'mermaid',
+  'css-tree'
 ]
 
 function packageDir(name, from = ROOT) {
@@ -28,6 +31,7 @@ function packageDir(name, from = ROOT) {
   }
 }
 
+const OFL = readFileSync(path.join(import.meta.dirname, 'OFL-1.1.txt'), 'utf8').trim()
 const seen = new Map()
 function visit(name, from) {
   const dir = packageDir(name, from)
@@ -54,5 +58,21 @@ for (const [dir, pkg] of entries) {
   const text = file ? readFileSync(path.join(dir, file), 'utf8').trim() : `License: ${pkg.license}`
   out += `\n## ${pkg.name} ${pkg.version}\n\n\`\`\`text\n${text}\n\`\`\`\n`
 }
+out += `
+## KaTeX fonts (bundled with katex, embedded in documents and exports)
+
+\`\`\`text
+Copyright (c) 2009-2010, Design Science, Inc. (<www.mathjax.org>)
+Copyright (c) 2014-2018 Khan Academy (<www.khanacademy.org>),
+Copyright (c) 1995, 2009 American Mathematical Society (<www.ams.org>),
+with Reserved Font Names KaTeX_AMS, KaTeX_Caligraphic, KaTeX_Fraktur, KaTeX_Main, KaTeX_Math,
+KaTeX_SansSerif, KaTeX_Script, KaTeX_Size1, KaTeX_Size2, KaTeX_Size3, KaTeX_Size4 and KaTeX_Typewriter.
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at: http://scripts.sil.org/OFL
+
+${OFL}
+\`\`\`
+`
 writeFileSync(path.join(ROOT, 'THIRD_PARTY_NOTICES.md'), out)
 process.stdout.write(`Wrote notices for ${entries.length} packages.\n`)

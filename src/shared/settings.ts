@@ -7,6 +7,11 @@
  */
 
 import { pathsEqual } from './paths'
+import {
+  DEFAULT_DOCUMENT_SETTINGS,
+  sanitizeDocumentSettings,
+  type DocumentSettings
+} from './presentation/settings'
 
 export type ThemeName = 'dark' | 'light'
 export type ExplorerMode = 'tree' | 'thumbnails'
@@ -70,6 +75,8 @@ export interface AppSettings {
     /** Last author name typed when creating a document from a template. Never guessed. */
     author: string
   }
+  /** Document appearance and publishing defaults. Never stored in a Markdown document. */
+  document: DocumentSettings
   workspace: {
     restoreLastWorkspace: boolean
     lastWorkspace: string | null
@@ -108,6 +115,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     toc: { includeTopLevel: false, maxDepth: 6 }
   },
   templates: { author: '' },
+  document: DEFAULT_DOCUMENT_SETTINGS,
   workspace: { restoreLastWorkspace: true, lastWorkspace: null, recent: [] },
   layout: {
     sidebarVisible: true,
@@ -277,6 +285,7 @@ export function sanitizeSettings(input: unknown): AppSettings {
           ? templates.author.replace(/[\r\n]+/g, ' ').slice(0, LIMITS.authorLength)
           : d.templates.author
     },
+    document: sanitizeDocumentSettings(s.document),
     workspace: {
       restoreLastWorkspace: bool(workspace.restoreLastWorkspace, d.workspace.restoreLastWorkspace),
       lastWorkspace: str(workspace.lastWorkspace),

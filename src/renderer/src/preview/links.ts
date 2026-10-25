@@ -1,9 +1,28 @@
 import { isMarkdownPath } from '@shared/fileTypes'
 import { basename } from '@shared/paths'
 import { api, errorMessage } from '../bridge'
+import { getActiveEditor } from '../editor/models'
 import { resolveLocalPath, type DocumentContext } from '../markdown/resolve'
 import { openDocument } from '../state/documents'
 import { notify } from '../state/ui'
+
+/**
+ * A rendering error shown in the preview (a diagram or an equation that could not be drawn)
+ * leads back to its place in the source when it is clicked or activated with Enter.
+ */
+export function jumpToPreviewSource(target: Element | null): boolean {
+  const box = target?.closest?.('.ms-diagram-error, .ms-math-error')
+  const holder = box?.closest('[data-ms-source-line], [data-ms-line]')
+  const line = Number(
+    holder?.getAttribute('data-ms-source-line') ?? holder?.getAttribute('data-ms-line')
+  )
+  const editor = getActiveEditor()
+  if (!box || !line || !editor) return false
+  editor.revealLineInCenter(line)
+  editor.setPosition({ lineNumber: line, column: 1 })
+  editor.focus()
+  return true
+}
 
 /**
  * Handles every click inside the preview. The rendered document never navigates itself:
@@ -15,6 +34,10 @@ export function handlePreviewClick(
   previewDocument: Document,
   context: DocumentContext
 ): void {
+  if (jumpToPreviewSource(event.target as Element | null)) {
+    event.preventDefault()
+    return
+  }
   const anchor = (event.target as Element | null)?.closest?.('a')
   if (!anchor) return
   event.preventDefault()

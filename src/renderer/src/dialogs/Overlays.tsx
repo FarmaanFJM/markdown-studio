@@ -11,8 +11,16 @@ export function Toasts() {
         const Icon =
           toast.kind === 'error' ? CircleAlert : toast.kind === 'success' ? CircleCheck : Info
         return (
-          <div key={toast.id} className={`toast ${toast.kind}`} data-testid={`toast-${toast.kind}`}>
-            <Icon size={16} className="toast-icon" />
+          <div
+            key={toast.id}
+            className={`toast ${toast.kind}`}
+            data-testid={`toast-${toast.kind}`}
+            role={toast.kind === 'error' ? 'alert' : undefined}
+          >
+            <Icon size={16} className="toast-icon" aria-hidden="true" />
+            <span className="visually-hidden">
+              {toast.kind === 'error' ? 'Error: ' : toast.kind === 'success' ? 'Done: ' : ''}
+            </span>
             <span className="toast-message">{toast.message}</span>
             {toast.action && (
               <button

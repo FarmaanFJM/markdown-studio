@@ -48,6 +48,7 @@ export const KEYBINDINGS: KeyBinding[] = [
   { key: 'e', mod: true, shift: true, label: 'Show Explorer', run: commands.showExplorer },
   { key: ',', mod: true, label: 'Settings', run: commands.showSettings },
   { key: 'v', mod: true, shift: true, label: 'Toggle preview', run: commands.togglePreview },
+  { key: 'u', mod: true, shift: true, label: 'Export…', run: commands.exportDialog },
   { key: 'z', alt: true, label: 'Toggle word wrap', run: commands.toggleWordWrap },
   { key: '=', mod: true, label: 'Increase editor font size', run: commands.increaseFontSize },
   { key: '-', mod: true, label: 'Decrease editor font size', run: commands.decreaseFontSize },

@@ -1,4 +1,6 @@
 import createMarkdownIt, { type MarkdownIt, type Token } from 'markdown-it'
+import { diagramFences, pageBreaks } from './blocks'
+import { mathPlugin, type MathOptions } from './math'
 import { SlugAllocator } from './slug'
 
 /** Plain text of an inline token (text and code spans only), used for heading ids and labels. */
@@ -60,6 +62,13 @@ export function taskLists(md: MarkdownIt): void {
 export interface MarkdownItOptions {
   highlight?: (code: string, language: string) => string
   linkify?: boolean
+  /**
+   * Mathematical notation. Parsing is always on for the editor tooling; the preview and the
+   * exports pass `false` when the user switched math rendering off.
+   */
+  math?: MathOptions | false
+  /** Render `mermaid` fences as diagram placeholders (default) or as plain code. */
+  diagrams?: boolean
 }
 
 /**
@@ -77,5 +86,8 @@ export function createApplicationMarkdownIt(options: MarkdownItOptions = {}): Ma
   })
   md.use(headingIds)
   md.use(taskLists)
+  if (options.math !== false) md.use(mathPlugin, options.math ?? {})
+  md.use(diagramFences, { diagrams: options.diagrams })
+  md.use(pageBreaks)
   return md
 }

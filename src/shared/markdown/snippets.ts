@@ -120,6 +120,51 @@ export const BUILT_IN_SNIPPETS: SnippetDefinition[] = [
     slash: true
   },
   {
+    id: 'mathInline',
+    label: 'Inline math',
+    detail: 'Equation in a sentence: $E = mc^2$',
+    kind: 'inline',
+    body: '\\$${1:E = mc^2}\\$',
+    keywords: ['math', 'equation', 'formula', 'latex', 'katex', 'inline'],
+    slash: false
+  },
+  {
+    id: 'mathBlock',
+    label: 'Display equation',
+    detail: 'Centred equation between $$ lines',
+    kind: 'block',
+    body: '\\$\\$\n${1:\\\\int_{0}^{\\\\infty} e^{-x^2}\\\\,dx = \\\\frac{\\\\sqrt{\\\\pi}}{2}}\n\\$\\$',
+    keywords: ['math', 'equation', 'formula', 'latex', 'katex', 'display', 'block'],
+    slash: true
+  },
+  {
+    id: 'mermaidFlowchart',
+    label: 'Mermaid flowchart',
+    detail: 'Diagram rendered in the preview and exports',
+    kind: 'block',
+    body: `${FENCE}mermaid\nflowchart TD\n    A[\${1:Start}] --> B{\${2:Decision}}\n    B -->|Yes| C[\${3:Result}]\n    B -->|No| D[\${4:Other}]\n${FENCE}`,
+    keywords: ['mermaid', 'diagram', 'flowchart', 'chart', 'graph'],
+    slash: true
+  },
+  {
+    id: 'mermaidSequence',
+    label: 'Mermaid sequence diagram',
+    detail: 'Messages between participants',
+    kind: 'block',
+    body: `${FENCE}mermaid\nsequenceDiagram\n    participant \${1:Client}\n    participant \${2:Server}\n    \${1:Client}->>\${2:Server}: \${3:Request}\n    \${2:Server}-->>\${1:Client}: \${4:Response}\n${FENCE}`,
+    keywords: ['mermaid', 'diagram', 'sequence', 'uml'],
+    slash: true
+  },
+  {
+    id: 'pageBreak',
+    label: 'Page break',
+    detail: 'Starts a new page in PDF export',
+    kind: 'block',
+    body: '<!-- pagebreak -->\n$0',
+    keywords: ['page', 'break', 'pdf', 'print', 'newpage'],
+    slash: true
+  },
+  {
     id: 'bold',
     label: 'Bold',
     detail: 'Strong emphasis',
@@ -218,3 +263,47 @@ export function snippetPreview(body: string): string {
 export function escapeSnippetText(text: string): string {
   return text.replace(/[\\$}]/g, (ch) => `\\${ch}`)
 }
+
+/** Starting points offered inside an empty `mermaid` block. Plain text, not snippets. */
+export const MERMAID_STARTERS: { label: string; detail: string; body: string }[] = [
+  {
+    label: 'flowchart TD',
+    detail: 'Flowchart, top to bottom',
+    body: 'flowchart TD\n    A[${1:Start}] --> B{${2:Decision}}\n    B -->|Yes| C[${3:Done}]\n    B -->|No| D[${4:Retry}]'
+  },
+  {
+    label: 'flowchart LR',
+    detail: 'Flowchart, left to right',
+    body: 'flowchart LR\n    A[${1:Input}] --> B[${2:Process}] --> C[${3:Output}]'
+  },
+  {
+    label: 'sequenceDiagram',
+    detail: 'Sequence diagram',
+    body: 'sequenceDiagram\n    Alice->>Bob: ${1:Hello}\n    Bob-->>Alice: ${2:Hi}'
+  },
+  {
+    label: 'classDiagram',
+    detail: 'Class diagram',
+    body: 'classDiagram\n    class ${1:Animal} {\n        +String name\n        +speak() void\n    }\n    ${1:Animal} <|-- ${2:Dog}'
+  },
+  {
+    label: 'stateDiagram-v2',
+    detail: 'State diagram',
+    body: 'stateDiagram-v2\n    [*] --> ${1:Idle}\n    ${1:Idle} --> ${2:Running}: start\n    ${2:Running} --> [*]'
+  },
+  {
+    label: 'erDiagram',
+    detail: 'Entity-relationship diagram',
+    body: 'erDiagram\n    ${1:CUSTOMER} ||--o{ ${2:ORDER} : places\n    ${2:ORDER} ||--|{ LINE_ITEM : contains'
+  },
+  {
+    label: 'gantt',
+    detail: 'Gantt chart',
+    body: 'gantt\n    title ${1:Plan}\n    dateFormat YYYY-MM-DD\n    section ${2:Phase}\n    ${3:Task} :a1, 2026-01-01, 7d'
+  },
+  {
+    label: 'pie',
+    detail: 'Pie chart',
+    body: 'pie title ${1:Share}\n    "${2:A}" : 40\n    "${3:B}" : 60'
+  }
+]

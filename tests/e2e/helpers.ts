@@ -176,6 +176,8 @@ export function inPreview<T>(page: Page, fn: (doc: Document) => T): Promise<T> {
     `(() => {
       const doc = document.querySelector('iframe.html-preview')?.contentDocument
       if (!doc) throw new Error('Preview is not available')
+      // Available to the function: computed style as seen by the preview frame's own window.
+      const css = (d, element) => d.defaultView.getComputedStyle(element)
       return (${fn.toString()})(doc)
     })()`
   ) as Promise<T>
@@ -370,4 +372,132 @@ export async function clickMenuItem(
     },
     [menu, ...path]
   )
+}
+
+/**
+ * Exports through the Export dialog: opens it for the format, optionally adjusts it, and starts
+ * the export (the save dialog is stubbed by the caller).
+ */
+export async function exportViaDialog(
+  page: Page,
+  format: 'pdf' | 'html',
+  adjust?: (dialog: Locator) => Promise<void>
+): Promise<void> {
+  await page
+    .getByRole('button', { name: format === 'pdf' ? 'Export as PDF' : 'Export as HTML' })
+    .click()
+  const dialog = page.getByRole('dialog', { name: 'Export' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByTestId(`export-format-${format}`)).toHaveAttribute(
+    'aria-checked',
+    'true'
+  )
+  if (adjust) await adjust(dialog)
+  await dialog.getByTestId('export-run').click()
+}
+
+/** Writes documents into the sandbox workspace before the application starts. */
+export function seedDocuments(sandbox: Sandbox, files: Record<string, string>): void {
+  for (const [name, content] of Object.entries(files)) {
+    const target = path.join(sandbox.workspace, name)
+    mkdirSync(path.dirname(target), { recursive: true })
+    writeFileSync(target, content)
+  }
+}
+
+/** The documents used by the Phase 3 specs. */
+export const MIXED_DOCUMENT = `# Release Notes
+
+Euler's identity is $e^{i\\pi} + 1 = 0$, and a price is $5 or $10.
+
+$$
+\\int_{0}^{\\infty} e^{-x^2}\\,dx
+=
+\\frac{\\sqrt{\\pi}}{2}
+$$
+
+\`\`\`mermaid
+flowchart TD
+    A[Write Markdown] --> B[Live Preview]
+    B --> C[Export PDF]
+    B --> D[Export HTML]
+\`\`\`
+
+| Feature | Status |
+| ------- | ------ |
+| Math    | done   |
+| Diagrams | done  |
+
+\`\`\`ts
+const answer: number = 42
+\`\`\`
+`
+
+/** Waits until every diagram in the HTML preview has been drawn (or has failed with a message). */
+export async function waitForDiagrams(page: Page, expected: number): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        inPreview(
+          page,
+          (doc) =>
+            [...doc.querySelectorAll('figure.ms-diagram')].filter((f) =>
+              ['ready', 'error'].includes(f.getAttribute('data-ms-state') ?? '')
+            ).length
+        ),
+      { timeout: 30_000 }
+    )
+    .toBe(expected)
+}
+
+/**
+ * Observes calls on one IPC channel from the main process (without changing behaviour): counts
+ * them and keeps the arguments' size and, for binary results, the last answer.
+ */
+export async function tapIpc(app: ElectronApplication, channel: string): Promise<void> {
+  await app.evaluate(({ ipcMain }, name) => {
+    const handlers = (
+      ipcMain as unknown as { _invokeHandlers: Map<string, (...a: unknown[]) => unknown> }
+    )._invokeHandlers
+    const original = handlers.get(name)
+    if (!original) throw new Error(`No handler for ${name}`)
+    const store = ((
+      globalThis as unknown as { __taps?: Record<string, { calls: number; last?: Buffer }> }
+    ).__taps ??= {})
+    store[name] = { calls: 0 }
+    handlers.set(name, async (...args: unknown[]) => {
+      store[name].calls++
+      const result = await original(...args)
+      if (result instanceof Uint8Array) store[name].last = Buffer.from(result)
+      return result
+    })
+  }, channel)
+}
+
+export async function ipcCalls(app: ElectronApplication, channel: string): Promise<number> {
+  return app.evaluate(
+    (_electron, name) =>
+      (globalThis as unknown as { __taps: Record<string, { calls: number }> }).__taps[name]
+        ?.calls ?? 0,
+    channel
+  )
+}
+
+/** The last binary answer of a tapped channel, written to `file` (for PDF previews). */
+export async function saveLastIpcResult(
+  app: ElectronApplication,
+  channel: string,
+  file: string
+): Promise<boolean> {
+  const base64 = await app.evaluate(
+    (_electron, name) =>
+      (globalThis as unknown as { __taps: Record<string, { last?: Buffer }> }).__taps[
+        name
+      ]?.last?.toString('base64') ?? '',
+    channel
+  )
+  if (!base64) return false
+  mkdirSync(path.dirname(file), { recursive: true })
+  writeFileSync(file, Buffer.from(base64, 'base64'))
+  return true
 }

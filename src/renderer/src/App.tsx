@@ -18,6 +18,8 @@ import { Welcome } from './layout/Welcome'
 import { PreviewPanel } from './preview/PreviewPanel'
 import { SettingsPanel } from './settings/SettingsPanel'
 import { confirmCloseAll, documentName, useDocuments } from './state/documents'
+import { useExportSetup } from './state/exportSetup'
+import { startPresentationStore } from './state/presentation'
 import { flushSettings, useSettings } from './state/settings'
 import { useWorkspace } from './state/workspace'
 
@@ -95,6 +97,8 @@ export function App() {
         // The main process has already re-opened (and authorised) the last workspace.
         if (loaded.workspace.lastWorkspace)
           useWorkspace.getState().setRoot(loaded.workspace.lastWorkspace)
+        startPresentationStore()
+        void useExportSetup.getState().loadPresets()
         setReady(true)
       })
   }, [])

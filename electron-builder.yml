@@ -28,6 +28,9 @@ nsis:
   uninstallerIcon: resources/build/icon.ico
   artifactName: Markdown-Studio-Setup-${version}.${ext}
 mac:
+  # Signing and notarisation happen only when the release workflow provides credentials.
+  hardenedRuntime: true
+  gatekeeperAssess: false
   target: dmg
   category: public.app-category.productivity
   icon: resources/build/icon.png

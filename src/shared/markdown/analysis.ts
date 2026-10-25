@@ -21,9 +21,21 @@ export interface Heading {
   omitFromToc: boolean
 }
 
+/** A mathematical expression and where it was written. Lines and columns are 0-based. */
+export interface MathSpan {
+  tex: string
+  display: boolean
+  line: number
+  column: number
+  endLine: number
+  endColumn: number
+}
+
 export interface FenceBlock extends LineRange {
   /** The info string after the opening marker (usually the language). */
   info: string
+  /** The text inside the fence, as the renderer sees it (no trailing line break). */
+  content: string
   /** True when the closing marker line exists (the last line of the range). */
   closed: boolean
 }
@@ -47,6 +59,8 @@ export interface DocumentAnalysis {
   codeBlocks: LineRange[]
   htmlBlocks: LineRange[]
   tables: TableBlock[]
+  /** Math written in prose and display equations, with positions (table cells are not located). */
+  math: MathSpan[]
   /** Line ranges of every inline-content token (paragraphs, headings, table rows, ...). */
   inlineRegions: LineRange[]
   /** Lines claimed by some block token. Unclaimed non-blank lines can only be definitions. */
@@ -77,6 +91,61 @@ function collectHtmlAnchors(html: string, into: Set<string>): void {
   }
 }
 
+/**
+ * Finds where the math of an inline token was written by searching its source lines for the
+ * delimiters and text, in order. When the exact text cannot be found (for example because the
+ * expression spans indented continuation lines), the span points at the token's first line.
+ */
+function locateInlineMath(
+  token: Token,
+  lines: string[],
+  map: [number, number],
+  into: MathSpan[]
+): void {
+  const children = (token.children ?? []).filter((child) => child.type === 'math_inline')
+  if (children.length === 0) return
+  const region = lines.slice(map[0], map[1]).join('\n')
+  const lineStarts: number[] = []
+  let offset = 0
+  for (let i = map[0]; i < map[1]; i++) {
+    lineStarts.push(offset)
+    offset += lines[i].length + 1
+  }
+  const position = (at: number) => {
+    let index = lineStarts.length - 1
+    while (index > 0 && lineStarts[index] > at) index--
+    return { line: map[0] + index, column: at - lineStarts[index] }
+  }
+  let cursor = 0
+  for (const child of children) {
+    const closing = child.markup === '\\(' ? '\\)' : child.markup
+    const written = `${child.markup}${child.content}${closing}`
+    const found = region.indexOf(written, cursor)
+    if (found < 0) {
+      into.push({
+        tex: child.content,
+        display: Boolean(child.meta?.display),
+        line: map[0],
+        column: 0,
+        endLine: map[0],
+        endColumn: lines[map[0]]?.length ?? 0
+      })
+      continue
+    }
+    cursor = found + written.length
+    const start = position(found)
+    const end = position(cursor)
+    into.push({
+      tex: child.content,
+      display: Boolean(child.meta?.display),
+      line: start.line,
+      column: start.column,
+      endLine: end.line,
+      endColumn: end.column
+    })
+  }
+}
+
 export function analyzeDocument(source: string): DocumentAnalysis {
   const lines = splitLines(source)
   const tokens: Token[] = getParser().parse(source, {})
@@ -88,6 +157,7 @@ export function analyzeDocument(source: string): DocumentAnalysis {
     codeBlocks: [],
     htmlBlocks: [],
     tables: [],
+    math: [],
     inlineRegions: [],
     coveredLines: new Set(),
     htmlAnchors: new Set()
@@ -125,6 +195,7 @@ export function analyzeDocument(source: string): DocumentAnalysis {
           start: map[0],
           end: map[1],
           info: token.info.trim(),
+          content: token.content.replace(/\n$/, ''),
           // markdown-it ends an unclosed fence at the end of its container.
           closed:
             map[1] - map[0] >= 2 &&
@@ -134,6 +205,20 @@ export function analyzeDocument(source: string): DocumentAnalysis {
         cover(map)
         break
       }
+      case 'math_block':
+        if (map) {
+          const last = Math.max(map[0], map[1] - 1)
+          analysis.math.push({
+            tex: token.content,
+            display: true,
+            line: map[0],
+            column: 0,
+            endLine: last,
+            endColumn: lines[last]?.length ?? 0
+          })
+          cover(map)
+        }
+        break
       case 'code_block':
         if (map) {
           analysis.codeBlocks.push({ start: map[0], end: map[1] })
@@ -163,6 +248,7 @@ export function analyzeDocument(source: string): DocumentAnalysis {
           analysis.inlineRegions.push({ start: map[0], end: map[1] })
           cover(map)
         }
+        if (map) locateInlineMath(token, lines, map, analysis.math)
         for (const child of token.children ?? []) {
           if (child.type === 'html_inline') collectHtmlAnchors(child.content, analysis.htmlAnchors)
         }

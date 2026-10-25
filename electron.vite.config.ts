@@ -58,6 +58,16 @@ export default defineConfig({
     },
     plugins: [react(), contentSecurityPolicy()],
     worker: { format: 'es' },
-    build: { minify: true, chunkSizeWarningLimit: 6000 }
+    build: {
+      minify: true,
+      chunkSizeWarningLimit: 6000,
+      rollupOptions: {
+        // The second page hosts Mermaid in a separate, isolated window.
+        input: {
+          index: resolve(__dirname, 'src/renderer/index.html'),
+          'diagram-host': resolve(__dirname, 'src/renderer/diagram-host.html')
+        }
+      }
+    }
   }
 })

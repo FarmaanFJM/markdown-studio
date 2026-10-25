@@ -11,8 +11,10 @@ import {
   ListTree,
   Minus,
   Quote,
+  Sigma,
   Strikethrough,
   Table,
+  Workflow,
   type LucideIcon
 } from 'lucide-react'
 import { headingLevelOf } from '@shared/markdown/formatting'
@@ -47,6 +49,10 @@ const GROUPS: ToolbarButton[][] = [
     { command: 'table.insert', label: 'Insert table', Icon: Table },
     { command: 'insert.horizontalRule', label: 'Insert horizontal rule', Icon: Minus },
     { command: 'toc.insert', label: 'Insert table of contents', Icon: ListTree }
+  ],
+  [
+    { command: 'insert.mathInline', label: 'Insert inline math', Icon: Sigma },
+    { command: 'insert.mermaid', label: 'Insert Mermaid diagram', Icon: Workflow }
   ]
 ]
 

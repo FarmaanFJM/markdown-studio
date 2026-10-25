@@ -6,6 +6,11 @@
  */
 import type { AppSettings, SettingsPatch } from './settings'
 import type { StoredTemplate, TemplateScope } from './templates'
+import type { DiagramRenderRequest, DiagramRenderResult } from './diagram'
+import type { ExportRequest, ExportResult } from './export/job'
+import type { PdfOptions } from './export/pdf'
+import type { PresetScope, StoredPreset } from './export/presets'
+import type { WorkspacePresentation } from './presentation/settings'
 
 export interface DirEntry {
   name: string
@@ -45,6 +50,25 @@ export interface ImportedImage {
   copied: boolean
 }
 
+export interface PresetListing {
+  global: StoredPreset[]
+  workspace: StoredPreset[]
+  workspaceAvailable: boolean
+}
+
+export interface WorkspacePresentationState {
+  /** False when no folder is open. */
+  available: boolean
+  overrides: WorkspacePresentation | null
+}
+
+export interface CssFile {
+  /** The path as it should be stored: workspace-relative inside the workspace, else absolute. */
+  path: string
+  text: string
+  mtimeMs: number
+}
+
 export interface AppInfo {
   name: string
   version: string
@@ -66,6 +90,7 @@ export type MenuCommand =
   | 'file.saveAll'
   | 'file.exportHtml'
   | 'file.exportPdf'
+  | 'file.export'
   | 'file.closeEditor'
   | 'file.closeFolder'
   | 'edit.undo'
@@ -125,8 +150,18 @@ export const IPC = {
   templatesSave: 'templates:save',
   templatesDelete: 'templates:delete',
   renderPdf: 'render:pdf',
-  exportPdf: 'export:pdf',
-  exportHtml: 'export:html',
+  exportRun: 'export:run',
+  exportCancel: 'export:cancel',
+  presetsList: 'presets:list',
+  presetsSave: 'presets:save',
+  presetsDelete: 'presets:delete',
+  presetsRestore: 'presets:restore',
+  presentationGetWorkspace: 'presentation:get-workspace',
+  presentationSetWorkspace: 'presentation:set-workspace',
+  cssPick: 'css:pick',
+  cssRead: 'css:read',
+  diagramRender: 'diagram:render',
+  diagramCancel: 'diagram:cancel',
   shellOpenExternal: 'shell:open-external',
   shellShowItem: 'shell:show-item'
 } as const
@@ -193,9 +228,36 @@ export interface MarkdownStudioApi {
     delete(scope: TemplateScope, id: string): Promise<void>
   }
   render: {
-    pdf(html: string): Promise<Uint8Array>
-    exportPdf(html: string, defaultPath: string): Promise<string | null>
-    exportHtml(html: string, defaultPath: string): Promise<string | null>
+    /** Prints a document with the same engine and options an export of it would use. */
+    pdf(
+      html: string,
+      options: PdfOptions,
+      values: { title: string; file: string }
+    ): Promise<Uint8Array>
+  }
+  export: {
+    /** Asks for a destination and writes the export; expected failures are returned. */
+    run(request: ExportRequest): Promise<ExportResult>
+    cancel(jobId: string): Promise<void>
+  }
+  presets: {
+    list(): Promise<PresetListing>
+    /** Creates the preset (empty `id`) or replaces the stored one. A built-in id stores an edit. */
+    save(scope: PresetScope, preset: Partial<StoredPreset>): Promise<StoredPreset>
+    delete(scope: PresetScope, id: string): Promise<void>
+    /** Deletes the edited copies of built-in presets in a scope; returns how many. */
+    restoreBuiltins(scope: PresetScope): Promise<number>
+  }
+  presentation: {
+    getWorkspace(): Promise<WorkspacePresentationState>
+    /** Stores workspace overrides, or clears them with `null`. */
+    setWorkspace(overrides: WorkspacePresentation | null): Promise<WorkspacePresentationState>
+    pickCss(scope: 'global' | 'workspace'): Promise<CssFile | null>
+    readCss(path: string): Promise<CssFile>
+  }
+  diagram: {
+    render(request: DiagramRenderRequest): Promise<DiagramRenderResult>
+    cancel(ids: string[]): Promise<void>
   }
   shell: {
     openExternal(url: string): Promise<void>

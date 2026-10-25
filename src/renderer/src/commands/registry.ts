@@ -6,7 +6,16 @@ import { commands } from './commands'
 import { setRegistryRunner } from './dispatch'
 
 export type CommandCategory =
-  'File' | 'Edit' | 'View' | 'Format' | 'Insert' | 'Table' | 'Templates' | 'Navigate' | 'Help'
+  | 'File'
+  | 'Edit'
+  | 'View'
+  | 'Format'
+  | 'Insert'
+  | 'Table'
+  | 'Templates'
+  | 'Navigate'
+  | 'Document'
+  | 'Help'
 
 export interface AppCommand {
   id: string
@@ -43,6 +52,22 @@ export const APP_COMMANDS: AppCommand[] = [
     needsDocument: doc
   },
   { id: 'file.saveAll', title: 'Save All', category: 'File', run: commands.saveAll },
+  {
+    id: 'file.export',
+    title: 'Export…',
+    category: 'File',
+    run: commands.exportDialog,
+    needsDocument: doc,
+    keywords: 'publish pdf html preset page setup'
+  },
+  {
+    id: 'export.active',
+    title: 'Export with Current Preset',
+    category: 'File',
+    run: commands.exportWithActiveSetup,
+    needsDocument: doc,
+    keywords: 'publish pdf html quick'
+  },
   {
     id: 'file.exportHtml',
     title: 'Export as HTML…',
