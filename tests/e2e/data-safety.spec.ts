@@ -3,6 +3,7 @@ import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import {
   closeApp,
+  killApp,
   createSandbox,
   editorText,
   focusEditor,
@@ -172,7 +173,7 @@ test('unsaved text survives a killed application and is offered back', async () 
   await expect
     .poll(() => existsSync(recovery) && readdirSync(recovery).length > 0, { timeout: 10_000 })
     .toBe(true)
-  launched.app.process().kill('SIGKILL')
+  await killApp(launched.app)
   expect(readFileSync(path.join(sandbox.workspace, 'draft.md'), 'utf8')).toBe('# Draft\n')
 
   launched = await launchWithWorkspace(sandbox, NO_WRAP)

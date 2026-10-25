@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -511,4 +512,20 @@ export async function saveLastIpcResult(
   mkdirSync(path.dirname(file), { recursive: true })
   writeFileSync(file, Buffer.from(base64, 'base64'))
   return true
+}
+
+/**
+ * Ends the application abruptly, as a crash or power loss would. On Windows the child
+ * processes (renderer, GPU) must go too, or they keep the user-data folder locked.
+ */
+export async function killApp(app: ElectronApplication): Promise<void> {
+  const child = app.process()
+  const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()))
+  if (process.platform === 'win32' && child.pid) {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'])
+  } else {
+    child.kill('SIGKILL')
+  }
+  await exited
+  await new Promise((resolve) => setTimeout(resolve, 1000))
 }
