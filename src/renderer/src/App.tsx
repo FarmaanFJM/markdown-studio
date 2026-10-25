@@ -8,6 +8,7 @@ import { handleGlobalKeydown } from './commands/keybindings'
 import { ContextMenu, Toasts } from './dialogs/Overlays'
 import { DialogHost } from './dialogs/DialogHost'
 import { EditorTabs } from './editor/EditorTabs'
+import { FormattingToolbar } from './editor/FormattingToolbar'
 import { MarkdownEditor } from './editor/MarkdownEditor'
 import { Explorer } from './explorer/Explorer'
 import { ActivityBar } from './layout/ActivityBar'
@@ -137,6 +138,7 @@ export function App() {
         <main className="editor-area" ref={editorAreaRef}>
           <div className="editor-column" data-testid="editor-column">
             {hasDocuments && <EditorTabs />}
+            {hasDocuments && settings.markdown.toolbar && <FormattingToolbar />}
             <div className="editor-stack">
               <MarkdownEditor />
               {!hasDocuments && <Welcome />}

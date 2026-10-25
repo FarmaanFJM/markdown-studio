@@ -339,3 +339,23 @@ export async function focusEditorBehindDialog(page: Page): Promise<void> {
     }
   })
 }
+
+/** Clicks a native menu item by its menu and item labels (ampersands in labels are ignored). */
+export async function clickMenuItem(
+  app: ElectronApplication,
+  menu: string,
+  ...path: string[]
+): Promise<void> {
+  await app.evaluate(
+    ({ Menu, BrowserWindow }, [menuLabel, ...items]) => {
+      const clean = (label: string) => label.replace('&', '')
+      let current = Menu.getApplicationMenu()!.items.find((i) => clean(i.label) === menuLabel)
+      for (const label of items) {
+        current = current?.submenu?.items.find((i) => clean(i.label) === label)
+      }
+      if (!current) throw new Error(`Menu item not found: ${[menuLabel, ...items].join(' > ')}`)
+      current.click(undefined, BrowserWindow.getAllWindows()[0], undefined as never)
+    },
+    [menu, ...path]
+  )
+}

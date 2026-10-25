@@ -69,7 +69,9 @@ test('cancelling changes nothing; renaming without updating leaves the documents
     await renameViaKeyboard(page, ['architecture.png'], 'renamed.png')
     await confirm.getByRole('button', { name: 'Rename Without Updating' }).click()
     await expect(confirm).toBeHidden()
-    expect(existsSync(path.join(sandbox.workspace, 'assets', 'renamed.png'))).toBe(true)
+    await expect
+      .poll(() => existsSync(path.join(sandbox.workspace, 'assets', 'renamed.png')))
+      .toBe(true)
     expect(read(sandbox, 'README.md')).toBe(readme)
   } finally {
     await closeApp(app)
@@ -237,8 +239,10 @@ test.describe('drag and drop', () => {
     const { app, page } = await launchWithWorkspace(sandbox)
     try {
       await dragTo(page, 'windows-notes.md', 'docs')
-      await expect(treeRow(page, 'windows-notes.md')).toBeVisible()
-      expect(existsSync(path.join(sandbox.workspace, 'docs', 'windows-notes.md'))).toBe(true)
+      // The move finishes asynchronously (the row is visible before and after it).
+      await expect
+        .poll(() => existsSync(path.join(sandbox.workspace, 'docs', 'windows-notes.md')))
+        .toBe(true)
       expect(existsSync(path.join(sandbox.workspace, 'windows-notes.md'))).toBe(false)
 
       await dragTo(page, 'assets', 'docs')

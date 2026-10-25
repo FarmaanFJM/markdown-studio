@@ -1,5 +1,7 @@
 import { getCommand } from '../../commands/registry'
 import { monaco } from '../monaco'
+import { tableAtLine } from '@shared/markdown/analysis'
+import { analysisFor } from './model'
 import { isInTableCell } from './tableCommands'
 
 type Editor = monaco.editor.IStandaloneCodeEditor
@@ -49,6 +51,14 @@ export function installContextMenu(editor: Editor): monaco.IDisposable {
     }, 120)
   }
   const disposables: monaco.IDisposable[] = [
+    // A right-click builds the menu before the debounced refresh would run, so the key is set
+    // from the clicked line right away.
+    editor.onMouseDown((event) => {
+      const model = editor.getModel()
+      const line = event.target.position?.lineNumber
+      if (!event.event.rightButton || !model || !line) return
+      inTable.set(tableAtLine(analysisFor(model), line - 1) !== null)
+    }),
     editor.onDidChangeCursorPosition(refresh),
     editor.onDidChangeModel(refresh),
     editor.onDidChangeModelContent(refresh)

@@ -88,6 +88,8 @@ export type MenuCommand =
   | 'view.fontReset'
   | 'help.about'
   | 'help.shortcuts'
+  /** Runs a command of the renderer's command registry; the id travels as the argument. */
+  | 'app.command'
 
 export interface MenuCommandMessage {
   command: MenuCommand

@@ -3,6 +3,7 @@ import { registerRunner } from '../editor/markdown/runners'
 import { tableCommands } from '../editor/markdown/tableCommands'
 import { activeDocument } from '../state/documents'
 import { commands } from './commands'
+import { setRegistryRunner } from './dispatch'
 
 export type CommandCategory =
   'File' | 'Edit' | 'View' | 'Format' | 'Insert' | 'Table' | 'Templates' | 'Navigate' | 'Help'
@@ -118,6 +119,12 @@ export const APP_COMMANDS: AppCommand[] = [
     title: 'Explorer as Thumbnails',
     category: 'View',
     run: () => commands.setExplorerMode('thumbnails')
+  },
+  {
+    id: 'view.toggleToolbar',
+    title: 'Toggle Formatting Toolbar',
+    category: 'View',
+    run: commands.toggleToolbar
   },
   {
     id: 'view.toggleWordWrap',
@@ -392,6 +399,8 @@ for (const command of APP_COMMANDS) {
   byId.set(command.id, command)
   registerRunner(command.id, command.run)
 }
+
+setRegistryRunner((id) => runCommand(id))
 
 export function getCommand(id: string): AppCommand | undefined {
   return byId.get(id)

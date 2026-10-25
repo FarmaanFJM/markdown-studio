@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { LINT_RULES } from '@shared/lint'
 import {
   LIMITS,
   normalizeAssetDirectory,
@@ -89,6 +90,64 @@ function AssetDirectoryInput() {
   )
 }
 
+function AuthorInput() {
+  const stored = useSettings((s) => s.settings.templates.author)
+  const update = useSettings((s) => s.update)
+  const [value, setValue] = useState(stored)
+  useEffect(() => setValue(stored), [stored])
+  const commit = () => {
+    if (value.trim() !== stored) update({ templates: { author: value.trim() } })
+  }
+  return (
+    <input
+      id="setting-author"
+      className="text-input"
+      value={value}
+      maxLength={LIMITS.authorLength}
+      placeholder="Not set"
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit()
+      }}
+    />
+  )
+}
+
+function StyleRules() {
+  const disabled = useSettings((s) => s.settings.markdown.diagnostics.disabledRules)
+  const update = useSettings((s) => s.update)
+  const toggle = (id: string, enabled: boolean) =>
+    update({
+      markdown: {
+        diagnostics: {
+          disabledRules: enabled ? disabled.filter((r) => r !== id) : [...disabled, id]
+        }
+      }
+    })
+  return (
+    <details className="rule-list" data-testid="style-rules">
+      <summary>
+        Style rules ({LINT_RULES.length - disabled.length} of {LINT_RULES.length} on)
+      </summary>
+      <ul>
+        {LINT_RULES.map((rule) => (
+          <li key={rule.id}>
+            <label>
+              <input
+                type="checkbox"
+                checked={!disabled.includes(rule.id)}
+                onChange={(e) => toggle(rule.id, e.target.checked)}
+              />
+              <span className="rule-id">{rule.id}</span> {rule.name}
+            </label>
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
+}
+
 export function SettingsPanel() {
   const settings = useSettings((s) => s.settings)
   const update = useSettings((s) => s.update)
@@ -141,6 +200,122 @@ export function SettingsPanel() {
             checked={settings.editor.minimap}
             onChange={(v) => update({ editor: { minimap: v } })}
           />
+        </Row>
+
+        <h3 className="settings-section">Markdown editing</h3>
+        <Row
+          label="Smart lists and quotes"
+          htmlFor="setting-smart-lists"
+          hint="Enter continues a list or quote, Tab and Shift+Tab nest items."
+        >
+          <Toggle
+            id="setting-smart-lists"
+            checked={settings.markdown.smartLists}
+            onChange={(v) => update({ markdown: { smartLists: v } })}
+          />
+        </Row>
+        <Row
+          label="Table navigation"
+          htmlFor="setting-table-navigation"
+          hint="Tab and Shift+Tab move between cells and keep the table tidy."
+        >
+          <Toggle
+            id="setting-table-navigation"
+            checked={settings.markdown.tableNavigation}
+            onChange={(v) => update({ markdown: { tableNavigation: v } })}
+          />
+        </Row>
+        <Row
+          label="Automatic suggestions"
+          htmlFor="setting-auto-suggest"
+          hint='Offer suggestions after "/" and inside link and image paths. Ctrl+Space always works.'
+        >
+          <Toggle
+            id="setting-auto-suggest"
+            checked={settings.markdown.autoSuggest}
+            onChange={(v) => update({ markdown: { autoSuggest: v } })}
+          />
+        </Row>
+        <Row label="Formatting toolbar" htmlFor="setting-toolbar">
+          <Toggle
+            id="setting-toolbar"
+            checked={settings.markdown.toolbar}
+            onChange={(v) => update({ markdown: { toolbar: v } })}
+          />
+        </Row>
+
+        <h3 className="settings-section">Problems</h3>
+        <Row
+          label="Check links and images"
+          htmlFor="setting-check-links"
+          hint="Missing files, images and heading anchors. Web addresses are never contacted."
+        >
+          <Toggle
+            id="setting-check-links"
+            checked={settings.markdown.diagnostics.links}
+            onChange={(v) => update({ markdown: { diagnostics: { links: v } } })}
+          />
+        </Row>
+        <Row
+          label="Check tables"
+          htmlFor="setting-check-tables"
+          hint="Tables that the preview does not display as written."
+        >
+          <Toggle
+            id="setting-check-tables"
+            checked={settings.markdown.diagnostics.tables}
+            onChange={(v) => update({ markdown: { diagnostics: { tables: v } } })}
+          />
+        </Row>
+        <Row
+          label="Style checks"
+          htmlFor="setting-check-style"
+          hint="Spacing and structure notes from markdownlint."
+        >
+          <Toggle
+            id="setting-check-style"
+            checked={settings.markdown.diagnostics.lint}
+            onChange={(v) => update({ markdown: { diagnostics: { lint: v } } })}
+          />
+        </Row>
+        {settings.markdown.diagnostics.lint && <StyleRules />}
+
+        <h3 className="settings-section">Table of contents</h3>
+        <Row
+          label="Include the document title"
+          htmlFor="setting-toc-title"
+          hint="List the first heading when it is a level-1 title."
+        >
+          <Toggle
+            id="setting-toc-title"
+            checked={settings.markdown.toc.includeTopLevel}
+            onChange={(v) => update({ markdown: { toc: { includeTopLevel: v } } })}
+          />
+        </Row>
+        <Row label="Deepest heading level" htmlFor="setting-toc-depth">
+          <input
+            id="setting-toc-depth"
+            className="number-input"
+            type="number"
+            min={LIMITS.tocDepth.min}
+            max={LIMITS.tocDepth.max}
+            value={settings.markdown.toc.maxDepth}
+            onChange={(e) => {
+              const depth = Number(e.target.value)
+              if (depth >= LIMITS.tocDepth.min && depth <= LIMITS.tocDepth.max) {
+                update({ markdown: { toc: { maxDepth: depth } } })
+              }
+            }}
+          />
+        </Row>
+
+        <h3 className="settings-section">Templates</h3>
+        <Row
+          label="Author name"
+          htmlFor="setting-author"
+          hint="Offered when a template asks for an author. It is never filled in without your say."
+        >
+          <AuthorInput />
         </Row>
 
         <h3 className="settings-section">Explorer</h3>

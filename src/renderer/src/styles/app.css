@@ -2105,3 +2105,79 @@ input[type='range'] {
   outline: 1px dashed var(--accent);
   outline-offset: -1px;
 }
+
+/* ---------- Formatting toolbar ---------- */
+
+.format-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 8px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+
+.format-group {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding-left: 6px;
+  margin-left: 2px;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.compact-select {
+  height: 24px;
+  max-width: 128px;
+  font-size: 12px;
+}
+
+.format-toolbar .icon-button {
+  width: 26px;
+  height: 24px;
+}
+
+.format-toolbar .icon-button:focus-visible {
+  outline: 1px solid var(--accent);
+}
+
+/* ---------- Style rule list in settings ---------- */
+
+.rule-list {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.rule-list summary {
+  cursor: pointer;
+  color: var(--text-2);
+}
+
+.rule-list ul {
+  margin: 8px 0 0;
+  padding: 0;
+  max-height: 220px;
+  overflow: auto;
+  list-style: none;
+}
+
+.rule-list label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rule-id {
+  min-width: 44px;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}

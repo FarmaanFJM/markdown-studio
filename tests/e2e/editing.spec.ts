@@ -135,7 +135,9 @@ test('asks before closing a tab with unsaved changes', async () => {
 test('creates an untitled document and saves it with Save As', async () => {
   const sandbox = createSandbox()
   const target = path.join(sandbox.workspace, 'notes', '..', 'meeting-notes.md')
-  const { app, page } = await launchWithWorkspace(sandbox)
+  // This test is about saving. Since Phase 2, Enter after a bullet continues the list; the
+  // automatic list behaviour is switched off here so the typed text is saved exactly as typed.
+  const { app, page } = await launchWithWorkspace(sandbox, { markdown: { smartLists: false } })
   try {
     await page.keyboard.press(`${mod}+N`)
     await expect(page.locator('.tab.active .tab-label')).toHaveText('Untitled-1')
