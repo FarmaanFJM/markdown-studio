@@ -90,14 +90,21 @@ test('dragging a project image inserts a relative reference at the drop point', 
     await openFromTree(page, 'README.md')
     await treeRow(page, 'assets').click()
 
-    // A real mouse drag from the Explorer row to an empty line in the editor.
+    // A real pointer drag from the Explorer row to an empty line in the editor. The pointer
+    // first moves a few pixels over the row, as a hand would: Chromium only starts an HTML5
+    // drag once the pointer passes its drag threshold over the source, and a single jump to the
+    // target (Playwright's dragTo) intermittently failed to start the drag on Windows.
     const target = await lineCoordinates(page, README_BLANK_LINE)
-    await treeRow(page, 'screenshot.jpg').dragTo(page.locator('.monaco-editor .view-lines'), {
-      targetPosition: await page.locator('.monaco-editor .view-lines').evaluate((el, p) => {
-        const r = el.getBoundingClientRect()
-        return { x: p.x - r.left, y: p.y - r.top }
-      }, target)
-    })
+    const source = (await treeRow(page, 'screenshot.jpg').boundingBox())!
+    const start = { x: source.x + 40, y: source.y + source.height / 2 }
+    await page.mouse.move(start.x, start.y)
+    await page.mouse.down()
+    for (let offset = 2; offset <= 12; offset += 2) {
+      await page.mouse.move(start.x + offset, start.y + offset / 2)
+    }
+    await page.mouse.move(target.x + 4, target.y, { steps: 12 })
+    await page.mouse.move(target.x, target.y, { steps: 2 })
+    await page.mouse.up()
 
     await expect(page.locator('.tab.active')).toHaveClass(/dirty/)
     await expect
