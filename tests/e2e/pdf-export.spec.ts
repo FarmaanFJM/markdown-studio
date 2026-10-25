@@ -135,7 +135,9 @@ test('HTML export produces a valid standalone document with embedded images', as
     await stubSaveDialog(app, target)
     // The toolbar button opens the Export dialog (the File menu command does the same).
     await exportViaDialog(page, 'html')
-    await expect(page.getByTestId('toast-success')).toContainText('guide.html')
+    // A document with relative links to other files exports with a warning, not a plain success.
+    await expect(page.getByTestId('toast-info')).toContainText('Exported guide.html')
+    await expect(page.getByTestId('toast-info')).toContainText('1 link to local files')
 
     const html = readFileSync(target, 'utf8')
     expect(html.startsWith('<!DOCTYPE html>')).toBe(true)
@@ -171,7 +173,9 @@ test('HTML export keeps tables, code, task lists and inline HTML', async () => {
     const target = path.join(sandbox.base, 'README.html')
     await stubSaveDialog(app, target)
     await exportViaDialog(page, 'html')
-    await expect(page.getByTestId('toast-success')).toBeVisible()
+    await expect(page.locator('[data-testid^="toast-"]').first()).toContainText(
+      'Exported README.html'
+    )
 
     const viewer = await openInViewer(app, target)
     expect(await viewer.locator('table tbody tr').count()).toBe(3)

@@ -26,7 +26,7 @@ test('starts with the branded shell and an About dialog', async () => {
 
     await page.getByRole('button', { name: 'About Markdown Studio' }).click()
     const dialog = page.getByRole('dialog', { name: 'About Markdown Studio' })
-    await expect(dialog).toContainText('Version 0.1.0')
+    await expect(dialog).toContainText(/Version \d+\.\d+\.\d+/)
     await expect(dialog).toContainText('Electron')
     await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
