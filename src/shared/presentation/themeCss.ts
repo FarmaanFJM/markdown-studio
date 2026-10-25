@@ -153,6 +153,7 @@ figure.ms-figure img { display: block; margin: 0 auto; }
 figcaption, caption { color: var(--ms-muted); font-size: 0.9em; line-height: 1.4; }
 figcaption { margin-top: 0.5em; text-align: center; }
 caption { caption-side: top; padding: 0 0 0.5em; text-align: left; }
+table.ms-table { min-width: min(100%, 26em); }
 .ms-caption-label { color: var(--ms-text); font-weight: 650; }
 .ms-secnum { margin-right: 0.15em; color: var(--ms-muted); font-variant-numeric: tabular-nums; }
 .ms-xref { color: var(--ms-link); }
@@ -186,6 +187,8 @@ img.ms-img-missing::after { content: ' \2014  ' attr(title); }
 .markdown-body[data-columns='2'] { column-count: 2; column-gap: var(--ms-col-gap, 8mm); column-fill: balance; }
 .markdown-body[data-columns='2'] > h1:first-child, .markdown-body[data-columns='2'] > nav.ms-toc, .markdown-body[data-columns='2'] .ms-full-width, .markdown-body[data-columns='2'] .ms-publication-title, .markdown-body[data-columns='2'] .ms-publication-meta, .markdown-body[data-columns='2'] .ms-chapter > h1:first-child { column-span: all; }
 .markdown-body[data-columns='2'] .ms-full-width { margin-left: 0; margin-right: 0; }
+/* A table with five or more columns is too wide for one column: it spans both. */
+.markdown-body[data-columns='2'] table:has(> thead th:nth-child(5)) { column-span: all; table-layout: auto; font-size: 0.9em; }
 .markdown-body[data-columns='2'] table { display: table; width: 100%; table-layout: fixed; font-size: 0.85em; overflow: visible; }
 .markdown-body[data-columns='2'] th, .markdown-body[data-columns='2'] td { overflow-wrap: anywhere; padding: 0.3em 0.5em; }
 .markdown-body[data-columns='2'] .ms-full-width table { table-layout: auto; font-size: 0.9em; }
@@ -210,6 +213,12 @@ img.ms-img-missing::after { content: ' \2014  ' attr(title); }
   pre { overflow: visible; }
   blockquote, img, tr, figure, .ms-diagram, .ms-math-block, .ms-diagram-error { break-inside: avoid; page-break-inside: avoid; }
   table { display: table; width: auto; max-width: 100%; overflow: visible; }
+  th, td { overflow-wrap: anywhere; }
+  /* Many columns: smaller text keeps words whole instead of breaking them. */
+  table:has(> thead th:nth-child(7)) { font-size: 0.82em; }
+  table:has(> thead th:nth-child(7)) th, table:has(> thead th:nth-child(7)) td { padding-left: 0.3em; padding-right: 0.3em; }
+  table:has(> thead th:nth-child(10)) { font-size: 0.7em; }
+  table.ms-table-short { break-inside: avoid; page-break-inside: avoid; }
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
   img, .ms-diagram svg { max-height: var(--ms-page-height); object-fit: contain; }

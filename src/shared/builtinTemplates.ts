@@ -223,8 +223,8 @@ toc: true
 
 # {{title}}
 
-**Author:** {{author}}
-**Date:** {{date}}
+- **Author:** {{author}}
+- **Date:** {{date}}
 
 ## Summary
 
@@ -284,8 +284,8 @@ toc: true
 
 # {{title}}
 
-**Auteur:** {{author}}
-**Datum:** {{date}}
+- **Auteur:** {{author}}
+- **Datum:** {{date}}
 
 ## Samenvatting
 
@@ -345,9 +345,9 @@ toc: true
 
 # {{title}}
 
-**Author:** {{author}}
-**Guild:** Playful Tech
-**Date:** {{date}}
+- **Author:** {{author}}
+- **Guild:** Playful Tech
+- **Date:** {{date}}
 
 ## Research question
 

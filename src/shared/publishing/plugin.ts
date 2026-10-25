@@ -107,6 +107,8 @@ interface Meta {
   labelId?: string
   figure?: { caption: string; id: string; full: boolean }
   tableCaption?: { caption: string; id?: string; full: boolean }
+  /** A table small enough to keep on one page. */
+  short?: boolean
   /** Resolved at render time. */
   numberText?: string
 }
@@ -222,6 +224,9 @@ function headingTextOf(inline: Token | undefined): string {
     .join('')
 }
 
+/** Tables with at most this many rows (header included) are not split across pages. */
+const SHORT_TABLE_ROWS = 20
+
 export function publishingPlugin(md: MarkdownIt, _options: Options = {}): void {
   void _options
   md.block.ruler.before('hr', 'front_matter', frontMatterRule as never, {
@@ -334,6 +339,16 @@ export function publishingPlugin(md: MarkdownIt, _options: Options = {}): void {
     for (const label of collected.labels) if (!opts.labels) labelMap.set(label.id, label)
     const problems = collected.problems
     const prefix = opts.idPrefix ?? ''
+
+    // Short tables are kept on one page (with their caption); long ones may continue.
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].type !== 'table_open') continue
+      let rows = 0
+      for (let j = i + 1; j < tokens.length && tokens[j].type !== 'table_close'; j++) {
+        if (tokens[j].type === 'tr_open') rows++
+      }
+      if (rows <= SHORT_TABLE_ROWS) metaOf(tokens[i]).short = true
+    }
 
     // Inject numbers into headings and caption labels into figures/tables.
     for (let i = 0; i < tokens.length; i++) {
@@ -551,7 +566,7 @@ export function publishingPlugin(md: MarkdownIt, _options: Options = {}): void {
     const label = meta?.numberText
       ? `<span class="ms-caption-label">${escapeHtml(meta.numberText)}</span> `
       : ''
-    return `<table class="ms-table${caption.full ? ' ms-full-width' : ''}"${id}>\n<caption>${label}${md.renderInline(caption.caption, captionEnv(env))}</caption>\n`
+    return `<table class="ms-table${meta?.short ? ' ms-table-short' : ''}${caption.full ? ' ms-full-width' : ''}"${id}>\n<caption>${label}${md.renderInline(caption.caption, captionEnv(env))}</caption>\n`
   }
 }
 

@@ -296,7 +296,7 @@ describe('tables with captions', () => {
     expect(
       withCaption
         .replace(/<caption>.*?<\/caption>\n/s, '')
-        .replace(/ class="ms-table" id="tbl-x"/, '')
+        .replace(/ class="ms-table ms-table-short" id="tbl-x"/, '')
     ).toBe(without)
   })
 })
