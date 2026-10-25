@@ -17,7 +17,7 @@ import { basename, relativePath } from '@shared/paths'
 import { getActiveEditor } from '../models'
 import { monaco } from '../monaco'
 import { useSettings } from '../../state/settings'
-import { listDirectory, headingsOfFile, workspaceFiles } from '../../workspace'
+import { anchorsOfFile, listDirectory, workspaceFiles } from '../../workspace'
 import { documentContext, documentPath } from './context'
 import { getCustomSnippets } from './customSnippets'
 import { analysisFor } from './model'
@@ -298,7 +298,8 @@ async function anchorSuggestions(
     headings = analysisFor(model).headings
   } else {
     const target = resolveLocalPath(safeDecode(pathPart), documentContext(model))
-    headings = target && isMarkdownPath(target) ? await headingsOfFile(target) : null
+    headings =
+      target && isMarkdownPath(target) ? ((await anchorsOfFile(target))?.headings ?? null) : null
   }
   return (headings ?? [])
     .filter((heading) => heading.id)

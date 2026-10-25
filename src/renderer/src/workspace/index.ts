@@ -1,5 +1,5 @@
 import type { DirEntry } from '@shared/ipc'
-import { analyzeDocument, type Heading } from '@shared/markdown/analysis'
+import { analyzeDocument, documentAnchors, type Heading } from '@shared/markdown/analysis'
 import { api } from '../bridge'
 import { useWorkspace } from '../state/workspace'
 
@@ -14,7 +14,10 @@ const HEADINGS_TTL_MS = 2000
 
 const directories = new Map<string, { at: number; entries: Promise<DirEntry[]> }>()
 let fileList: { at: number; files: Promise<string[]> } | null = null
-const headings = new Map<string, { at: number; value: Promise<Heading[] | null> }>()
+const headings = new Map<
+  string,
+  { at: number; value: Promise<{ headings: Heading[]; anchors: Set<string> } | null> }
+>()
 
 export function invalidateWorkspaceIndex(): void {
   directories.clear()
@@ -55,14 +58,19 @@ export function workspaceFiles(): Promise<string[]> {
   return files
 }
 
-/** Headings of another Markdown file, or null when it cannot be read. */
-export function headingsOfFile(path: string): Promise<Heading[] | null> {
+/** Headings and link targets of another Markdown file, or null when it cannot be read. */
+export function anchorsOfFile(
+  path: string
+): Promise<{ headings: Heading[]; anchors: Set<string> } | null> {
   subscribe()
   const cached = headings.get(path)
   if (cached && Date.now() - cached.at < HEADINGS_TTL_MS) return cached.value
   const value = api.fs
     .readText(path)
-    .then((file) => analyzeDocument(file.content).headings)
+    .then((file) => {
+      const analysis = analyzeDocument(file.content)
+      return { headings: analysis.headings, anchors: documentAnchors(analysis) }
+    })
     .catch(() => null)
   headings.set(path, { at: Date.now(), value })
   return value

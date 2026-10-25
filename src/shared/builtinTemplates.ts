@@ -119,7 +119,7 @@ Describe the main components and how they interact.
 
 ## Goals
 
-- {{cursor}}
+- {{cursor}}First goal
 
 ## Status
 

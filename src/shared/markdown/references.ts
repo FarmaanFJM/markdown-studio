@@ -278,7 +278,11 @@ export function extractReferences(analysis: DocumentAnalysis): DocReference[] {
   for (const range of analysis.htmlBlocks) {
     const region = makeRegion(lines, range)
     const found: Found[] = []
-    for (const match of region.text.matchAll(new RegExp(TAG_PATTERN.source, 'g'))) {
+    // Commented-out markup is not part of the document; blank it out but keep every offset.
+    const visible = region.text.replace(/<!--[\s\S]*?(?:-->|$)/g, (comment) =>
+      comment.replace(/[^\n]/g, ' ')
+    )
+    for (const match of visible.matchAll(new RegExp(TAG_PATTERN.source, 'g'))) {
       scanTag(match[0], match.index, found)
     }
     found.forEach((f) => add(region, f))

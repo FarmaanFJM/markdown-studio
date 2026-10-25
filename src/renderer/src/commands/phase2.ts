@@ -3,6 +3,8 @@
  * outline...). Imported once by the application shell so the registry is complete before the
  * editor builds its menus.
  */
+import { getActiveEditor } from '../editor/models'
+import { fixAllProblems } from '../diagnostics/manager'
 import { startTemplateStore } from '../templates/store'
 import { templateCommands } from '../templates/flows'
 import { insertTableOfContents, updateTableOfContents } from '../outline/toc'
@@ -13,6 +15,30 @@ import { registerCommands } from './registry'
 startTemplateStore()
 
 registerCommands([
+  {
+    id: 'problems.next',
+    title: 'Go to Next Problem',
+    category: 'Navigate',
+    run: () => getActiveEditor()?.trigger('palette', 'editor.action.marker.next', null),
+    needsDocument: true,
+    keywords: 'warning error diagnostics'
+  },
+  {
+    id: 'problems.previous',
+    title: 'Go to Previous Problem',
+    category: 'Navigate',
+    run: () => getActiveEditor()?.trigger('palette', 'editor.action.marker.prev', null),
+    needsDocument: true,
+    keywords: 'warning error diagnostics'
+  },
+  {
+    id: 'problems.fixAll',
+    title: 'Fix All Automatic Style Problems',
+    category: 'Format',
+    run: fixAllProblems,
+    needsDocument: true,
+    keywords: 'lint markdownlint spacing'
+  },
   {
     id: 'template.newDocument',
     title: 'New File from Template…',

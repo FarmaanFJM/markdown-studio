@@ -2028,3 +2028,29 @@ input[type='range'] {
 .template-warning p {
   margin: 0 0 6px;
 }
+
+/* ---------- Status bar problems ---------- */
+
+.status-button {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.status-button:hover {
+  color: var(--text);
+}
+
+.status-button:focus-visible {
+  outline: 1px solid var(--accent);
+}
+
+.status-button.has-warnings {
+  color: #e5b454;
+}
+
+.status-notes {
+  color: var(--text-3);
+}

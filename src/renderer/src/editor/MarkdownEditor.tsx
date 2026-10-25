@@ -4,6 +4,7 @@ import { useSettings } from '../state/settings'
 import { notify } from '../state/ui'
 import { dataTransferHasDroppable, insertImages, sourcesFromDataTransfer } from './imageDrop'
 import { documentModels, setActiveEditor } from './models'
+import { installDiagnostics, registerQuickFixes } from '../diagnostics/manager'
 import { registerCompletions } from './markdown/completions'
 import { installContextMenu } from './markdown/contextMenu'
 import { installSmartEditing } from './markdown/smartEditing'
@@ -67,8 +68,10 @@ export function MarkdownEditor() {
     setActiveEditor(editor)
     const features = [
       registerCompletions(),
+      registerQuickFixes(),
       installSmartEditing(editor),
-      installContextMenu(editor)
+      installContextMenu(editor),
+      installDiagnostics(editor)
     ]
 
     editor.onDidChangeCursorSelection(({ selection }) => {
