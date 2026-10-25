@@ -4,11 +4,13 @@ import {
   createSandbox,
   focusEditor,
   inPreview,
+  ipcCalls,
   launchWithWorkspace,
   MIXED_DOCUMENT,
   mod,
   openFromTree,
   seedDocuments,
+  tapIpc,
   waitForDiagrams
 } from './helpers'
 
@@ -174,15 +176,7 @@ test('editing text does not redraw unchanged diagrams, and diagram edits are deb
     await openFromTree(page, 'mixed.md')
     await waitForDiagrams(page, 1)
     // Count the drawings requested from the isolated renderer from now on.
-    await page.evaluate(() => {
-      const api = window.markdownStudio.diagram
-      const original = api.render
-      ;(window as unknown as { __drawn: number }).__drawn = 0
-      api.render = (request) => {
-        ;(window as unknown as { __drawn: number }).__drawn++
-        return original(request)
-      }
-    })
+    await tapIpc(app, 'diagram:render')
     const svgBefore = await inPreview(page, (doc) => doc.querySelector('figure.ms-diagram svg')?.id ?? '')
     await focusEditor(page)
     await page.keyboard.press(`${mod}+Home`)
@@ -190,7 +184,7 @@ test('editing text does not redraw unchanged diagrams, and diagram edits are deb
     await expect
       .poll(() => inPreview(page, (doc) => doc.body.textContent?.includes('character by character') ?? false))
       .toBe(true)
-    expect(await page.evaluate(() => (window as unknown as { __drawn: number }).__drawn)).toBe(0)
+    expect(await ipcCalls(app, 'diagram:render')).toBe(0)
     expect(await inPreview(page, (doc) => doc.querySelector('figure.ms-diagram svg')?.id ?? '')).toBe(svgBefore)
 
     // Edit the diagram: one quick burst of typing makes one drawing, not one per key.
@@ -200,7 +194,9 @@ test('editing text does not redraw unchanged diagrams, and diagram edits are deb
     await expect
       .poll(() => inPreview(page, (doc) => doc.querySelectorAll('figure.ms-diagram svg .node').length))
       .toBe(5)
-    expect(await page.evaluate(() => (window as unknown as { __drawn: number }).__drawn)).toBeLessThanOrEqual(2)
+    const drawn = await ipcCalls(app, 'diagram:render')
+    expect(drawn).toBeGreaterThanOrEqual(1)
+    expect(drawn).toBeLessThanOrEqual(2)
   } finally {
     await closeApp(app)
   }

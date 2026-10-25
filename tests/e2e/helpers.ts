@@ -442,3 +442,43 @@ export async function waitForDiagrams(page: Page, expected: number): Promise<voi
     )
     .toBe(expected)
 }
+
+/**
+ * Observes calls on one IPC channel from the main process (without changing behaviour): counts
+ * them and keeps the arguments' size and, for binary results, the last answer.
+ */
+export async function tapIpc(app: ElectronApplication, channel: string): Promise<void> {
+  await app.evaluate(({ ipcMain }, name) => {
+    const handlers = (ipcMain as unknown as { _invokeHandlers: Map<string, (...a: unknown[]) => unknown> })._invokeHandlers
+    const original = handlers.get(name)
+    if (!original) throw new Error(`No handler for ${name}`)
+    const store = ((globalThis as unknown as { __taps?: Record<string, { calls: number; last?: Buffer }> }).__taps ??= {})
+    store[name] = { calls: 0 }
+    handlers.set(name, async (...args: unknown[]) => {
+      store[name].calls++
+      const result = await original(...args)
+      if (result instanceof Uint8Array) store[name].last = Buffer.from(result)
+      return result
+    })
+  }, channel)
+}
+
+export async function ipcCalls(app: ElectronApplication, channel: string): Promise<number> {
+  return app.evaluate(
+    (_electron, name) => (globalThis as unknown as { __taps: Record<string, { calls: number }> }).__taps[name]?.calls ?? 0,
+    channel
+  )
+}
+
+/** The last binary answer of a tapped channel, written to `file` (for PDF previews). */
+export async function saveLastIpcResult(app: ElectronApplication, channel: string, file: string): Promise<boolean> {
+  const base64 = await app.evaluate(
+    (_electron, name) =>
+      (globalThis as unknown as { __taps: Record<string, { last?: Buffer }> }).__taps[name]?.last?.toString('base64') ?? '',
+    channel
+  )
+  if (!base64) return false
+  mkdirSync(path.dirname(file), { recursive: true })
+  writeFileSync(file, Buffer.from(base64, 'base64'))
+  return true
+}
