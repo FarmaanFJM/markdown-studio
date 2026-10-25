@@ -141,14 +141,15 @@ export function PdfPreview({
 
   const generate = useCallback(async () => {
     const id = ++generation.current
-    let source: ExportSource | null = null
-    if (usePublicationView.getState().previewing) {
-      const loaded = await loadPublicationBuild()
-      source = loaded ? publicationExportSource(loaded) : null
-    } else {
-      const doc = activeDocument()
-      source = doc ? exportSourceFor(doc) : null
-    }
+    const loaded = usePublicationView.getState().previewing ? await loadPublicationBuild() : null
+    const doc = activeDocument()
+    const source: ExportSource | null = usePublicationView.getState().previewing
+      ? loaded
+        ? publicationExportSource(loaded)
+        : null
+      : doc
+        ? exportSourceFor(doc)
+        : null
     if (id !== generation.current) return
     if (!source) {
       setPdf(null)

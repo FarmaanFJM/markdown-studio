@@ -34,7 +34,7 @@ const NONE: FrontMatter = {
   error: null
 }
 
-const OPEN = /^﻿?---[ \t]*\r?\n/
+const OPEN = /^\ufeff?---[ \t]*\r?\n/
 
 /** Locates the block without parsing it. */
 function locate(text: string): { raw: string; end: number; lineCount: number } | null {
@@ -51,6 +51,8 @@ function locate(text: string): { raw: string; end: number; lineCount: number } |
   return { raw, end, lineCount }
 }
 
+let lastParsed: { raw: string; data: Record<string, unknown>; error: string | null } | null = null
+
 export function splitFrontMatter(text: string): FrontMatter {
   const found = locate(text)
   if (!found) return NONE
@@ -59,16 +61,24 @@ export function splitFrontMatter(text: string): FrontMatter {
     return { ...base, data: {}, error: 'The front matter is too large to read.' }
   }
   if (found.raw.trim() === '') return { ...base, data: {}, error: null }
-  const doc = parseDocument(found.raw, { strict: false, uniqueKeys: true })
-  if (doc.errors.length > 0) {
-    return { ...base, data: {}, error: doc.errors[0].message.split('\n')[0] }
+  // The front matter rarely changes while the body is edited: reuse the last parse.
+  if (lastParsed && lastParsed.raw === found.raw) {
+    return { ...base, data: lastParsed.data, error: lastParsed.error }
   }
+  const parsed = parseRaw(found.raw)
+  lastParsed = { raw: found.raw, ...parsed }
+  return { ...base, ...parsed }
+}
+
+function parseRaw(raw: string): { data: Record<string, unknown>; error: string | null } {
+  const doc = parseDocument(raw, { strict: false, uniqueKeys: true })
+  if (doc.errors.length > 0) return { data: {}, error: doc.errors[0].message.split('\n')[0] }
   const value = doc.toJS({ maxAliasCount: 20 }) as unknown
-  if (value === null || value === undefined) return { ...base, data: {}, error: null }
+  if (value === null || value === undefined) return { data: {}, error: null }
   if (typeof value !== 'object' || Array.isArray(value)) {
-    return { ...base, data: {}, error: 'The front matter must be a list of "key: value" lines.' }
+    return { data: {}, error: 'The front matter must be a list of "key: value" lines.' }
   }
-  return { ...base, data: value as Record<string, unknown>, error: null }
+  return { data: value as Record<string, unknown>, error: null }
 }
 
 /** The document text without its front matter. */
@@ -107,7 +117,7 @@ export function updateFrontMatter(text: string, patch: FrontMatterPatch): string
   }
   let yaml = doc.toString({ lineWidth: 0 })
   if (yaml.trim() === '{}') yaml = ''
-  const bom = text.startsWith('﻿') ? '﻿' : ''
+  const bom = text.startsWith('\ufeff') ? '\ufeff' : ''
   const body = text.slice(found.end)
   if (yaml === '') {
     // Nothing left: drop the empty block and the blank line that followed it.

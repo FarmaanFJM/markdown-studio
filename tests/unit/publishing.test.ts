@@ -7,7 +7,7 @@ import type { Source } from '@shared/publishing/sources'
 function render(source: string, ms: PublishingOptions = {}) {
   const md = createApplicationMarkdownIt()
   const env: PublishingEnv = { ms }
-  const html = md.render(source, env)
+  const html = md.render(source, env as never)
   return { html, result: env.ms!.result as PublishingResult }
 }
 

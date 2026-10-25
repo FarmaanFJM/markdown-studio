@@ -1,3 +1,4 @@
+import { formatLinkDestination } from '@shared/imageReference'
 import { escapeSnippetText } from '@shared/markdown/snippets'
 import { analyzePublishing, suggestLabelId } from '@shared/publishing/analyze'
 import {
@@ -185,9 +186,7 @@ export async function insertFigure(): Promise<void> {
     editor.focus()
     return
   }
-  const destination = /[\s()]/.test(imported.relative)
-    ? `<${imported.relative}>`
-    : imported.relative
+  const destination = formatLinkDestination(imported.relative)
   const text = `![${escapeAlt(result.caption)}](${destination}){#${result.id}${result.fullWidth ? ' .full-width' : ''}}`
   insertSnippetText(editor, escapeSnippetText(text), { block: true })
   void model

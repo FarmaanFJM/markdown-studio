@@ -23,6 +23,7 @@ import { FileService } from './services/fileService'
 import { PdfService } from './services/pdfService'
 import { PresentationService } from './services/presentationService'
 import { ProjectService } from './services/projectService'
+import { RecoveryService } from './services/recoveryService'
 import { PresetService } from './services/presetService'
 import { MsFileProtocol, registerSchemePrivileges } from './services/protocol'
 import { SettingsService } from './services/settingsService'
@@ -48,6 +49,7 @@ const pdf = new PdfService(msfile)
 const presets = new PresetService(access, path.join(app.getPath('userData'), 'export-presets'))
 const presentation = new PresentationService(access, () => mainWindow)
 const project = new ProjectService(access)
+const recovery = new RecoveryService(path.join(app.getPath('userData'), 'recovery'))
 const exportService = new ExportService({
   pdf,
   chooseTarget: async (format, defaultPath) => {
@@ -185,6 +187,12 @@ function registerIpc(): void {
           restoreLastWorkspace: workspace.restoreLastWorkspace,
           ...(Array.isArray(workspace.recent) && workspace.recent.length === 0
             ? { recent: [] }
+            : {}),
+          // Which documents were open is the renderer's to report; opening them again still goes
+          // through the access checks of the file API.
+          ...(Array.isArray(workspace.openFiles) ? { openFiles: workspace.openFiles } : {}),
+          ...(workspace.activeFile === null || typeof workspace.activeFile === 'string'
+            ? { activeFile: workspace.activeFile }
             : {})
         }
       : undefined
@@ -319,6 +327,15 @@ function registerIpc(): void {
 
   handle(IPC.presentationGetWorkspace, () => presentation.getWorkspace())
   handle(IPC.presentationSetWorkspace, (overrides: unknown) => presentation.setWorkspace(overrides))
+  handle(
+    IPC.assetsSaveClipboardImage,
+    (bytes: unknown, mime: unknown, target: unknown, name: unknown) =>
+      assets.saveClipboardImage(bytes, mime, target, name)
+  )
+  handle(IPC.recoveryWrite, (snapshot: unknown) => recovery.write(snapshot))
+  handle(IPC.recoveryRemove, (id: unknown) => recovery.remove(id))
+  handle(IPC.recoveryList, () => recovery.list())
+  handle(IPC.recoveryClear, () => recovery.clear())
   handle(IPC.projectGet, () => project.get())
   handle(IPC.projectSetPublication, (publication: unknown) => project.setPublication(publication))
   handle(IPC.projectSetSources, (sources: unknown) => project.setSources(sources))

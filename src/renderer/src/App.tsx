@@ -19,10 +19,17 @@ import { Welcome } from './layout/Welcome'
 import { PreviewPanel } from './preview/PreviewPanel'
 import { PublicationPanel } from './publishing/PublicationPanel'
 import { SettingsPanel } from './settings/SettingsPanel'
-import { confirmCloseAll, documentName, useDocuments } from './state/documents'
+import {
+  checkForExternalChanges,
+  confirmCloseAll,
+  documentName,
+  useDocuments
+} from './state/documents'
 import { useExportSetup } from './state/exportSetup'
 import { startPresentationStore } from './state/presentation'
 import { startProjectStore } from './state/project'
+import { clearSnapshots } from './state/recovery'
+import { offerRecovery, restoreSession, startSessionTracking } from './state/session'
 import { flushSettings, useSettings } from './state/settings'
 import { useWorkspace } from './state/workspace'
 
@@ -37,6 +44,7 @@ function useApplicationEvents(): void {
       closing = true
       try {
         if (await confirmCloseAll()) {
+          await clearSnapshots()
           await flushSettings()
           await api.app.confirmClose()
         }
@@ -55,6 +63,9 @@ function useApplicationEvents(): void {
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
       }
     }
+    // Files edited by another program are noticed when the window gets focus again.
+    const onFocus = () => void checkForExternalChanges()
+    window.addEventListener('focus', onFocus)
     window.addEventListener('keydown', handleGlobalKeydown, true)
     window.addEventListener('dragover', block)
     window.addEventListener('drop', block)
@@ -62,6 +73,7 @@ function useApplicationEvents(): void {
       offMenu()
       offClose()
       offChanged()
+      window.removeEventListener('focus', onFocus)
       window.removeEventListener('keydown', handleGlobalKeydown, true)
       window.removeEventListener('dragover', block)
       window.removeEventListener('drop', block)
@@ -104,6 +116,10 @@ export function App() {
         startProjectStore()
         void useExportSetup.getState().loadPresets()
         setReady(true)
+        void restoreSession().then(async () => {
+          await offerRecovery()
+          startSessionTracking()
+        })
       })
   }, [])
 

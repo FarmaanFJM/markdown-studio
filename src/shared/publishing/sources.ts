@@ -101,6 +101,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 function text(value: unknown): string | undefined {
   if (typeof value === 'number' && Number.isFinite(value)) return String(value)
   if (typeof value !== 'string') return undefined
+  // eslint-disable-next-line no-control-regex -- control characters are stripped from imported text
   const cleaned = value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim()
   return cleaned === '' ? undefined : cleaned.slice(0, SOURCE_LIMITS.maxField)
 }

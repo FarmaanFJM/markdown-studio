@@ -81,6 +81,19 @@ export interface ProjectState {
   problems: string[]
 }
 
+export interface RecoverySnapshot {
+  /** Identifies the open document within a session. */
+  id: string
+  /** The file the text belongs to, or null for a document that was never saved. */
+  path: string | null
+  name: string
+  content: string
+  hasBom: boolean
+  /** Modification time of the file when the document was opened or last saved. */
+  mtimeMs: number | null
+  savedAt: number
+}
+
 export interface AppInfo {
   name: string
   version: string
@@ -160,6 +173,11 @@ export const IPC = {
   dialogOpenImage: 'dialog:open-image',
   dialogOpenSources: 'dialog:open-sources',
   assetsImportImage: 'assets:import-image',
+  assetsSaveClipboardImage: 'assets:save-clipboard-image',
+  recoveryWrite: 'recovery:write',
+  recoveryRemove: 'recovery:remove',
+  recoveryList: 'recovery:list',
+  recoveryClear: 'recovery:clear',
   templatesList: 'templates:list',
   templatesSave: 'templates:save',
   templatesDelete: 'templates:delete',
@@ -241,6 +259,20 @@ export interface MarkdownStudioApi {
     /** Absolute path of a file dropped from the operating system, or '' if unavailable. */
     pathForFile(file: File): string
     importImage(sourcePath: string, targetDirectory: string): Promise<ImportedImage>
+    /** Stores an image from the clipboard as a new file; never overwrites an existing one. */
+    saveClipboardImage(
+      bytes: Uint8Array,
+      mime: string,
+      targetDirectory: string,
+      baseName: string
+    ): Promise<ImportedImage>
+  }
+  recovery: {
+    write(snapshot: RecoverySnapshot): Promise<void>
+    remove(id: string): Promise<void>
+    list(): Promise<RecoverySnapshot[]>
+    /** Forgets every snapshot (after a clean close). */
+    clear(): Promise<void>
   }
   templates: {
     list(): Promise<TemplateListing>

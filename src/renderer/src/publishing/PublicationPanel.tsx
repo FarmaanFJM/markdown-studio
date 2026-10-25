@@ -85,7 +85,10 @@ export async function exportPublication(): Promise<void> {
     untitledName: loaded.build.title,
     hasBom: false,
     dirty: false,
-    savedVersion: 0
+    savedVersion: 0,
+    mtimeMs: null,
+    conflict: false,
+    saveError: null
   }
   await openExportDialog(undefined, undefined, {
     doc: fake,
@@ -95,7 +98,7 @@ export async function exportPublication(): Promise<void> {
 
 async function addChapters(config: PublicationConfig, root: string): Promise<void> {
   try {
-    const listing = await api.fs.listFiles({ extensions: ['md', 'markdown'], limit: 3000 })
+    const listing = await api.fs.listFiles({ extensions: ['.md', '.markdown'], limit: 3000 })
     const have = new Set(config.chapters)
     const candidates = listing.files
       .map((file) => ({

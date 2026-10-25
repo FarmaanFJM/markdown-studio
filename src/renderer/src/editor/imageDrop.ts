@@ -19,6 +19,10 @@ export interface DropSource {
   path: string
   /** True for files dropped from the operating system rather than the Explorer. */
   external: boolean
+  /** Image data pasted from the clipboard; `path` then only carries the suggested file name. */
+  clipboard?: { bytes: Uint8Array; mime: string }
+  /** Alt text to use instead of one derived from the file name. */
+  alt?: string
 }
 
 export function dataTransferHasDroppable(dataTransfer: DataTransfer | null): boolean {
@@ -161,7 +165,21 @@ export async function insertImages(
   try {
     for (const source of images) {
       let imagePath = source.path
-      if (source.external) {
+      if (source.clipboard) {
+        try {
+          const saved = await api.assets.saveClipboardImage(
+            source.clipboard.bytes,
+            source.clipboard.mime,
+            placement.assetDirectory,
+            basename(source.path)
+          )
+          imagePath = saved.path
+          if (saved.copied) copied.push(saved.path)
+        } catch (error) {
+          notify('error', `Could not paste the image: ${errorMessage(error)}`)
+          continue
+        }
+      } else if (source.external) {
         try {
           const imported = await api.assets.importImage(source.path, placement.assetDirectory)
           imagePath = imported.path
@@ -177,7 +195,7 @@ export async function insertImages(
         continue
       }
       // Alt text describes the file the user chose, even if the copy had to be renamed.
-      references.push(buildImageReference(altTextFromFileName(source.path), relative))
+      references.push(buildImageReference(source.alt ?? altTextFromFileName(source.path), relative))
     }
   } finally {
     // Read the tracked position before removing the marker.
@@ -218,5 +236,65 @@ export async function insertImages(
       .getState()
       .refresh([placement.assetDirectory, dirname(placement.assetDirectory)])
   }
+  return true
+}
+
+const PASTE_TYPES: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
+  'image/bmp': 'bmp',
+  'image/avif': 'avif'
+}
+
+function pastedName(): string {
+  const d = new Date()
+  const two = (n: number) => String(n).padStart(2, '0')
+  return `pasted-image-${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}${two(d.getSeconds())}`
+}
+
+/**
+ * Handles a paste that carries an image: a screenshot or a picture copied from a program or a
+ * web page, or image files copied in the file explorer. Text always wins: copying spreadsheet
+ * cells puts both text and a picture of them on the clipboard, and the text is what is wanted.
+ * Returns true when the paste was taken over (the caller then stops the default paste).
+ */
+export function pasteImages(
+  editor: monaco.editor.IStandaloneCodeEditor,
+  data: DataTransfer | null
+): boolean {
+  if (!data || !editor.getModel()) return false
+  if (data.getData('text/plain').trim() !== '') return false
+
+  const files = [...data.files]
+  const fromDisk = files
+    .map((file) => ({ file, path: api.assets.pathForFile(file) }))
+    .filter((entry) => entry.path && isImagePath(entry.path))
+  if (fromDisk.length > 0) {
+    void insertImages(
+      editor,
+      fromDisk.map((entry) => ({ path: entry.path, external: true })),
+      null
+    )
+    return true
+  }
+  const images = files.filter((file) => file.type in PASTE_TYPES)
+  if (images.length === 0) return false
+  const stem = pastedName()
+  void (async () => {
+    const sources: DropSource[] = []
+    for (const [index, file] of images.entries()) {
+      const bytes = new Uint8Array(await file.arrayBuffer())
+      const name = images.length > 1 ? `${stem}-${index + 1}` : stem
+      sources.push({
+        path: `${name}.${PASTE_TYPES[file.type]}`,
+        external: true,
+        clipboard: { bytes, mime: file.type },
+        alt: 'Pasted image'
+      })
+    }
+    await insertImages(editor, sources, null)
+  })()
   return true
 }

@@ -176,7 +176,7 @@ section.ms-bibliography { margin-top: 2.2em; }
 .ms-publication-meta { margin: 0 0 2em; color: var(--ms-muted); }
 
 img.ms-img-missing { display: inline-block; box-sizing: border-box; max-width: 100%; min-height: 2.6em; padding: 0.5em 0.8em; color: #b42318; background: color-mix(in srgb, #b42318 8%, transparent); border: 1px dashed #b42318; border-radius: 4px; font-size: 0.9em; font-style: normal; }
-img.ms-img-missing::after { content: ' \2014  image not found: ' attr(data-ms-src); }
+img.ms-img-missing::after { content: ' \2014  ' attr(title); }
 
 /* ---------- publishing: columns (whole document) ---------- */
 @media screen and (min-width: 900px) {

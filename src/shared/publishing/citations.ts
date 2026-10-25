@@ -98,7 +98,17 @@ export function createCitationProvider(
 ): CitationProvider {
   const locale = cslLocale(lang)
   const byId = new Map(sources.map((s) => [s.id, s]))
+  // Typing elsewhere in the document does not change its citations: reuse the last result.
+  let last: { key: string; result: CitationResult } | null = null
   return (clusters: CitationCluster[]): CitationResult => {
+    const key = JSON.stringify(clusters.map((c) => [c.narrative, c.items]))
+    if (last && last.key === key) return last.result
+    const result = format(clusters)
+    last = { key, result }
+    return result
+  }
+
+  function format(clusters: CitationCluster[]): CitationResult {
     const print = fingerprint(sources)
     if (print !== lastFingerprint) {
       // New data: engines keep per-item caches, so start them afresh.

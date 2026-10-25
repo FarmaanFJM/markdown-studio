@@ -264,3 +264,43 @@ describe('applying plans', () => {
     })
   })
 })
+
+describe('heading on an empty line', () => {
+  it('inserts the marker and leaves the caret after it', () => {
+    const source = ''
+    const result = setHeading(lines(source), sel(0, 0), 1, () => false)
+    expect(apply(source, result).text).toBe('# ')
+  })
+})
+
+describe('lists and quotes on an empty line', () => {
+  it.each([
+    ['bullet', '- '],
+    ['ordered', '1. '],
+    ['task', '- [ ] ']
+  ] as const)('start a %s list', (kind, marker) => {
+    expect(
+      apply(
+        '',
+        toggleList(lines(''), sel(0, 0), kind, () => false)
+      ).text
+    ).toBe(marker)
+  })
+  it('starts a quote', () => {
+    expect(
+      apply(
+        '',
+        toggleQuote(lines(''), sel(0, 0), () => false)
+      ).text
+    ).toBe('> ')
+  })
+  it('leaves blank lines inside a multi-line selection alone', () => {
+    const source = 'a\n\nb'
+    expect(
+      apply(
+        source,
+        toggleList(lines(source), sel(0, 0, 2, 1), 'bullet', () => false)
+      ).text
+    ).toBe('- a\n\n- b')
+  })
+})

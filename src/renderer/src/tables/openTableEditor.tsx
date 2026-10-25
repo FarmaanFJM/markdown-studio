@@ -123,7 +123,13 @@ export async function insertTableVisually(): Promise<void> {
     ]
   }
   const result = await dialogs.custom<TableModel>((done) => (
-    <TableEditor title="Insert Table" initial={initial} confirmLabel="Insert Table" onDone={done} />
+    <TableEditor
+      title="Insert Table"
+      initial={initial}
+      confirmLabel="Insert Table"
+      sizePicker
+      onDone={done}
+    />
   ))
   if (result) {
     insertSnippetText(editor, escapeSnippetText(formatTable(result).join('\n')), { block: true })

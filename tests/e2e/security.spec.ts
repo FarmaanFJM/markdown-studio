@@ -154,7 +154,8 @@ test('hostile Markdown cannot run code, load resources or reach the application'
     const pdf = path.join(sandbox.base, 'out', 'hostile.pdf')
     await stubSaveDialog(app, pdf)
     await exportViaDialog(page, 'pdf')
-    await expect(page.getByTestId('toast-success').last()).toContainText('hostile.pdf')
+    // The document refers to files that do not exist, so the export reports them (an info toast).
+    await expect(page.locator('[data-testid^="toast-"]').last()).toContainText('hostile.pdf')
     expect(readFileSync(pdf).subarray(0, 5).toString()).toBe('%PDF-')
     expect(requests).toEqual([])
   } finally {

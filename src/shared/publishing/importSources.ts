@@ -11,7 +11,7 @@ export function importSourcesText(text: string, fileName: string): SanitizedSour
   if (text.length > SOURCE_LIMITS.maxFileChars) {
     return { sources: [], problems: ['The file is too large to import.'] }
   }
-  const trimmed = text.replace(/^﻿/, '').trim()
+  const trimmed = text.replace(/^\ufeff/, '').trim()
   if (trimmed === '') return { sources: [], problems: ['The file is empty.'] }
   if (/\.json$/i.test(fileName) || trimmed.startsWith('[') || trimmed.startsWith('{')) {
     const parsed = parseSourcesJson(trimmed.startsWith('{') ? `[${trimmed}]` : trimmed)

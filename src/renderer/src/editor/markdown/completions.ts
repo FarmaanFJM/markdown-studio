@@ -15,10 +15,14 @@ import {
 } from '@shared/markdown/snippets'
 import { templateToSnippet, titleFromName } from '@shared/templates'
 import { basename, relativePath } from '@shared/paths'
+import { analyzePublishing } from '@shared/publishing/analyze'
+import { describeSource } from '@shared/publishing/sources'
+import { captionNames } from '@shared/publishing/types'
 import { getActiveEditor } from '../models'
 import { monaco } from '../monaco'
 import { useSettings } from '../../state/settings'
 import { anchorsOfFile, listDirectory, workspaceFiles } from '../../workspace'
+import { documentPublishing } from '../../publishing/documentPublishing'
 import { documentContext, documentPath } from './context'
 import { getCustomSnippets } from './customSnippets'
 import { analysisFor } from './model'
@@ -328,6 +332,49 @@ function withLine(items: CompletionItem[], line: number): CompletionItem[] {
   return items
 }
 
+const labelCache = new WeakMap<
+  monaco.editor.ITextModel,
+  { version: number; result: ReturnType<typeof analyzePublishing> }
+>()
+
+/** Labels (figures, tables, sections) and source keys that `@` can refer to. */
+function referenceSuggestions(model: monaco.editor.ITextModel, range: Range): CompletionItem[] {
+  let cached = labelCache.get(model)
+  const publishing = documentPublishing(model.getValue())
+  if (!cached || cached.version !== model.getVersionId()) {
+    cached = {
+      version: model.getVersionId(),
+      result: analyzePublishing(model.getValue(), { ...publishing.options, cite: undefined })
+    }
+    labelCache.set(model, cached)
+  }
+  const names = captionNames(publishing.settings.lang)
+  const items: CompletionItem[] = []
+  cached.result.labels.forEach((label, index) => {
+    const word =
+      label.kind === 'fig' ? names.figure : label.kind === 'tbl' ? names.table : names.section
+    items.push({
+      label: { label: label.id, description: label.number ? `${word} ${label.number}` : word },
+      kind: CompletionItemKind.Reference,
+      detail: label.text,
+      insertText: label.id,
+      range,
+      sortText: `0${orderOf(index)}`
+    })
+  })
+  publishing.sources.forEach((source, index) => {
+    items.push({
+      label: { label: source.id, description: 'Source' },
+      kind: CompletionItemKind.Reference,
+      detail: describeSource(source),
+      insertText: source.id,
+      range,
+      sortText: `1${orderOf(index)}`
+    })
+  })
+  return items
+}
+
 async function provide(
   model: monaco.editor.ITextModel,
   position: monaco.Position,
@@ -386,6 +433,13 @@ async function provide(
       effective = { ...destination, typed: '' }
     }
     return { suggestions: await pathSuggestions(model, effective, range) }
+  }
+  // References and citations: `@` offers figure, table and section labels and source keys.
+  const reference = /(?:^|[\s([;,])@([\w:.-]*)$/.exec(before)
+  if (reference && !isInCodeBlock(analysis, line0) && !before.includes('](')) {
+    return {
+      suggestions: referenceSuggestions(model, lineRange(position.column - reference[1].length))
+    }
   }
   if (!explicit && context.triggerCharacter !== '/') return none
 
@@ -529,7 +583,7 @@ export function registerCompletions(): monaco.IDisposable {
       runCommandById(id)
     }),
     monaco.languages.registerCompletionItemProvider('markdown', {
-      triggerCharacters: ['/', '(', '#'],
+      triggerCharacters: ['/', '(', '#', '@'],
       provideCompletionItems: provide
     })
   ]

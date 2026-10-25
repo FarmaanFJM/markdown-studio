@@ -55,7 +55,15 @@ const api: MarkdownStudioApi = {
       }
     },
     importImage: (sourcePath, targetDirectory) =>
-      ipcRenderer.invoke(IPC.assetsImportImage, sourcePath, targetDirectory)
+      ipcRenderer.invoke(IPC.assetsImportImage, sourcePath, targetDirectory),
+    saveClipboardImage: (bytes, mime, targetDirectory, baseName) =>
+      ipcRenderer.invoke(IPC.assetsSaveClipboardImage, bytes, mime, targetDirectory, baseName)
+  },
+  recovery: {
+    write: (snapshot) => ipcRenderer.invoke(IPC.recoveryWrite, snapshot),
+    remove: (id) => ipcRenderer.invoke(IPC.recoveryRemove, id),
+    list: () => ipcRenderer.invoke(IPC.recoveryList),
+    clear: () => ipcRenderer.invoke(IPC.recoveryClear)
   },
   templates: {
     list: () => ipcRenderer.invoke(IPC.templatesList),

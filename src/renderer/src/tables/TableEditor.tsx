@@ -21,6 +21,7 @@ import {
   type TableModel
 } from '@shared/markdown/tables'
 import { Modal } from '../dialogs/Modal'
+import { NumberInput } from '../presentation/fields'
 
 /** Cells are shown as the reader sees them (`\|` as `|`) and escaped again when applied. */
 export function toEditable(table: TableModel): TableModel {
@@ -48,7 +49,21 @@ interface Props {
   initial: TableModel
   confirmLabel: string
   stale?: StaleSignal
+  /** Offer fields for the number of rows and columns (when designing a new table). */
+  sizePicker?: boolean
   onDone(result: TableModel | null): void
+}
+
+const SIZE_LIMITS = { rows: { min: 1, max: 100 }, columns: { min: 1, max: 20 } }
+
+/** Grows or shrinks a table at its end; existing cells are kept. */
+function resized(table: TableModel, rows: number, columns: number): TableModel {
+  const header = Array.from({ length: columns }, (_, c) => table.header[c] ?? `Column ${c + 1}`)
+  const alignments = Array.from({ length: columns }, (_, c) => table.alignments[c] ?? 'none')
+  const body = Array.from({ length: rows }, (_, r) =>
+    Array.from({ length: columns }, (_, c) => table.rows[r]?.[c] ?? '')
+  )
+  return { ...table, header, alignments, rows: body }
 }
 
 interface Active {
@@ -65,7 +80,7 @@ const ALIGNMENTS: { value: Alignment; label: string; Icon: typeof AlignLeft }[] 
 
 const noSubscription = () => () => undefined
 
-export function TableEditor({ title, initial, confirmLabel, stale, onDone }: Props) {
+export function TableEditor({ title, initial, confirmLabel, stale, sizePicker, onDone }: Props) {
   const [table, setTable] = useState<TableModel>(() => toEditable(initial))
   const [active, setActive] = useState<Active>({ row: -1, column: 0 })
   const gridRef = useRef<HTMLTableElement>(null)
@@ -200,6 +215,33 @@ export function TableEditor({ title, initial, confirmLabel, stale, onDone }: Pro
             <button type="button" className="button" onClick={reload}>
               Reload from document
             </button>
+          </div>
+        )}
+        {sizePicker && (
+          <div className="table-editor-size" role="group" aria-label="Table size">
+            <label>
+              Rows
+              <NumberInput
+                id="table-size-rows"
+                testId="table-size-rows"
+                value={table.rows.length}
+                min={SIZE_LIMITS.rows.min}
+                max={SIZE_LIMITS.rows.max}
+                onChange={(rows) => setTable(resized(table, rows, columns))}
+              />
+            </label>
+            <label>
+              Columns
+              <NumberInput
+                id="table-size-columns"
+                testId="table-size-columns"
+                value={columns}
+                min={SIZE_LIMITS.columns.min}
+                max={SIZE_LIMITS.columns.max}
+                onChange={(count) => setTable(resized(table, table.rows.length, count))}
+              />
+            </label>
+            <span className="muted">Rows below the header row.</span>
           </div>
         )}
         <div className="table-editor-toolbar" role="toolbar" aria-label="Table structure">

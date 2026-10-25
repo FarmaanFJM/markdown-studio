@@ -52,7 +52,7 @@ function frontMatterRule(
 ): boolean {
   if (startLine !== 0 || state.sCount[0] - 0 !== 0) return false
   const line = (n: number) =>
-    state.src.slice(state.bMarks[n] + state.tShift[n], state.eMarks[n]).replace(/^﻿/, '')
+    state.src.slice(state.bMarks[n] + state.tShift[n], state.eMarks[n]).replace(/^\ufeff/, '')
   if (!FM_OPEN.test(line(0))) return false
   let close = -1
   for (let n = 1; n < endLine; n++) {
@@ -378,7 +378,7 @@ export function publishingPlugin(md: MarkdownIt, _options: Options = {}): void {
                   : label.kind === 'tbl'
                     ? names.table
                     : names.section
-              const text = label.number ? `${word} ${label.number}` : `“${label.text}”`
+              const text = label.number ? `${word}\u00a0${label.number}` : `“${label.text}”`
               const href = `#${escapeHtml(label.id)}`
               return `<a class="ms-xref" href="${href}">${escapeHtml(text)}</a>`
             })
@@ -661,7 +661,7 @@ function collect(
     } else if (token.type === 'paragraph_open' && meta.figure) {
       counters.figures++
       const number = prefixed(counters.figures)
-      const label = `${names.figure} ${number}:`
+      const label = `${names.figure}\u00a0${number}:`
       meta.numberText = label
       const id = meta.figure.id
       if (!id.startsWith(LABEL_PREFIX.fig)) {
@@ -702,7 +702,7 @@ function collect(
         } else {
           counters.tables++
           const number = prefixed(counters.tables)
-          meta.numberText = `${names.table} ${number}:`
+          meta.numberText = `${names.table}\u00a0${number}:`
           add({
             id: caption.id,
             kind: 'tbl',
@@ -808,7 +808,7 @@ function listHtml(labels: Label[], kind: LabelKind, title: string, word: string)
   const items = own
     .map(
       (l) =>
-        `<li><a href="#${escapeHtml(l.id)}">${escapeHtml(`${word} ${l.number}`)}: ${escapeHtml(l.text)}</a></li>`
+        `<li><a href="#${escapeHtml(l.id)}">${escapeHtml(`${word}\u00a0${l.number}`)}: ${escapeHtml(l.text)}</a></li>`
     )
     .join('')
   return `<nav class="ms-list ms-list-${kind}" aria-label="${escapeHtml(title)}">\n<p class="ms-toc-title">${escapeHtml(title)}</p>\n<ul>${items}</ul>\n</nav>\n`

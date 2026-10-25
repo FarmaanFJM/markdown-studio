@@ -82,6 +82,7 @@ export function normalizeChapterPath(value: unknown): string | null {
   if (/^[a-zA-Z]:/.test(cleaned) || cleaned.startsWith('/') || cleaned.startsWith('//')) return null
   const parts = cleaned.split('/')
   if (parts.some((p) => p === '' || p === '.' || p === '..')) return null
+  // eslint-disable-next-line no-control-regex -- control characters are never valid in names
   if (parts.some((p) => /[\u0000-\u001f<>:"|?*]/.test(p))) return null
   if (!/\.(?:md|markdown|mdown)$/i.test(cleaned)) return null
   return cleaned
