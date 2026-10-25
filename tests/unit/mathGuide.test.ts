@@ -30,7 +30,11 @@ function examples(): Example[] {
       while (j < lines.length && !lines[j].startsWith('```')) body.push(lines[j++])
       const text = body.join('\n')
       const expectError = /^<!--\s*expect-error\s*-->/m.test(text)
-      found.push({ source: text.replace(/^<!--\s*expect-error\s*-->\n/m, ''), expectError, heading })
+      found.push({
+        source: text.replace(/^<!--\s*expect-error\s*-->\n/m, ''),
+        expectError,
+        heading
+      })
       i = j
     }
   }
@@ -58,13 +62,17 @@ describe('docs/MATHEMATICS.md', () => {
         expect(errors).toBeGreaterThan(0)
       } else {
         expect(errors).toBe(0)
-        expect(html.querySelectorAll('.katex').length + html.querySelectorAll('code').length).toBeGreaterThan(0)
+        expect(
+          html.querySelectorAll('.katex').length + html.querySelectorAll('code').length
+        ).toBeGreaterThan(0)
       }
     })
   }
 
   it('keeps currency and escaped dollars as text, as documented', () => {
-    const html = render('Prices: $5 and $10 stay text. An escaped \\$x\\$ is text too.\nCode is untouched: `$x$`. Math with a dollar inside: $a \\$ b$.')
+    const html = render(
+      'Prices: $5 and $10 stay text. An escaped \\$x\\$ is text too.\nCode is untouched: `$x$`. Math with a dollar inside: $a \\$ b$.'
+    )
     expect(html.querySelectorAll('.katex')).toHaveLength(1)
     expect(html.textContent).toContain('$5 and $10 stay text')
     expect(html.textContent).toContain('An escaped $x$ is text too')
@@ -86,8 +94,12 @@ describe('docs/MATHEMATICS.md', () => {
     })
 
     it('supports one tag per line of an align environment', () => {
-      const html = render('$$\n\\begin{align}\na &= b \\tag{2} \\\\\nd &= e \\tag{3}\n\\end{align}\n$$')
-      expect([...html.querySelectorAll('.katex-tag')].map((t) => t.textContent).join('')).toContain('(2)(3)')
+      const html = render(
+        '$$\n\\begin{align}\na &= b \\tag{2} \\\\\nd &= e \\tag{3}\n\\end{align}\n$$'
+      )
+      expect([...html.querySelectorAll('.katex-tag')].map((t) => t.textContent).join('')).toContain(
+        '(2)(3)'
+      )
     })
 
     it('rejects tags in inline math, as documented', () => {
@@ -110,24 +122,33 @@ describe('docs/MATHEMATICS.md', () => {
     })
 
     it('\\newcommand cannot redefine a command KaTeX already has', () => {
-      expect(render('$\\newcommand{\\R}{x} \\R$').querySelectorAll('.ms-math-error')).toHaveLength(1)
+      expect(render('$\\newcommand{\\R}{x} \\R$').querySelectorAll('.ms-math-error')).toHaveLength(
+        1
+      )
     })
 
     it('numbers lines inside one equation, restarting in every equation', () => {
       const one = (env: string, rows: number) =>
-        render(`$$\n\\begin{${env}} ${Array.from({ length: rows }, (_, i) => `r${i} &= x`).join(' \\\\ ')} \\end{${env}}\n$$`)
+        render(
+          `$$\n\\begin{${env}} ${Array.from({ length: rows }, (_, i) => `r${i} &= x`).join(' \\\\ ')} \\end{${env}}\n$$`
+        )
       expect(one('align', 2).querySelectorAll('.eqn-num')).toHaveLength(2)
       expect(one('gather', 2).querySelectorAll('.eqn-num')).toHaveLength(2)
       expect(one('align*', 2).querySelectorAll('.eqn-num')).toHaveLength(0)
       expect(one('aligned', 2).querySelectorAll('.eqn-num')).toHaveLength(0)
       // Each equation has its own counter: there is no document-wide sequence.
-      const two = render('$$\\begin{equation} a = b \\end{equation}$$\n\n$$\\begin{equation} c = d \\end{equation}$$')
+      const two = render(
+        '$$\\begin{equation} a = b \\end{equation}$$\n\n$$\\begin{equation} c = d \\end{equation}$$'
+      )
       expect(two.querySelectorAll('.katex')).toHaveLength(2)
-      for (const katex of two.querySelectorAll('.katex')) expect(katex.querySelectorAll('.eqn-num')).toHaveLength(1)
+      for (const katex of two.querySelectorAll('.katex'))
+        expect(katex.querySelectorAll('.eqn-num')).toHaveLength(1)
     })
 
     it('\\nonumber skips one line', () => {
-      const html = render('$$\n\\begin{align} a &= b \\\\ c &= d \\nonumber \\\\ e &= f \\end{align}\n$$')
+      const html = render(
+        '$$\n\\begin{align} a &= b \\\\ c &= d \\nonumber \\\\ e &= f \\end{align}\n$$'
+      )
       expect(html.querySelectorAll('.eqn-num')).toHaveLength(2)
     })
 

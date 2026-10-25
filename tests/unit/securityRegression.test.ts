@@ -14,7 +14,8 @@ const HOSTILE: Record<string, string> = {
   script: '<script>alert(1)</script>',
   'img onerror': '<img src=x onerror="alert(1)">',
   'svg onload': '<svg onload="alert(1)"><script>alert(2)</script></svg>',
-  'svg foreignObject iframe': '<svg><foreignObject><iframe src="https://evil.example"></iframe></foreignObject></svg>',
+  'svg foreignObject iframe':
+    '<svg><foreignObject><iframe src="https://evil.example"></iframe></foreignObject></svg>',
   iframe: '<iframe src="https://evil.example"></iframe>',
   object: '<object data="https://evil.example/x.swf"></object>',
   embed: '<embed src="https://evil.example/x.swf">',
@@ -36,7 +37,8 @@ const HOSTILE: Record<string, string> = {
   'math breakout': '$<img src=x onerror=alert(1)>$',
   'math html': '$$\n\\text{</span><script>alert(1)</script>}\n$$',
   'link title': '[x](https://example.com "\\" onmouseover=\\"alert(1)")',
-  'mutation xss': '<math><mtext><table><mglyph><style><!--</style><img title="--&gt;&lt;/mglyph&gt;&lt;img&Tab;src=1&Tab;onerror=alert(1)&gt;">',
+  'mutation xss':
+    '<math><mtext><table><mglyph><style><!--</style><img title="--&gt;&lt;/mglyph&gt;&lt;img&Tab;src=1&Tab;onerror=alert(1)&gt;">',
   noscript: '<noscript><p title="</noscript><img src=x onerror=alert(1)>">',
   template: '<template><script>alert(1)</script></template>'
 }
@@ -45,20 +47,29 @@ const HOSTILE: Record<string, string> = {
 function activeContent(html: string): string[] {
   const doc = new DOMParser().parseFromString(html, 'text/html')
   const problems: string[] = []
-  doc.querySelectorAll('script, iframe, frame, object, embed, applet, form, link, base, meta, noscript').forEach((el) => problems.push(`<${el.localName}>`))
+  doc
+    .querySelectorAll(
+      'script, iframe, frame, object, embed, applet, form, link, base, meta, noscript'
+    )
+    .forEach((el) => problems.push(`<${el.localName}>`))
   doc.querySelectorAll('*').forEach((el) => {
     for (const attribute of [...el.attributes]) {
       const name = attribute.name.toLowerCase()
       const value = attribute.value.trim().toLowerCase()
       if (name.startsWith('on')) problems.push(`${el.localName}[${name}]`)
-      if (['href', 'src', 'xlink:href', 'action', 'formaction'].includes(name) && /^(?:javascript|vbscript|data:text\/html)/.test(value)) {
+      if (
+        ['href', 'src', 'xlink:href', 'action', 'formaction'].includes(name) &&
+        /^(?:javascript|vbscript|data:text\/html)/.test(value)
+      ) {
         problems.push(`${el.localName}[${name}=${value.slice(0, 20)}]`)
       }
-      if (/url\(\s*['"]?(?:https?:|file:|\/\/)/.test(value)) problems.push(`${el.localName}[${name}] remote url`)
+      if (/url\(\s*['"]?(?:https?:|file:|\/\/)/.test(value))
+        problems.push(`${el.localName}[${name}] remote url`)
     }
   })
   doc.querySelectorAll('style').forEach((el) => {
-    if (/@import|url\(\s*['"]?(?:https?:|file:|\/\/)/i.test(el.textContent ?? '')) problems.push('style rule loads a resource')
+    if (/@import|url\(\s*['"]?(?:https?:|file:|\/\/)/i.test(el.textContent ?? ''))
+      problems.push('style rule loads a resource')
   })
   return problems
 }
@@ -69,7 +80,11 @@ describe('hostile documents', () => {
       const html = render(source)
       expect(activeContent(html), `${name}: ${html}`).toEqual([])
       // The audit used before every export agrees (images are embedded as data URIs by then).
-      const full = buildHtmlDocument({ title: 'x', body: html.replace(/msfile:[^"]*/g, 'data:image/png;base64,AA'), purpose: 'export' })
+      const full = buildHtmlDocument({
+        title: 'x',
+        body: html.replace(/msfile:[^"]*/g, 'data:image/png;base64,AA'),
+        purpose: 'export'
+      })
       expect(auditExportedHtml(full).violations, name).toEqual([])
     })
   }
@@ -81,7 +96,9 @@ describe('hostile documents', () => {
   })
 
   it('keeps ordinary formatting HTML', () => {
-    const html = render('<div style="text-align:center"><b>bold</b> <kbd>Ctrl</kbd></div>\n\n<details><summary>More</summary>\n\nBody\n\n</details>')
+    const html = render(
+      '<div style="text-align:center"><b>bold</b> <kbd>Ctrl</kbd></div>\n\n<details><summary>More</summary>\n\nBody\n\n</details>'
+    )
     expect(html).toContain('style="text-align:center"')
     expect(html).toContain('<kbd>Ctrl</kbd>')
     expect(html).toContain('<details>')
@@ -96,7 +113,11 @@ describe('hostile documents', () => {
   })
 
   it('escapes the document title in the page head', () => {
-    const html = buildHtmlDocument({ title: '</title><script>alert(1)</script>', body: '', purpose: 'export' })
+    const html = buildHtmlDocument({
+      title: '</title><script>alert(1)</script>',
+      body: '',
+      purpose: 'export'
+    })
     expect(auditExportedHtml(html).violations).toEqual([])
     expect(html).not.toContain('</title><script>')
   })

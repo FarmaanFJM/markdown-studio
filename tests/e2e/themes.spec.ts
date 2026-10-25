@@ -50,7 +50,10 @@ const themeFacts = (page: Page) =>
       h1Border: css(doc, h1).borderBottomWidth,
       h2Color: h2 ? css(doc, h2).color : '',
       mainWidth: css(doc, main).maxWidth,
-      tableBorder: table ? css(doc, table.querySelector('td')!).borderTopWidth + css(doc, table.querySelector('td')!).borderBottomWidth : '',
+      tableBorder: table
+        ? css(doc, table.querySelector('td')!).borderTopWidth +
+          css(doc, table.querySelector('td')!).borderBottomWidth
+        : '',
       quoteStyle: quote ? css(doc, quote).borderLeftWidth + css(doc, quote).fontStyle : '',
       preBackground: pre ? css(doc, pre).backgroundColor : '',
       background: css(doc, doc.body).backgroundColor
@@ -83,7 +86,10 @@ const answer = 42
 test('the four document themes look genuinely different and apply without disturbing the editor', async () => {
   const sandbox = createSandbox()
   // Long enough for the preview to scroll.
-  const filler = Array.from({ length: 40 }, (_, i) => `Filler paragraph ${i + 1} of the theme sample.`).join('\n\n')
+  const filler = Array.from(
+    { length: 40 },
+    (_, i) => `Filler paragraph ${i + 1} of the theme sample.`
+  ).join('\n\n')
   seedDocuments(sandbox, { 'sample.md': `${SAMPLE}\n${filler}\n` })
   const { app, page } = await launchWithWorkspace(sandbox)
   try {
@@ -117,7 +123,9 @@ test('the four document themes look genuinely different and apply without distur
       await expect(page.getByTestId('save-state')).toHaveText(/Unsaved/)
     }
     expect(await inPreview(page, (doc) => doc.documentElement.scrollTop)).toBeGreaterThan(0)
-    expect(await inPreview(page, (doc) => doc.body.textContent ?? '')).toContain('Unsaved paragraph.')
+    expect(await inPreview(page, (doc) => doc.body.textContent ?? '')).toContain(
+      'Unsaved paragraph.'
+    )
 
     const all = Object.values(seen)
     const distinct = (pick: (f: (typeof all)[number]) => unknown) => new Set(all.map(pick)).size
@@ -161,7 +169,10 @@ test('the chosen document theme and its customisation persist across restarts', 
     expect((await themeFacts(page))?.bodySize).toBe('20px')
     const settings = JSON.parse(readFileSync(path.join(sandbox.userData, 'settings.json'), 'utf8'))
     expect(settings.document.theme).toBe('editorial')
-    expect(settings.document.customization).toMatchObject({ accentColor: '#aa3366', bodyFontSize: 20 })
+    expect(settings.document.customization).toMatchObject({
+      accentColor: '#aa3366',
+      bodyFontSize: 20
+    })
     // Nothing about the theme leaks into the Markdown file.
     expect(readFileSync(path.join(sandbox.workspace, 'sample.md'), 'utf8')).toBe(SAMPLE)
 
@@ -240,16 +251,24 @@ test('custom CSS styles documents only, and unsafe CSS is rejected with explanat
     await panel.getByTestId('settings-css-inline').click()
     const editor = panel.getByTestId('settings-css-text')
 
-    const uiColorBefore = await page.evaluate(() => getComputedStyle(document.querySelector('.sidebar-title')!).color)
+    const uiColorBefore = await page.evaluate(
+      () => getComputedStyle(document.querySelector('.sidebar-title')!).color
+    )
 
     // Valid CSS applies to the document, including `*` rules, but never to the application.
-    await editor.fill('* { text-decoration-color: rgb(9, 9, 9); }\nh1 { color: rgb(1, 2, 3); letter-spacing: 3px }\nbody { background: rgb(250, 240, 230) }')
+    await editor.fill(
+      '* { text-decoration-color: rgb(9, 9, 9); }\nh1 { color: rgb(1, 2, 3); letter-spacing: 3px }\nbody { background: rgb(250, 240, 230) }'
+    )
     await expect(panel.getByTestId('css-status')).toContainText('valid and applied')
     await expect
       .poll(() => inPreview(page, (doc) => css(doc, doc.querySelector('h1')!).color))
       .toBe('rgb(1, 2, 3)')
-    expect(await inPreview(page, (doc) => css(doc, doc.body).backgroundColor)).toBe('rgb(250, 240, 230)')
-    expect(await page.evaluate(() => getComputedStyle(document.querySelector('.sidebar-title')!).color)).toBe(uiColorBefore)
+    expect(await inPreview(page, (doc) => css(doc, doc.body).backgroundColor)).toBe(
+      'rgb(250, 240, 230)'
+    )
+    expect(
+      await page.evaluate(() => getComputedStyle(document.querySelector('.sidebar-title')!).color)
+    ).toBe(uiColorBefore)
     expect(await page.evaluate(() => getComputedStyle(document.body).letterSpacing)).not.toBe('3px')
 
     // Unsafe CSS is rejected visibly and is not applied (the previous valid CSS is gone too,
@@ -267,7 +286,9 @@ test('custom CSS styles documents only, and unsafe CSS is rejected with explanat
       await expect
         .poll(() => inPreview(page, (doc) => css(doc, doc.querySelector('h1')!).color))
         .not.toBe('rgb(255, 0, 0)')
-      expect(await inPreview(page, (doc) => doc.getElementById('ms-custom-css')!.textContent!.trim())).toBe('')
+      expect(
+        await inPreview(page, (doc) => doc.getElementById('ms-custom-css')!.textContent!.trim())
+      ).toBe('')
     }
     expect(requests).toEqual([])
 
@@ -281,7 +302,10 @@ test('custom CSS styles documents only, and unsafe CSS is rejected with explanat
 
 test('a CSS file is read, reloaded when it changes on disk, and never modified', async () => {
   const sandbox = createSandbox()
-  seedDocuments(sandbox, { 'sample.md': SAMPLE, 'styles/doc.css': 'h1 { color: rgb(10, 20, 30) }\n' })
+  seedDocuments(sandbox, {
+    'sample.md': SAMPLE,
+    'styles/doc.css': 'h1 { color: rgb(10, 20, 30) }\n'
+  })
   const cssFile = path.join(sandbox.workspace, 'styles', 'doc.css')
   const { app, page } = await launchWithWorkspace(sandbox)
   try {
@@ -325,7 +349,16 @@ test('diagrams follow the document theme, including dark pages', async () => {
   try {
     await openFromTree(page, 'mixed.md')
     await waitForDiagrams(page, 1)
-    const light = await inPreview(page, (doc) => css(doc, doc.querySelector('figure.ms-diagram svg .node rect, figure.ms-diagram svg .node polygon')!).fill)
+    const light = await inPreview(
+      page,
+      (doc) =>
+        css(
+          doc,
+          doc.querySelector(
+            'figure.ms-diagram svg .node rect, figure.ms-diagram svg .node polygon'
+          )!
+        ).fill
+    )
     const panel = await openSettings(page)
     await panel.getByTestId('appearance-details').locator('summary').click()
     await panel.getByLabel('Page background', { exact: true }).fill('#0d1117')
@@ -336,7 +369,16 @@ test('diagrams follow the document theme, including dark pages', async () => {
     await waitForDiagrams(page, 1)
     await expect
       .poll(() =>
-        inPreview(page, (doc) => css(doc, doc.querySelector('figure.ms-diagram svg .node rect, figure.ms-diagram svg .node polygon')!).fill)
+        inPreview(
+          page,
+          (doc) =>
+            css(
+              doc,
+              doc.querySelector(
+                'figure.ms-diagram svg .node rect, figure.ms-diagram svg .node polygon'
+              )!
+            ).fill
+        )
       )
       .not.toBe(light)
     // Text on the dark page stays readable.

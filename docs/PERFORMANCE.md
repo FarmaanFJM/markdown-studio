@@ -13,15 +13,15 @@ node scripts/benchmark.mjs --app /path/to/baseline  # a build of another revisio
 
 ## Environment
 
-| | |
-| --- | --- |
-| OS | Linux 6.18 (cloud container, software rendering, no GPU) |
-| CPU / RAM | Intel Xeon @ 2.80 GHz, 4 vCPU / 16 GB |
-| Electron | 44.9.3 (Chromium 152) |
-| Node | 22.22.0 |
-| Baseline | `main` at b284c3e (Phase 2), built in a separate worktree |
-| Phase 3 | this branch |
-| Raw data | [`benchmarks/bench-baseline.json`](benchmarks/bench-baseline.json), [`benchmarks/bench-phase3.json`](benchmarks/bench-phase3.json) |
+|           |                                                                                                                                    |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| OS        | Linux 6.18 (cloud container, software rendering, no GPU)                                                                           |
+| CPU / RAM | Intel Xeon @ 2.80 GHz, 4 vCPU / 16 GB                                                                                              |
+| Electron  | 44.9.3 (Chromium 152)                                                                                                              |
+| Node      | 22.22.0                                                                                                                            |
+| Baseline  | `main` at b284c3e (Phase 2), built in a separate worktree                                                                          |
+| Phase 3   | this branch                                                                                                                        |
+| Raw data  | [`benchmarks/bench-baseline.json`](benchmarks/bench-baseline.json), [`benchmarks/bench-phase3.json`](benchmarks/bench-phase3.json) |
 
 A single run on a shared virtual machine: differences below roughly 15% are noise. Numbers are
 not comparable with other hardware. Windows and macOS were not benchmarked.
@@ -32,23 +32,23 @@ Key-to-frame is the editor's keystroke-to-next-frame latency (p50 / p95). Long t
 tasks over 50 ms during typing (count / total). Preview latency is the time from the last keystroke
 to an updated preview.
 
-| Document | Key→frame p50 base → P3 | p95 base → P3 | Long tasks base → P3 | Preview latency base → P3 | PDF preview base → P3 |
-| --- | --- | --- | --- | --- | --- |
-| Small notes | 28 → 27 | 45 → 41 | 0 → 0 | 118 → 127 | 401 → 440 |
-| Medium (60 KB) | 30 → 30 | 43 → 38 | 4 → 4 | 349 → 279 | 1178 → 1691 |
-| Large (400 KB) | 53 → 40 | 65 → 104 | 9 → 9 | 1915 → 1586 | 4758 → 5199 |
-| Huge (1.1 MB) | 86 → 92 | 130 → 128 | 120 → 124 | 3623 → 3789 | 19223 → 28693 |
-| 300 tables | 32 → 33 | 72 → 61 | 15 → 15 | 561 → 582 | 2272 → 1866 |
-| 4 large images | 26 → 26 | 88 → 33 | 8 → 0 | 137 → 129 | 3439 → 3468 |
-| Mixed | 34 → 33 | 48 → 90 | 27 → 18 | 613 → 766 | 2259 → 4057 |
+| Document       | Key→frame p50 base → P3 | p95 base → P3 | Long tasks base → P3 | Preview latency base → P3 | PDF preview base → P3 |
+| -------------- | ----------------------- | ------------- | -------------------- | ------------------------- | --------------------- |
+| Small notes    | 28 → 27                 | 45 → 41       | 0 → 0                | 118 → 127                 | 401 → 440             |
+| Medium (60 KB) | 30 → 30                 | 43 → 38       | 4 → 4                | 349 → 279                 | 1178 → 1691           |
+| Large (400 KB) | 53 → 40                 | 65 → 104      | 9 → 9                | 1915 → 1586               | 4758 → 5199           |
+| Huge (1.1 MB)  | 86 → 92                 | 130 → 128     | 120 → 124            | 3623 → 3789               | 19223 → 28693         |
+| 300 tables     | 32 → 33                 | 72 → 61       | 15 → 15              | 561 → 582                 | 2272 → 1866           |
+| 4 large images | 26 → 26                 | 88 → 33       | 8 → 0                | 137 → 129                 | 3439 → 3468           |
+| Mixed          | 34 → 33                 | 48 → 90       | 27 → 18              | 613 → 766                 | 2259 → 4057           |
 
 Documents using Phase 3 features (the baseline shows them as plain text, so they are not a
 like-for-like comparison):
 
-| Document | Phase 3 render | Key→frame p50 | Preview latency | PDF preview |
-| --- | --- | --- | --- | --- |
-| 10 Mermaid diagrams | 7 ms (cached) | 27 | 129 | 878 |
-| 500 math expressions | 1239 ms first render | 26 | 224 | 2648 |
+| Document             | Phase 3 render       | Key→frame p50 | Preview latency | PDF preview |
+| -------------------- | -------------------- | ------------- | --------------- | ----------- |
+| 10 Mermaid diagrams  | 7 ms (cached)        | 27            | 129             | 878         |
+| 500 math expressions | 1239 ms first render | 26            | 224             | 2648        |
 
 Other measurements: tab switching 60× took 163 ms per switch (baseline) vs 179 ms (Phase 3), with
 the preview always matching the active document; 60 typing/render cycles of the medium document

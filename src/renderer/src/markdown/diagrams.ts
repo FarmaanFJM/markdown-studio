@@ -168,7 +168,8 @@ function applyOutcome(
   const fenceLine = Number(figure.getAttribute('data-ms-line')) || 0
   // Mermaid reports an unexpected end of text one line past the last line.
   const lastLine = source.split('\n').length
-  if (!outcome.ok && outcome.line !== null) outcome = { ...outcome, line: Math.min(outcome.line, lastLine) }
+  if (!outcome.ok && outcome.line !== null)
+    outcome = { ...outcome, line: Math.min(outcome.line, lastLine) }
   if (outcome.ok) {
     figure.setAttribute('data-ms-state', 'ready')
     const holder = figure.ownerDocument.createElement('div')

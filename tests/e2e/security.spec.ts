@@ -69,18 +69,28 @@ test('hostile Markdown cannot run code, load resources or reach the application'
 
     const facts = await inPreview(page, (doc) => ({
       scripts: doc.querySelectorAll('script').length,
-      handlers: [...doc.querySelectorAll('*')].filter((el) => [...el.attributes].some((a) => a.name.startsWith('on'))).length,
-      frames: doc.querySelectorAll('iframe, form, link, meta[http-equiv]:not([http-equiv="Content-Security-Policy" i]), object, embed').length,
+      handlers: [...doc.querySelectorAll('*')].filter((el) =>
+        [...el.attributes].some((a) => a.name.startsWith('on'))
+      ).length,
+      frames: doc.querySelectorAll(
+        'iframe, form, link, meta[http-equiv]:not([http-equiv="Content-Security-Policy" i]), object, embed'
+      ).length,
       jsLinks: [...doc.querySelectorAll('[href], [src], [xlink\\:href]')].filter((el) =>
         [...el.attributes].some((a) => /^\s*javascript:/i.test(a.value))
       ).length,
-      remoteStyle: [...doc.querySelectorAll('style')].some((s) => /127\.0\.0\.1|@import/.test(s.textContent ?? '')),
-      inlineRemote: [...doc.querySelectorAll('[style]')].some((el) => /127\.0\.0\.1/.test(el.getAttribute('style') ?? '')),
-      svgHandlers: [...doc.querySelectorAll('figure.ms-diagram *')].filter((el) => [...el.attributes].some((a) => a.name.startsWith('on'))).length,
-      svgScripts: doc.querySelectorAll('figure.ms-diagram script').length,
-      svgJsLinks: [...doc.querySelectorAll('figure.ms-diagram [href], figure.ms-diagram [xlink\\:href]')].filter((el) =>
-        [...el.attributes].some((a) => /javascript:/i.test(a.value))
+      remoteStyle: [...doc.querySelectorAll('style')].some((s) =>
+        /127\.0\.0\.1|@import/.test(s.textContent ?? '')
+      ),
+      inlineRemote: [...doc.querySelectorAll('[style]')].some((el) =>
+        /127\.0\.0\.1/.test(el.getAttribute('style') ?? '')
+      ),
+      svgHandlers: [...doc.querySelectorAll('figure.ms-diagram *')].filter((el) =>
+        [...el.attributes].some((a) => a.name.startsWith('on'))
       ).length,
+      svgScripts: doc.querySelectorAll('figure.ms-diagram script').length,
+      svgJsLinks: [
+        ...doc.querySelectorAll('figure.ms-diagram [href], figure.ms-diagram [xlink\\:href]')
+      ].filter((el) => [...el.attributes].some((a) => /javascript:/i.test(a.value))).length,
       bridge: typeof (doc.defaultView as unknown as { markdownStudio?: unknown }).markdownStudio,
       text: doc.body.textContent ?? ''
     }))
@@ -99,23 +109,31 @@ test('hostile Markdown cannot run code, load resources or reach the application'
     expect(facts.text).toContain('Hostile document')
 
     // Nothing ran anywhere, and nothing was requested from the network.
-    expect(await page.evaluate(() => (window as unknown as { __pwned?: unknown }).__pwned)).toBeUndefined()
+    expect(
+      await page.evaluate(() => (window as unknown as { __pwned?: unknown }).__pwned)
+    ).toBeUndefined()
     expect(requests).toEqual([])
 
     // The preview frame cannot run scripts at all.
-    expect(await page.locator('iframe.html-preview').getAttribute('sandbox')).toBe('allow-same-origin')
+    expect(await page.locator('iframe.html-preview').getAttribute('sandbox')).toBe(
+      'allow-same-origin'
+    )
 
     // Clicking the hostile link does nothing dangerous.
     const link = page.frameLocator('iframe.html-preview').locator('text=click me')
     if (await link.count()) await link.click()
-    expect(await page.evaluate(() => (window as unknown as { __pwned?: unknown }).__pwned)).toBeUndefined()
+    expect(
+      await page.evaluate(() => (window as unknown as { __pwned?: unknown }).__pwned)
+    ).toBeUndefined()
 
     // HTML and PDF exports of the same document are clean too.
     const html = path.join(sandbox.base, 'out', 'hostile.html')
     mkdirSync(path.dirname(html), { recursive: true })
     await stubSaveDialog(app, html)
     await exportViaDialog(page, 'html')
-    await expect(page.getByTestId('toast-info').or(page.getByTestId('toast-success')).first()).toContainText('hostile.html')
+    await expect(
+      page.getByTestId('toast-info').or(page.getByTestId('toast-success')).first()
+    ).toContainText('hostile.html')
     const exported = readFileSync(html, 'utf8')
     expect(exported).not.toMatch(/<script|<iframe|<form|<link |@import/i)
     expect(exported).not.toContain(`127.0.0.1:${port}`)
@@ -124,8 +142,12 @@ test('hostile Markdown cannot run code, load resources or reach the application'
     expect(
       await viewer.evaluate(() => ({
         scripts: document.scripts.length,
-        handlers: [...document.querySelectorAll('*')].filter((el) => [...el.attributes].some((a) => a.name.startsWith('on'))).length,
-        jsLinks: [...document.querySelectorAll('[href], [src]')].filter((el) => [...el.attributes].some((a) => /^\s*javascript:/i.test(a.value))).length
+        handlers: [...document.querySelectorAll('*')].filter((el) =>
+          [...el.attributes].some((a) => a.name.startsWith('on'))
+        ).length,
+        jsLinks: [...document.querySelectorAll('[href], [src]')].filter((el) =>
+          [...el.attributes].some((a) => /^\s*javascript:/i.test(a.value))
+        ).length
       }))
     ).toEqual({ scripts: 0, handlers: 0, jsLinks: 0 })
 
@@ -174,7 +196,12 @@ test('the diagram renderer is isolated: no preload, no Node.js, no network, own 
       })
     )
     const main = windows.find((w) => !w.url.includes('diagram-host'))!
-    expect(main).toMatchObject({ sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false })
+    expect(main).toMatchObject({
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      webviewTag: false
+    })
     const host = windows.find((w) => w.url.includes('diagram-host'))!
     expect(host).toMatchObject({
       visible: false,
@@ -189,7 +216,9 @@ test('the diagram renderer is isolated: no preload, no Node.js, no network, own 
 
     // From inside that window: no Node.js, no application bridge, and no way out to the network.
     const inside = await app.evaluate(async ({ BrowserWindow }, base) => {
-      const window = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('diagram-host'))!
+      const window = BrowserWindow.getAllWindows().find((w) =>
+        w.webContents.getURL().includes('diagram-host')
+      )!
       return window.webContents.executeJavaScript(
         `(async () => {
           const result = { require: typeof require, process: typeof process, bridge: typeof markdownStudio }
@@ -200,7 +229,12 @@ test('the diagram renderer is isolated: no preload, no Node.js, no network, own 
         true
       )
     }, `http://127.0.0.1:${port}`)
-    expect(inside).toEqual({ require: 'undefined', process: 'undefined', bridge: 'undefined', fetch: 'blocked' })
+    expect(inside).toEqual({
+      require: 'undefined',
+      process: 'undefined',
+      bridge: 'undefined',
+      fetch: 'blocked'
+    })
     expect(requests).toEqual([])
   } finally {
     await closeApp(app)
@@ -232,14 +266,39 @@ test('the privileged bridge validates every call, whatever the document says', a
         readCssOutside: await attempt(() => api.presentation.readCss(secret)),
         readCssTraversal: await attempt(() => api.presentation.readCss('../../etc/passwd.css')),
         readNonCss: await attempt(() => api.presentation.readCss('a.md')),
-        diagramGarbage: await attempt(() => api.diagram.render({ id: 'x', source: 'x', variant: 'rainbow', fontFamily: 'a;b', accent: 'no', text: '#000000', background: '#ffffff', svgId: 'bad id' } as never)),
-        exportGarbage: await attempt(() => api.export.run({ jobId: '', format: 'exe', html: 1 } as never)),
+        diagramGarbage: await attempt(() =>
+          api.diagram.render({
+            id: 'x',
+            source: 'x',
+            variant: 'rainbow',
+            fontFamily: 'a;b',
+            accent: 'no',
+            text: '#000000',
+            background: '#ffffff',
+            svgId: 'bad id'
+          } as never)
+        ),
+        exportGarbage: await attempt(() =>
+          api.export.run({ jobId: '', format: 'exe', html: 1 } as never)
+        ),
         presetTraversal: await attempt(() => api.presets.delete('global', '../../settings')),
         presetScope: await attempt(() => api.presets.save('everywhere' as never, { name: 'x' })),
-        pdfGarbage: await attempt(() => api.render.pdf('<p>x</p>', { pageSize: 'Huge' } as never, { title: '', file: '' }))
+        pdfGarbage: await attempt(() =>
+          api.render.pdf('<p>x</p>', { pageSize: 'Huge' } as never, { title: '', file: '' })
+        )
       }
     }, outside)
-    for (const key of ['openFile', 'openScript', 'readOutside', 'readCssOutside', 'readCssTraversal', 'readNonCss', 'presetTraversal', 'presetScope', 'pdfGarbage'] as const) {
+    for (const key of [
+      'openFile',
+      'openScript',
+      'readOutside',
+      'readCssOutside',
+      'readCssTraversal',
+      'readNonCss',
+      'presetTraversal',
+      'presetScope',
+      'pdfGarbage'
+    ] as const) {
       expect(results[key].ok, key).toBe(false)
     }
     expect(results.diagramGarbage).toMatchObject({ ok: true, value: { ok: false } })
@@ -254,7 +313,8 @@ test('the privileged bridge validates every call, whatever the document says', a
 test('local images stay subject to the access rules', async () => {
   const sandbox = createSandbox()
   seedDocuments(sandbox, {
-    'images.md': '![inside](assets/architecture.png)\n\n![outside](../Downloads/architecture.png)\n\n![escape](../../../../../etc/passwd)\n'
+    'images.md':
+      '![inside](assets/architecture.png)\n\n![outside](../Downloads/architecture.png)\n\n![escape](../../../../../etc/passwd)\n'
   })
   const { app, page } = await launchWithWorkspace(sandbox)
   try {

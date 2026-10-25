@@ -38,8 +38,12 @@ test('the application starts and publishes with only its own bundled assets', as
     if (process.env.MARKDOWN_STUDIO_EXECUTABLE) {
       expect(info.packaged).toBe(true)
       // The packaged resources carry the licence and the notices (fonts, Mermaid, KaTeX...).
-      expect(readFileSync(path.join(info.resources, 'THIRD_PARTY_NOTICES.md'), 'utf8')).toContain('KaTeX fonts')
-      expect(readFileSync(path.join(info.resources, 'LICENSE.MarkdownStudio.txt'), 'utf8')).toContain('MIT')
+      expect(readFileSync(path.join(info.resources, 'THIRD_PARTY_NOTICES.md'), 'utf8')).toContain(
+        'KaTeX fonts'
+      )
+      expect(
+        readFileSync(path.join(info.resources, 'LICENSE.MarkdownStudio.txt'), 'utf8')
+      ).toContain('MIT')
     }
 
     await openFromTree(page, 'mixed.md')
@@ -47,7 +51,8 @@ test('the application starts and publishes with only its own bundled assets', as
     const facts = await inPreview(page, (doc) => ({
       katex: doc.querySelectorAll('.katex').length,
       svg: doc.querySelectorAll('figure.ms-diagram svg .node').length,
-      fonts: [...doc.fonts].filter((f) => f.family.startsWith('KaTeX') && f.status === 'loaded').length,
+      fonts: [...doc.fonts].filter((f) => f.family.startsWith('KaTeX') && f.status === 'loaded')
+        .length,
       theme: doc.querySelector('main')?.getAttribute('data-theme')
     }))
     expect(facts).toMatchObject({ theme: 'minimal' })
@@ -57,7 +62,9 @@ test('the application starts and publishes with only its own bundled assets', as
 
     // The diagram window is created from the packaged host page.
     const hostUrl = await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows().map((w) => w.webContents.getURL()).find((u) => u.includes('diagram-host'))
+      BrowserWindow.getAllWindows()
+        .map((w) => w.webContents.getURL())
+        .find((u) => u.includes('diagram-host'))
     )
     expect(hostUrl).toBeTruthy()
 

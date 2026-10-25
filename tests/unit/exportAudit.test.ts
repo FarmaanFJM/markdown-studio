@@ -41,7 +41,9 @@ describe('export audit', () => {
   }
 
   it('flags stylesheets that load remote resources', () => {
-    const result = auditExportedHtml(page('<p>x</p>', '<style>@import url(https://evil.example/a.css);</style>'))
+    const result = auditExportedHtml(
+      page('<p>x</p>', '<style>@import url(https://evil.example/a.css);</style>')
+    )
     expect(result.violations.join(' ')).toMatch(/stylesheet/i)
   })
 

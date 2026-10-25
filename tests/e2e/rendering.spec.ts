@@ -28,7 +28,9 @@ test('math and Mermaid render in the HTML preview, and the source stays exactly 
       return {
         state: doc.querySelector('figure.ms-diagram')?.getAttribute('data-ms-state'),
         nodes: doc.querySelectorAll('figure.ms-diagram svg .node').length,
-        labels: [...doc.querySelectorAll('figure.ms-diagram svg .nodeLabel, figure.ms-diagram svg text')]
+        labels: [
+          ...doc.querySelectorAll('figure.ms-diagram svg .nodeLabel, figure.ms-diagram svg text')
+        ]
           .map((n) => n.textContent)
           .join('|'),
         svgWidth: box?.width ?? 0,
@@ -40,7 +42,9 @@ test('math and Mermaid render in the HTML preview, and the source stays exactly 
         price: doc.querySelector('p')?.textContent ?? '',
         script: doc.querySelectorAll('script').length,
         sourceKept: doc.querySelector('.ms-diagram-source code')?.textContent ?? '',
-        fontLoaded: [...doc.fonts].some((f) => f.family.startsWith('KaTeX') && f.status === 'loaded')
+        fontLoaded: [...doc.fonts].some(
+          (f) => f.family.startsWith('KaTeX') && f.status === 'loaded'
+        )
       }
     })
     expect(facts.state).toBe('ready')
@@ -71,10 +75,12 @@ test('diagrams of every mainstream type render', async () => {
   const diagrams = {
     flowchart: 'flowchart LR\n  A[Start] --> B{Choice}\n  B -->|yes| C[Done]\n  B -->|no| A',
     sequence: 'sequenceDiagram\n  Alice->>Bob: Hello\n  Bob-->>Alice: Hi',
-    class: 'classDiagram\n  class Animal {\n    +String name\n    +speak() void\n  }\n  Animal <|-- Dog',
+    class:
+      'classDiagram\n  class Animal {\n    +String name\n    +speak() void\n  }\n  Animal <|-- Dog',
     state: 'stateDiagram-v2\n  [*] --> Idle\n  Idle --> Running: start\n  Running --> [*]',
     er: 'erDiagram\n  CUSTOMER ||--o{ ORDER : places\n  ORDER ||--|{ ITEM : contains',
-    gantt: 'gantt\n  title Plan\n  dateFormat YYYY-MM-DD\n  section Build\n  Task :a1, 2026-01-01, 5d',
+    gantt:
+      'gantt\n  title Plan\n  dateFormat YYYY-MM-DD\n  section Build\n  Task :a1, 2026-01-01, 5d',
     pie: 'pie title Share\n  "A" : 40\n  "B" : 60'
   }
   seedDocuments(sandbox, {
@@ -96,7 +102,15 @@ test('diagrams of every mainstream type render', async () => {
     expect(states.map((s) => s.state)).toEqual(Object.keys(diagrams).map(() => 'ready'))
     for (const s of states) expect(s.width).toBeGreaterThan(50)
     expect(states.map((s) => s.label)).toEqual(
-      expect.arrayContaining(['flowchart-v2', 'sequence', 'classDiagram', 'stateDiagram', 'er', 'gantt', 'pie'])
+      expect.arrayContaining([
+        'flowchart-v2',
+        'sequence',
+        'classDiagram',
+        'stateDiagram',
+        'er',
+        'gantt',
+        'pie'
+      ])
     )
   } finally {
     await closeApp(app)
@@ -134,7 +148,9 @@ After everything.
     await openFromTree(page, 'broken.md')
     await waitForDiagrams(page, 2)
     const facts = await inPreview(page, (doc) => ({
-      states: [...doc.querySelectorAll('figure.ms-diagram')].map((f) => f.getAttribute('data-ms-state')),
+      states: [...doc.querySelectorAll('figure.ms-diagram')].map((f) =>
+        f.getAttribute('data-ms-state')
+      ),
       error: doc.querySelector('.ms-diagram-error')?.textContent ?? '',
       sourceLine: doc.querySelector('.ms-diagram-error')?.getAttribute('data-ms-source-line'),
       mathErrors: doc.querySelectorAll('.ms-math-error').length,
@@ -153,7 +169,11 @@ After everything.
 
     // The problems are also listed in the editor and reachable with the keyboard.
     await expect
-      .poll(() => page.evaluate(() => Number(document.querySelector('[data-testid="problem-warnings"]')?.textContent)))
+      .poll(() =>
+        page.evaluate(() =>
+          Number(document.querySelector('[data-testid="problem-warnings"]')?.textContent)
+        )
+      )
       .toBeGreaterThanOrEqual(3)
     await focusEditor(page)
     await page.keyboard.press(`${mod}+Home`)
@@ -177,22 +197,31 @@ test('editing text does not redraw unchanged diagrams, and diagram edits are deb
     await waitForDiagrams(page, 1)
     // Count the drawings requested from the isolated renderer from now on.
     await tapIpc(app, 'diagram:render')
-    const svgBefore = await inPreview(page, (doc) => doc.querySelector('figure.ms-diagram svg')?.id ?? '')
+    const svgBefore = await inPreview(
+      page,
+      (doc) => doc.querySelector('figure.ms-diagram svg')?.id ?? ''
+    )
     await focusEditor(page)
     await page.keyboard.press(`${mod}+Home`)
     await page.keyboard.type('Typing in prose, character by character. ', { delay: 15 })
     await expect
-      .poll(() => inPreview(page, (doc) => doc.body.textContent?.includes('character by character') ?? false))
+      .poll(() =>
+        inPreview(page, (doc) => doc.body.textContent?.includes('character by character') ?? false)
+      )
       .toBe(true)
     expect(await ipcCalls(app, 'diagram:render')).toBe(0)
-    expect(await inPreview(page, (doc) => doc.querySelector('figure.ms-diagram svg')?.id ?? '')).toBe(svgBefore)
+    expect(
+      await inPreview(page, (doc) => doc.querySelector('figure.ms-diagram svg')?.id ?? '')
+    ).toBe(svgBefore)
 
     // Edit the diagram: one quick burst of typing makes one drawing, not one per key.
     await page.getByText('Export HTML]').first().click()
     await page.keyboard.press('End')
     await page.keyboard.type('\n    D --> E[Archive]', { delay: 20 })
     await expect
-      .poll(() => inPreview(page, (doc) => doc.querySelectorAll('figure.ms-diagram svg .node').length))
+      .poll(() =>
+        inPreview(page, (doc) => doc.querySelectorAll('figure.ms-diagram svg .node').length)
+      )
       .toBe(5)
     const drawn = await ipcCalls(app, 'diagram:render')
     expect(drawn).toBeGreaterThanOrEqual(1)
@@ -222,8 +251,12 @@ test('math and diagram rendering can be switched off without changing the docume
         }))
       )
       .toMatchObject({ katex: 0, svg: 0 })
-    expect(await inPreview(page, (doc) => doc.body.textContent ?? '')).toContain('$e^{i\\pi} + 1 = 0$')
-    expect(await inPreview(page, (doc) => doc.querySelector('pre code')?.textContent ?? '')).toContain('flowchart TD')
+    expect(await inPreview(page, (doc) => doc.body.textContent ?? '')).toContain(
+      '$e^{i\\pi} + 1 = 0$'
+    )
+    expect(
+      await inPreview(page, (doc) => doc.querySelector('pre code')?.textContent ?? '')
+    ).toContain('flowchart TD')
     await panel.getByLabel('Render math').check()
     await panel.getByLabel('Render Mermaid diagrams').check()
     await waitForDiagrams(page, 1)
@@ -270,7 +303,9 @@ test('completion and commands support math, diagrams and page breaks', async () 
     await page.keyboard.press(`${mod}+Shift+P`)
     await page.getByTestId('palette-input').fill('display equation')
     await page.keyboard.press('Enter')
-    await expect.poll(() => page.locator('.monaco-editor .view-lines').textContent()).toContain('$$')
+    await expect
+      .poll(() => page.locator('.monaco-editor .view-lines').textContent())
+      .toContain('$$')
     await page.keyboard.press('Escape')
   } finally {
     await closeApp(app)

@@ -42,6 +42,7 @@ describe('diagram render requests', () => {
   })
 
   it('rejects non-objects', () => {
-    for (const value of [null, undefined, 'x', 3, []]) expect(validateDiagramRequest(value).ok).toBe(false)
+    for (const value of [null, undefined, 'x', 3, []])
+      expect(validateDiagramRequest(value).ok).toBe(false)
   })
 })

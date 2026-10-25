@@ -9,11 +9,11 @@ settings, in the workspace's `.markdown-studio` folder, or in preset files — n
 
 ## Three layers of appearance
 
-| Layer                           | Where you set it                                            | Applies to                      |
-| ------------------------------- | ----------------------------------------------------------- | ------------------------------- |
-| **Application appearance**      | Settings → Appearance (dark / light)                        | Markdown Studio itself only     |
-| **Document appearance**         | Settings → Document Appearance (global or per workspace)    | Preview, PDF and HTML export    |
-| **Export-specific overrides**   | The Export dialog (or a preset)                             | That export (and the PDF preview while the setup is active) |
+| Layer                         | Where you set it                                         | Applies to                                                  |
+| ----------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- |
+| **Application appearance**    | Settings → Appearance (dark / light)                     | Markdown Studio itself only                                 |
+| **Document appearance**       | Settings → Document Appearance (global or per workspace) | Preview, PDF and HTML export                                |
+| **Export-specific overrides** | The Export dialog (or a preset)                          | That export (and the PDF preview while the setup is active) |
 
 Later layers win: export overrides over workspace overrides over the application default. The
 Settings panel shows when a workspace override is active, and the preview header shows the
@@ -26,12 +26,12 @@ and page composition:
 
 ![The four document themes](screenshots/theme-comparison.png)
 
-| Theme                   | Character                                                                         |
-| ----------------------- | --------------------------------------------------------------------------------- |
-| **Minimal**             | Clean sans-serif, restrained headings, horizontal table rules. For general notes. |
-| **Technical**           | Compact, ruled headings, full-grid tables, dark code blocks, boxed callouts.       |
+| Theme                   | Character                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| **Minimal**             | Clean sans-serif, restrained headings, horizontal table rules. For general notes.   |
+| **Technical**           | Compact, ruled headings, full-grid tables, dark code blocks, boxed callouts.        |
 | **Editorial**           | Serif body, centred title, drop cap, justified text, ornamental rules, quote marks. |
-| **Professional Report** | Serif body with sans headings, numbered sections (1., 1.1), banded tables.         |
+| **Professional Report** | Serif body with sans headings, numbered sections (1., 1.1), banded tables.          |
 
 Choose one in **Settings → Document Appearance**, from the command palette (**Document Theme:
 …**), the **View → Document Theme** menu, or per export in the Export dialog. Changing the theme
@@ -79,9 +79,17 @@ either written in place or loaded from a `.css` file.
 Example:
 
 ```css
-h1 { letter-spacing: 0.02em; }
-blockquote { border-color: #0a7d5a; }
-@media print { h2 { break-before: page; } }
+h1 {
+  letter-spacing: 0.02em;
+}
+blockquote {
+  border-color: #0a7d5a;
+}
+@media print {
+  h2 {
+    break-before: page;
+  }
+}
 ```
 
 ## Math and diagrams
@@ -110,13 +118,13 @@ The preview on the right is the real PDF produced by the same print pipeline as 
 
 ### Placeholders
 
-| Placeholder | Meaning                                              |
-| ----------- | ---------------------------------------------------- |
+| Placeholder | Meaning                                                |
+| ----------- | ------------------------------------------------------ |
 | `{title}`   | Document title (its first heading, else the file name) |
-| `{file}`    | File name                                            |
-| `{date}`    | Date of export, `YYYY-MM-DD`                         |
-| `{page}`    | Current page number                                  |
-| `{pages}`   | Total number of pages                                |
+| `{file}`    | File name                                              |
+| `{date}`    | Date of export, `YYYY-MM-DD`                           |
+| `{page}`    | Current page number                                    |
+| `{pages}`   | Total number of pages                                  |
 
 `Page {page} of {pages}` gives "Page 2 of 8". Page numbers come from the PDF engine's real
 pagination, not an estimate. Everything you type is escaped (`<draft>` is shown literally). Write
@@ -163,10 +171,10 @@ back.
 
 Presets are stored as one JSON file each:
 
-| Scope         | Location                                          |
-| ------------- | ------------------------------------------------- |
-| Global        | `export-presets/<id>.json` in the user-data folder |
-| Workspace     | `<workspace>/.markdown-studio/export-presets/<id>.json` |
+| Scope     | Location                                                |
+| --------- | ------------------------------------------------------- |
+| Global    | `export-presets/<id>.json` in the user-data folder      |
+| Workspace | `<workspace>/.markdown-studio/export-presets/<id>.json` |
 
 Unknown fields are ignored, damaged files are skipped (never rewritten), and files from newer
 versions are read with the fields this version understands. The preset used last stays active for

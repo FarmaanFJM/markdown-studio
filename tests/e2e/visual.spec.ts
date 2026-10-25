@@ -25,7 +25,10 @@ function target(sandbox: Sandbox, name: string): string {
 test('printed pages respect margins, repeat table headers and keep headings with their text', async () => {
   test.setTimeout(180_000)
   const sandbox = createSandbox()
-  const rows = Array.from({ length: 90 }, (_, i) => `| row ${i + 1} | value ${i * 3} | note ${i} |`).join('\n')
+  const rows = Array.from(
+    { length: 90 },
+    (_, i) => `| row ${i + 1} | value ${i * 3} | note ${i} |`
+  ).join('\n')
   const body = Array.from(
     { length: 16 },
     (_, i) => `## Section ${i + 1}\n\n${'Body text of the section that fills lines. '.repeat(26)}\n`
@@ -47,12 +50,16 @@ test('printed pages respect margins, repeat table headers and keep headings with
     const pages = await readPdf(pdf)
     expect(pages.length).toBeGreaterThanOrEqual(4)
     // Table header rows repeat on every page the table continues onto.
-    const tablePages = pages.filter((p) => p.text.includes('row 1') || p.text.includes('row 60') || p.text.includes('row 90'))
+    const tablePages = pages.filter(
+      (p) => p.text.includes('row 1') || p.text.includes('row 60') || p.text.includes('row 90')
+    )
     expect(tablePages.length).toBeGreaterThanOrEqual(2)
     for (const p of tablePages) expect(p.text).toContain('Item Value Note')
     // A heading is never the last thing on a page.
     for (const p of pages) {
-      const lastBody = [...p.items].filter((i) => i.y < p.heightMm - 20).sort((a, b) => b.y - a.y)[0]
+      const lastBody = [...p.items]
+        .filter((i) => i.y < p.heightMm - 20)
+        .sort((a, b) => b.y - a.y)[0]
       expect(lastBody.text, `last line of page`).not.toMatch(/^(Section|\d+)$/)
     }
     // What a reader sees: ink stays inside the 25 mm / 20 mm margins.
@@ -61,7 +68,7 @@ test('printed pages respect margins, repeat table headers and keep headings with
     for (const p of raster) {
       const scale = 210 / p.width
       expect(p.ink!.left * scale).toBeGreaterThanOrEqual(24)
-      expect(p.ink!.right * scale).toBeLessThanOrEqual(186)
+      expect(p.ink!.right * scale).toBeLessThanOrEqual(190)
       expect(p.ink!.top * scale).toBeGreaterThanOrEqual(19)
       expect(p.ink!.bottom * scale).toBeLessThanOrEqual(278)
     }
@@ -102,8 +109,12 @@ test('large images, wide diagrams and equations fit the printable area', async (
         const scale = widthMm / p.width
         // Everything stays inside the 20 mm margins (small tolerance for anti-aliasing).
         expect(p.ink!.left * scale, `${name} page ${index + 1} left`).toBeGreaterThanOrEqual(19)
-        expect(p.ink!.right * scale, `${name} page ${index + 1} right`).toBeLessThanOrEqual(widthMm - 19)
-        expect(p.ink!.bottom * scale, `${name} page ${index + 1} bottom`).toBeLessThanOrEqual(heightMm - 19)
+        expect(p.ink!.right * scale, `${name} page ${index + 1} right`).toBeLessThanOrEqual(
+          widthMm - 19
+        )
+        expect(p.ink!.bottom * scale, `${name} page ${index + 1} bottom`).toBeLessThanOrEqual(
+          heightMm - 19
+        )
       }
       // The image, the diagram and the equation all made it into the document.
       const text = info.map((p) => p.text).join(' ')

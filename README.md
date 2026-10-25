@@ -107,7 +107,7 @@ Phase 2 (captured by `npm run screenshots` from the running application):
   broken diagram shows an explained error (with a link to its source line) without affecting
   the rest of the document.
 - `$…$`, `$$…$$`, `\(…\)` and `\[…\]` render with KaTeX (fonts bundled). Currency like `$5 and
-  $10` stays text; code is never touched. Manual numbering with `\tag{…}` works in all four
+$10` stays text; code is never touched. Manual numbering with `\tag{…}` works in all four
   outputs. Invalid equations are explained in the preview and as editor problems.
 - Completion for mermaid fences and starters, snippets and commands for inline math, display
   equations, diagrams and page breaks.
@@ -411,7 +411,7 @@ own platforms.
 | `npm run test:e2e`     | Playwright driving the real Electron app (run `npm run build` first)                                                                                                                                                             |
 | `npm test`             | Unit tests, build, then E2E                                                                                                                                                                                                      |
 | `npm run screenshots`  | Rebuilds and recaptures the Phase 2 and Phase 3 screenshots in `docs/screenshots/` from the running application                                                                                                                  |
-| `npm run benchmark`    | Performance benchmark (typing latency, render and PDF time, memory growth, tab switching, repeated exports); see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)                                                                       |
+| `npm run benchmark`    | Performance benchmark (typing latency, render and PDF time, memory growth, tab switching, repeated exports); see [docs/PERFORMANCE.md](docs/PERFORMANCE.md)                                                                      |
 
 The end-to-end suite launches the application with an isolated settings folder and a copy of
 `tests/fixtures/`, and covers opening folders, editing and saving, unsaved-change prompts,

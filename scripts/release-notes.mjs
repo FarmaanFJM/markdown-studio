@@ -4,12 +4,13 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 const root = path.resolve(import.meta.dirname, '..')
-const tag = process.argv[2] ?? `v${JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version}`
+const tag =
+  process.argv[2] ?? `v${JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8')).version}`
 const version = tag.replace(/^v/, '')
 const changelog = readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8')
 const heading = new RegExp(`^## ${version.replace(/\./g, '\\.')}\\b.*$`, 'm')
 const start = changelog.search(heading)
-let section = ''
+let section
 if (start >= 0) {
   const rest = changelog.slice(start)
   const next = rest.slice(3).search(/^## /m)

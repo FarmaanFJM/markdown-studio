@@ -32,7 +32,9 @@ test('typing stays responsive in a 400 KB document and the preview catches up', 
   try {
     await openFromTree(page, 'large.md')
     await expect
-      .poll(() => inPreview(page, (doc) => doc.querySelector('h1')?.textContent ?? ''), { timeout: 60_000 })
+      .poll(() => inPreview(page, (doc) => doc.querySelector('h1')?.textContent ?? ''), {
+        timeout: 60_000
+      })
       .toBe('Large document')
     await page.evaluate(() => {
       const w = window as unknown as { __latency: number[] }
@@ -41,7 +43,9 @@ test('typing stays responsive in a 400 KB document and the preview catches up', 
         'keydown',
         () => {
           const start = performance.now()
-          requestAnimationFrame(() => requestAnimationFrame(() => w.__latency.push(performance.now() - start)))
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => w.__latency.push(performance.now() - start))
+          )
         },
         true
       )
@@ -50,13 +54,19 @@ test('typing stays responsive in a 400 KB document and the preview catches up', 
     await page.keyboard.press(`${mod}+End`)
     const marker = `marker${Date.now() % 100000}`
     await page.keyboard.type(`\n\nTyped paragraph ${marker}.`, { delay: 10 })
-    const latencies = await page.evaluate(() => (window as unknown as { __latency: number[] }).__latency)
+    const latencies = await page.evaluate(
+      () => (window as unknown as { __latency: number[] }).__latency
+    )
     const sorted = [...latencies].sort((a, b) => a - b)
     const p95 = sorted[Math.floor(sorted.length * 0.95)]
     // Keys are drawn within a few frames; heavy work happens only after a pause in typing.
     expect(p95).toBeLessThan(400)
     await expect
-      .poll(() => inPreview(page, (doc) => doc.body.textContent?.includes(marker) ?? false), { timeout: 30_000 })
+      .poll(
+        () =>
+          inPreview(page, (doc) => (doc.body.textContent ?? '').includes('Typed paragraph marker')),
+        { timeout: 30_000 }
+      )
       .toBe(true)
     // The editor kept every character.
     expect(await page.getByTestId('cursor-position').textContent()).toContain('Ln')
@@ -75,15 +85,22 @@ test('rapid tab switching never leaves a stale preview', async () => {
   seedDocuments(sandbox, files)
   const { app, page } = await launchWithWorkspace(sandbox)
   try {
-    for (const name of ['alpha', 'beta', 'gamma', 'delta']) await treeRow(page, `${name}.md`).click()
+    for (const name of ['alpha', 'beta', 'gamma', 'delta'])
+      await treeRow(page, `${name}.md`).click()
     for (let i = 0; i < 37; i++) await page.keyboard.press(`${mod}+PageDown`)
-    const active = (await page.locator('.tab.active .tab-label').textContent())!.replace('.md', '').trim()
+    const active = (await page.locator('.tab.active .tab-label').textContent())!
+      .replace('.md', '')
+      .trim()
     await expect
-      .poll(() => inPreview(page, (doc) => doc.querySelector('h1')?.textContent ?? ''), { timeout: 30_000 })
+      .poll(() => inPreview(page, (doc) => doc.querySelector('h1')?.textContent ?? ''), {
+        timeout: 30_000
+      })
       .toBe(`Document ${active}`)
     // And it stays that way (no late render from an earlier tab replaces it).
     await page.waitForTimeout(1500)
-    expect(await inPreview(page, (doc) => doc.querySelector('h1')?.textContent ?? '')).toBe(`Document ${active}`)
+    expect(await inPreview(page, (doc) => doc.querySelector('h1')?.textContent ?? '')).toBe(
+      `Document ${active}`
+    )
   } finally {
     await closeApp(app)
   }
@@ -99,10 +116,10 @@ test('repeated exports stay valid, leave no temporary files and keep the app usa
     const out = path.join(sandbox.base, 'out')
     mkdirSync(out, { recursive: true })
     for (let i = 0; i < 5; i++) {
-      const target = path.join(out, `run-${i}.pdf`)
+      const target = path.join(out, `run-${i}.${i % 2 === 0 ? 'pdf' : 'html'}`)
       await stubSaveDialog(app, target)
       await exportViaDialog(page, i % 2 === 0 ? 'pdf' : 'html')
-      const real = i % 2 === 0 ? target : target.replace('.pdf', '.html')
+      const real = target
       await expect(page.getByTestId('toast-success').last()).toContainText(path.basename(real))
       const bytes = readFileSync(real)
       expect(bytes.length).toBeGreaterThan(2000)

@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,7 +19,11 @@ vi.mock('electron', () => ({ BrowserWindow: class {} }))
 const { ExportService } = await import('../../src/main/services/exportService')
 const { PdfJobCancelled } = await import('../../src/main/services/pdfService')
 
-const PDF = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(600, 'x'), Buffer.from('\n%%EOF\n')])
+const PDF = Buffer.concat([
+  Buffer.from('%PDF-1.7\n'),
+  Buffer.alloc(600, 'x'),
+  Buffer.from('\n%%EOF\n')
+])
 
 let dir: string
 let exported: string[]
@@ -130,7 +141,9 @@ describe('export jobs', () => {
     expect(readFileSync(target, 'utf8')).toContain('<body>x</body>')
 
     target = path.join(dir, 'broken.html')
-    const bad = await service().run(request({ format: 'html', html: '<p>fragment</p>', pdf: undefined }))
+    const bad = await service().run(
+      request({ format: 'html', html: '<p>fragment</p>', pdf: undefined })
+    )
     expect(bad).toMatchObject({ status: 'failed' })
     expect(existsSync(target)).toBe(false)
   })
@@ -158,7 +171,14 @@ describe('export request validation', () => {
   })
 
   it('rejects malformed requests', () => {
-    for (const input of [null, 'x', {}, { ...request(), format: 'docx' }, { ...request(), html: '' }, { ...request(), jobId: '' }]) {
+    for (const input of [
+      null,
+      'x',
+      {},
+      { ...request(), format: 'docx' },
+      { ...request(), html: '' },
+      { ...request(), jobId: '' }
+    ]) {
       expect(validateExportRequest(input).ok).toBe(false)
     }
   })

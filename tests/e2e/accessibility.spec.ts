@@ -16,7 +16,8 @@ import {
 } from './helpers'
 
 function luminance([r, g, b]: number[]): number {
-  const f = (c: number) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4)
+  const f = (c: number) =>
+    c / 255 <= 0.03928 ? c / 255 / 12.92 : ((c / 255 + 0.055) / 1.055) ** 2.4
   return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
 }
 function contrast(a: number[], b: number[]): number {
@@ -31,7 +32,10 @@ async function colours(page: Page, names: string[]): Promise<Record<string, numb
     const out: Record<string, number[]> = {}
     for (const name of vars) {
       probe.style.color = `var(${name})`
-      out[name] = getComputedStyle(probe).color.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number)
+      out[name] = getComputedStyle(probe)
+        .color.match(/\d+(\.\d+)?/g)!
+        .slice(0, 3)
+        .map(Number)
     }
     probe.remove()
     return out
@@ -43,10 +47,22 @@ for (const theme of ['dark', 'light'] as const) {
     const sandbox = createSandbox()
     const { app, page } = await launch(sandbox, { theme })
     try {
-      const c = await colours(page, ['--text', '--text-2', '--text-3', '--accent-strong', '--danger', '--surface', '--elevated', '--bg'])
+      const c = await colours(page, [
+        '--text',
+        '--text-2',
+        '--text-3',
+        '--accent-strong',
+        '--danger',
+        '--surface',
+        '--elevated',
+        '--bg'
+      ])
       for (const foreground of ['--text', '--text-2', '--text-3', '--accent-strong', '--danger']) {
         for (const background of ['--surface', '--elevated', '--bg']) {
-          expect(contrast(c[foreground], c[background]), `${foreground} on ${background}`).toBeGreaterThanOrEqual(4.5)
+          expect(
+            contrast(c[foreground], c[background]),
+            `${foreground} on ${background}`
+          ).toBeGreaterThanOrEqual(4.5)
         }
       }
     } finally {
@@ -69,7 +85,9 @@ test('settings are operable with the keyboard alone, with visible focus', async 
     await page.keyboard.press('ArrowDown')
     await expect(panel.getByTestId('theme-technical')).toBeChecked()
     await expect
-      .poll(() => page.frameLocator('iframe.html-preview').locator('main').getAttribute('data-theme'))
+      .poll(() =>
+        page.frameLocator('iframe.html-preview').locator('main').getAttribute('data-theme')
+      )
       .toBe('technical')
     // The focused theme card shows a focus ring.
     const outline = await page.evaluate(() => {
@@ -111,9 +129,19 @@ test('status, errors and progress are announced to assistive technology', async 
     await expect.poll(() => page.locator('.toasts').getAttribute('aria-live')).toBe('polite')
     // Diagram and equation errors are notes with text, not colour alone.
     await expect
-      .poll(() => inPreview(page, (doc) => [...doc.querySelectorAll('.ms-diagram-error, .ms-math-error')].map((e) => e.getAttribute('role'))))
+      .poll(() =>
+        inPreview(page, (doc) =>
+          [...doc.querySelectorAll('.ms-diagram-error, .ms-math-error')].map((e) =>
+            e.getAttribute('role')
+          )
+        )
+      )
       .toEqual(['note', 'note'])
-    const text = await inPreview(page, (doc) => [...doc.querySelectorAll('.ms-diagram-error strong, .ms-math-error strong')].map((e) => e.textContent))
+    const text = await inPreview(page, (doc) =>
+      [...doc.querySelectorAll('.ms-diagram-error strong, .ms-math-error strong')].map(
+        (e) => e.textContent
+      )
+    )
     expect(text.join(' ')).toMatch(/Diagram error/)
     expect(text.join(' ')).toMatch(/Math error/)
     // Math is exposed as MathML, diagrams as images with a label.
@@ -122,7 +150,9 @@ test('status, errors and progress are announced to assistive technology', async 
     // The PDF preview's progress text is a live status.
     await page.getByTestId('preview-tab-pdf').click()
     await page.getByTestId('pdf-refresh').click()
-    await expect(page.getByRole('status').filter({ hasText: 'Generating' }).first()).toBeVisible({ timeout: 5000 }).catch(() => undefined)
+    await expect(page.getByRole('status').filter({ hasText: 'Generating' }).first())
+      .toBeVisible({ timeout: 5000 })
+      .catch(() => undefined)
 
     // An export failure is reported through an alert.
     mkdirSync(path.join(sandbox.base, 'taken.pdf'))
@@ -165,7 +195,9 @@ test('small windows keep the editor usable and the Export dialog inside the scre
     const editor = await page.locator('.monaco-editor').first().boundingBox()
     expect(editor!.width).toBeGreaterThan(300)
     expect(editor!.height).toBeGreaterThan(200)
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)
+    ).toBe(true)
 
     await focusEditor(page)
     await page.keyboard.press(`${mod}+Shift+U`)

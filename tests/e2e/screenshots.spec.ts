@@ -4,7 +4,6 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   closeApp,
   createSandbox,
-  exportViaDialog,
   focusEditor,
   goToLine,
   inPreview,
@@ -154,7 +153,6 @@ test('captures the Phase 2 screenshots', async () => {
   }
 })
 
-
 const SHOWCASE = `# Quarterly Technical Report
 
 *Prepared with Markdown Studio.* This document combines prose, equations, diagrams, tables and
@@ -255,7 +253,9 @@ test('captures the Phase 3 screenshots', async () => {
     // Main window: editor and preview with math and a diagram.
     await openFromTree(page, 'Technical Report.md')
     await waitForDiagrams(page, 1)
-    await expect.poll(() => inPreview(page, (doc) => doc.querySelectorAll('.katex').length)).toBeGreaterThan(1)
+    await expect
+      .poll(() => inPreview(page, (doc) => doc.querySelectorAll('.katex').length))
+      .toBeGreaterThan(1)
     await page.waitForTimeout(600)
     await shot(page, 'phase3-editor-preview.png')
 
@@ -277,7 +277,9 @@ test('captures the Phase 3 screenshots', async () => {
     ] as const) {
       await runPaletteCommand(page, `Document Theme: ${title}`)
       await expect
-        .poll(() => page.frameLocator('iframe.html-preview').locator('main').getAttribute('data-theme'))
+        .poll(() =>
+          page.frameLocator('iframe.html-preview').locator('main').getAttribute('data-theme')
+        )
         .toBe(id)
       await waitForDiagrams(page, 1)
       await page.waitForTimeout(500)
@@ -326,14 +328,20 @@ test('captures the Phase 3 screenshots', async () => {
       `<!doctype html><meta charset="utf-8"><style>
         body{margin:0;padding:24px;background:#d9dde2;display:flex;gap:20px;align-items:flex-start;width:max-content}
         img{display:block;box-shadow:0 3px 12px rgba(0,0,0,.3);width:420px}
-      </style>${pages.slice(0, 3).map((p) => `<img src="data:image/png;base64,${p.png.toString('base64')}">`).join('')}`
+      </style>${pages
+        .slice(0, 3)
+        .map((p) => `<img src="data:image/png;base64,${p.png.toString('base64')}">`)
+        .join('')}`
     )
     const pagesViewer = await openInViewer(app, montage)
     await pagesViewer.setViewportSize({ width: 1400, height: 720 })
     await pagesViewer.waitForTimeout(500)
     await pagesViewer.screenshot({ path: path.join(OUTPUT, 'pdf-pages.png'), fullPage: true })
     await pagesViewer.close()
-    writeFileSync(path.join(OUTPUT, 'final-document.png'), (await rasterizePdf(app, pdf, 1.6))[0].png)
+    writeFileSync(
+      path.join(OUTPUT, 'final-document.png'),
+      (await rasterizePdf(app, pdf, 1.6))[0].png
+    )
 
     // Presets manager.
     await page.getByTestId('preview-tab-html').click()
@@ -350,12 +358,18 @@ test('captures the Phase 3 screenshots', async () => {
     await panel.getByTestId('scope-workspace').click()
     await panel.getByTestId('theme-card-editorial').click()
     await page.locator('#settings-document-appearance').scrollIntoViewIfNeeded()
-    await panel.evaluate((el) => el.querySelector('#settings-document-appearance')!.scrollIntoView())
+    await panel.evaluate((el) =>
+      el.querySelector('#settings-document-appearance')!.scrollIntoView()
+    )
     await page.waitForTimeout(700)
     await shot(page, 'theme-selection.png')
     await panel.getByTestId('css-details').locator('summary').click()
     await panel.getByTestId('settings-css-inline').click()
-    await panel.getByTestId('settings-css-text').fill('h1 { color: #0a7d5a }\n@import url("https://example.com/remote.css");\nbody { background: url(file:///etc/passwd) }')
+    await panel
+      .getByTestId('settings-css-text')
+      .fill(
+        'h1 { color: #0a7d5a }\n@import url("https://example.com/remote.css");\nbody { background: url(file:///etc/passwd) }'
+      )
     await expect(panel.getByTestId('css-problems')).toBeVisible()
     await panel.getByTestId('css-details').scrollIntoViewIfNeeded()
     await page.waitForTimeout(500)

@@ -12,13 +12,13 @@ same commit.
 
 Every push runs `.github/workflows/ci.yml`:
 
-| Job            | Gates                                                                                                                                           |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **linux**      | lint, formatting, typecheck, unit tests, build, **security regression tests**, **export rendering tests**, core editor E2E, AppImage build and a packaged-app smoke test |
-| **windows**    | unit tests, build, security, export and core E2E, **installer build**, signature status report, the whole E2E suite against the unpacked app, **silent install + launch of the installed app**, packaged smoke test |
-| **macos**      | build, DMG packaging, packaged-app smoke test                                                                                                    |
-| **performance** | informational benchmark, uploaded as an artifact                                                                                                |
-| **release**    | only for `v*` tags, after all of the above pass                                                                                                  |
+| Job             | Gates                                                                                                                                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **linux**       | lint, formatting, typecheck, unit tests, build, **security regression tests**, **export rendering tests**, core editor E2E, AppImage build and a packaged-app smoke test                                            |
+| **windows**     | unit tests, build, security, export and core E2E, **installer build**, signature status report, the whole E2E suite against the unpacked app, **silent install + launch of the installed app**, packaged smoke test |
+| **macos**       | build, DMG packaging, packaged-app smoke test                                                                                                                                                                       |
+| **performance** | informational benchmark, uploaded as an artifact                                                                                                                                                                    |
+| **release**     | only for `v*` tags, after all of the above pass                                                                                                                                                                     |
 
 Artifacts: `markdown-studio-windows-installer`, `markdown-studio-linux-appimage`,
 `markdown-studio-macos-dmg` (and `benchmark-results`). A platform is only described as verified
@@ -44,9 +44,9 @@ red.
 Signing is optional and uses the official tools through electron-builder; **no certificate or
 password is ever committed**.
 
-| Platform | Repository secrets                                                                                         |
-| -------- | ---------------------------------------------------------------------------------------------------------- |
-| Windows  | `WINDOWS_CERTIFICATE_BASE64` (the `.pfx` file, base64), `WINDOWS_CERTIFICATE_PASSWORD`                      |
+| Platform | Repository secrets                                                                                                                                                              |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Windows  | `WINDOWS_CERTIFICATE_BASE64` (the `.pfx` file, base64), `WINDOWS_CERTIFICATE_PASSWORD`                                                                                          |
 | macOS    | `MAC_CERTIFICATE_BASE64` (Developer ID Application `.p12`, base64), `MAC_CERTIFICATE_PASSWORD`, and for notarisation `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID` |
 
 - With the Windows secrets present, `electron-builder` signs the installer and the

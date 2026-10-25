@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import {
@@ -63,11 +63,19 @@ test('\\tag works in the HTML preview, PDF preview, HTML export and PDF export',
     await openFromTree(page, 'numbered.md')
 
     // HTML preview.
-    await expect.poll(() => inPreview(page, (doc) => doc.querySelectorAll('.katex-display').length)).toBe(6)
+    await expect
+      .poll(() => inPreview(page, (doc) => doc.querySelectorAll('.katex-display').length))
+      .toBe(6)
     const html = await inPreview(page, (doc) => ({
-      tags: [...doc.querySelectorAll('.katex-tag')].map((t) => (t.textContent ?? '').replace(/[​\s]/g, '')),
+      tags: [...doc.querySelectorAll('.katex-tag')].map((t) =>
+        (t.textContent ?? '').replace(/[\u200b\s]/g, '')
+      ),
       autoNumbers: doc.querySelectorAll('.eqn-num').length,
-      autoContent: [...doc.querySelectorAll('.eqn-num')].map((n) => css(doc, n).content === 'none' ? '' : doc.defaultView!.getComputedStyle(n, '::before').content),
+      autoContent: [...doc.querySelectorAll('.eqn-num')].map((n) =>
+        css(doc, n).content === 'none'
+          ? ''
+          : doc.defaultView!.getComputedStyle(n, '::before').content
+      ),
       errors: doc.querySelectorAll('.ms-math-error').length,
       tagBox: (() => {
         const tag = doc.querySelector('.katex-tag')!.getBoundingClientRect()
@@ -133,8 +141,12 @@ test('\\tag works in the HTML preview, PDF preview, HTML export and PDF export',
     const standalone = await viewer.evaluate(async () => {
       await document.fonts.ready
       return {
-        tags: [...document.querySelectorAll('.katex-tag')].map((t) => (t.textContent ?? '').replace(/[​\s]/g, '')),
-        auto: [...document.querySelectorAll('.eqn-num')].map((n) => getComputedStyle(n, '::before').content),
+        tags: [...document.querySelectorAll('.katex-tag')].map((t) =>
+          (t.textContent ?? '').replace(/[\u200b\s]/g, '')
+        ),
+        auto: [...document.querySelectorAll('.eqn-num')].map(
+          (n) => getComputedStyle(n, '::before').content
+        ),
         width: document.querySelector('.katex-tag')!.getBoundingClientRect().width
       }
     })
@@ -190,11 +202,15 @@ Everything else keeps rendering: $x^2 + y^2 = z^2$.
   try {
     await page.setViewportSize({ width: 1360, height: 860 })
     await openFromTree(page, 'cookbook.md')
-    await expect.poll(() => inPreview(page, (doc) => doc.querySelectorAll('.katex').length)).toBeGreaterThanOrEqual(5)
+    await expect
+      .poll(() => inPreview(page, (doc) => doc.querySelectorAll('.katex').length))
+      .toBeGreaterThanOrEqual(5)
     await page.waitForTimeout(500)
     await page.screenshot({ path: path.join(DOCS, 'math-html-preview.png') })
     await openFromTree(page, 'errors.md')
-    await expect.poll(() => inPreview(page, (doc) => doc.querySelectorAll('.ms-math-error').length)).toBe(3)
+    await expect
+      .poll(() => inPreview(page, (doc) => doc.querySelectorAll('.ms-math-error').length))
+      .toBe(3)
     await page.waitForTimeout(1500)
     await page.screenshot({ path: path.join(DOCS, 'math-errors.png') })
   } finally {

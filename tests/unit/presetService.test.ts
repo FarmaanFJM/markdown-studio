@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -54,8 +61,12 @@ describe('PresetService', () => {
 
   it('stores workspace presets in the project and gives each preset its own file', async () => {
     await service.save('workspace', input('Spec'))
-    expect(existsSync(path.join(workspace, '.markdown-studio', 'export-presets', 'spec.json'))).toBe(true)
-    const stored = JSON.parse(readFileSync(path.join(workspace, '.markdown-studio', 'export-presets', 'spec.json'), 'utf8'))
+    expect(
+      existsSync(path.join(workspace, '.markdown-studio', 'export-presets', 'spec.json'))
+    ).toBe(true)
+    const stored = JSON.parse(
+      readFileSync(path.join(workspace, '.markdown-studio', 'export-presets', 'spec.json'), 'utf8')
+    )
     expect(stored).toMatchObject({ version: 1, id: 'spec', name: 'Spec' })
   })
 
@@ -66,7 +77,10 @@ describe('PresetService', () => {
 
   it('stores an edit of a built-in preset and restores the original by deleting it', async () => {
     const standard = BUILTIN_PRESETS.find((p) => p.id === 'standard-pdf')!
-    const edited = await service.save('global', { ...standard, data: { ...standard.data, theme: 'report' } })
+    const edited = await service.save('global', {
+      ...standard,
+      data: { ...standard.data, theme: 'report' }
+    })
     expect(edited.id).toBe('standard-pdf')
     expect((await service.list()).global).toHaveLength(1)
 
@@ -83,7 +97,12 @@ describe('PresetService', () => {
     writeFileSync(path.join(globalDir, 'notes.txt'), 'hello')
     writeFileSync(
       path.join(globalDir, 'future.json'),
-      JSON.stringify({ version: 9, id: 'future', name: 'From later', data: { format: 'html', hologram: 1 } })
+      JSON.stringify({
+        version: 9,
+        id: 'future',
+        name: 'From later',
+        data: { format: 'html', hologram: 1 }
+      })
     )
     await service.save('global', input('Fine'))
     const names = (await service.list()).global.map((p) => p.name).sort()

@@ -86,17 +86,51 @@ function png(size) {
 
 const KB = 1024
 const documents = {
-  'small notes': { file: 'small.md', text: '# Small notes\n\nA few lines.\n\n- one\n- two\n\nSome `code` and a [link](https://example.com).\n' },
-  'medium technical (60 KB)': { file: 'medium.md', text: grow('# Technical documentation\n\n', (i) => section(i) + (i % 4 === 0 ? table(i) : ''), 60 * KB) },
+  'small notes': {
+    file: 'small.md',
+    text: '# Small notes\n\nA few lines.\n\n- one\n- two\n\nSome `code` and a [link](https://example.com).\n'
+  },
+  'medium technical (60 KB)': {
+    file: 'medium.md',
+    text: grow(
+      '# Technical documentation\n\n',
+      (i) => section(i) + (i % 4 === 0 ? table(i) : ''),
+      60 * KB
+    )
+  },
   'large (400 KB)': { file: 'large.md', text: grow('# Large document\n\n', section, 400 * KB) },
   'huge (1.1 MB)': { file: 'huge.md', text: grow('# Huge document\n\n', section, 1100 * KB) },
-  'tables and headings (300 tables)': { file: 'tables.md', text: grow('# Tables\n\n', (i) => `## Heading ${i}\n\n${table(i)}`, 300 * 330) },
-  'diagrams (10 Mermaid)': { file: 'diagrams.md', text: '# Diagrams\n\n' + Array.from({ length: 10 }, (_, i) => `Diagram ${i + 1}.\n\n${diagram(i + 1)}`).join(''), newFeature: true },
-  'math (500 expressions)': { file: 'math.md', text: '# Mathematics\n\n' + Array.from({ length: 250 }, (_, i) => math(i + 1)).join(''), newFeature: true },
-  'large images (4 x 2400 px)': { file: 'images.md', text: '# Images\n\n' + [1, 2, 3, 4].map((i) => `![photo ${i}](img/photo${i}.png)\n\n`).join('') },
+  'tables and headings (300 tables)': {
+    file: 'tables.md',
+    text: grow('# Tables\n\n', (i) => `## Heading ${i}\n\n${table(i)}`, 300 * 330)
+  },
+  'diagrams (10 Mermaid)': {
+    file: 'diagrams.md',
+    text:
+      '# Diagrams\n\n' +
+      Array.from({ length: 10 }, (_, i) => `Diagram ${i + 1}.\n\n${diagram(i + 1)}`).join(''),
+    newFeature: true
+  },
+  'math (500 expressions)': {
+    file: 'math.md',
+    text: '# Mathematics\n\n' + Array.from({ length: 250 }, (_, i) => math(i + 1)).join(''),
+    newFeature: true
+  },
+  'large images (4 x 2400 px)': {
+    file: 'images.md',
+    text: '# Images\n\n' + [1, 2, 3, 4].map((i) => `![photo ${i}](img/photo${i}.png)\n\n`).join('')
+  },
   'mixed (diagrams, tables, math, code)': {
     file: 'mixed.md',
-    text: grow('# Mixed document\n\n', (i) => section(i) + (i % 5 === 0 ? table(i) : '') + (i % 20 === 0 ? diagram(i) : '') + (i % 5 === 1 ? math(i) : ''), 150 * KB),
+    text: grow(
+      '# Mixed document\n\n',
+      (i) =>
+        section(i) +
+        (i % 5 === 0 ? table(i) : '') +
+        (i % 20 === 0 ? diagram(i) : '') +
+        (i % 5 === 1 ? math(i) : ''),
+      150 * KB
+    ),
     newFeature: true
   }
 }
@@ -109,17 +143,23 @@ const userData = path.join(base, 'user-data')
 mkdirSync(path.join(workspace, 'img'), { recursive: true })
 mkdirSync(userData, { recursive: true })
 for (const doc of Object.values(documents)) writeFileSync(path.join(workspace, doc.file), doc.text)
-for (let i = 1; i <= 4; i++) writeFileSync(path.join(workspace, 'img', `photo${i}.png`), png(quick ? 800 : 2400))
+for (let i = 1; i <= 4; i++)
+  writeFileSync(path.join(workspace, 'img', `photo${i}.png`), png(quick ? 800 : 2400))
 writeFileSync(
   path.join(userData, 'settings.json'),
-  JSON.stringify({ workspace: { restoreLastWorkspace: true, lastWorkspace: workspace, recent: [workspace] }, editor: { wordWrap: false } })
+  JSON.stringify({
+    workspace: { restoreLastWorkspace: true, lastWorkspace: workspace, recent: [workspace] },
+    editor: { wordWrap: false }
+  })
 )
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const percentile = (values, p) => {
   if (values.length === 0) return null
   const sorted = [...values].sort((a, b) => a - b)
-  return Math.round(sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))] * 10) / 10
+  return (
+    Math.round(sorted[Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length))] * 10) / 10
+  )
 }
 const round = (n) => (n === null || n === undefined ? null : Math.round(n * 10) / 10)
 
@@ -134,14 +174,20 @@ async function launch() {
 }
 
 const previewHeading = (page) =>
-  page.evaluate(() => document.querySelector('iframe.html-preview')?.contentDocument?.querySelector('h1')?.textContent ?? null)
+  page.evaluate(
+    () =>
+      document.querySelector('iframe.html-preview')?.contentDocument?.querySelector('h1')
+        ?.textContent ?? null
+  )
 
 async function open(page, file) {
   const start = Date.now()
   await page.locator('.tree-row').filter({ hasText: file }).first().click()
   await page.waitForFunction(
-    (title) => document.querySelector('iframe.html-preview')?.contentDocument?.querySelector('h1')?.textContent === title,
-    (await titleOf(file)),
+    (title) =>
+      document.querySelector('iframe.html-preview')?.contentDocument?.querySelector('h1')
+        ?.textContent === title,
+    await titleOf(file),
     { timeout: 120000 }
   )
   return Date.now() - start
@@ -159,13 +205,20 @@ async function measureTyping(page, count = 40) {
       'keydown',
       () => {
         const t = performance.now()
-        requestAnimationFrame(() => requestAnimationFrame(() => window.__latency.push(performance.now() - t)))
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => window.__latency.push(performance.now() - t))
+        )
       },
       true
     )
-    new PerformanceObserver((list) => list.getEntries().forEach((e) => window.__long.push(e.duration))).observe({ entryTypes: ['longtask'] })
+    new PerformanceObserver((list) =>
+      list.getEntries().forEach((e) => window.__long.push(e.duration))
+    ).observe({ entryTypes: ['longtask'] })
   })
-  await page.locator('.monaco-editor .view-lines').first().click({ position: { x: 5, y: 5 }, force: true })
+  await page
+    .locator('.monaco-editor .view-lines')
+    .first()
+    .click({ position: { x: 5, y: 5 }, force: true })
   await page.keyboard.press('Control+End')
   await page.keyboard.press('Control+End')
   const marker = `zz${Date.now() % 100000}`
@@ -177,7 +230,8 @@ async function measureTyping(page, count = 40) {
   const typed = Date.now() - start
   const previewStart = Date.now()
   await page.waitForFunction(
-    (m) => document.querySelector('iframe.html-preview')?.contentDocument?.body.textContent?.includes(m),
+    (m) =>
+      document.querySelector('iframe.html-preview')?.contentDocument?.body.textContent?.includes(m),
     marker,
     { timeout: 60000 }
   )
@@ -199,7 +253,11 @@ const renderTimes = (page) =>
     const entries = performance.getEntriesByName('ms:preview-render')
     if (entries.length === 0) return null
     const last = entries[entries.length - 1].duration
-    return { count: entries.length, lastMs: Math.round(last * 10) / 10, maxMs: Math.round(Math.max(...entries.map((e) => e.duration)) * 10) / 10 }
+    return {
+      count: entries.length,
+      lastMs: Math.round(last * 10) / 10,
+      maxMs: Math.round(Math.max(...entries.map((e) => e.duration)) * 10) / 10
+    }
   })
 
 const heap = async (page) => {
@@ -207,14 +265,19 @@ const heap = async (page) => {
   return page.evaluate(() => (performance.memory ? performance.memory.usedJSHeapSize : null))
 }
 const mainMemory = (app) =>
-  app.evaluate(({ app: electronApp }) => electronApp.getAppMetrics().reduce((sum, m) => sum + (m.memory?.workingSetSize ?? 0), 0))
+  app.evaluate(({ app: electronApp }) =>
+    electronApp.getAppMetrics().reduce((sum, m) => sum + (m.memory?.workingSetSize ?? 0), 0)
+  )
 
 async function pdfTime(page) {
   const start = Date.now()
   await page.getByTestId('preview-tab-pdf').click()
   await page.locator('.pdf-page').first().waitFor({ timeout: 180000 })
   const ms = Date.now() - start
-  await page.getByTestId('preview-tab-html').click().catch(() => page.locator('[data-testid=preview-tab-html]').click())
+  await page
+    .getByTestId('preview-tab-html')
+    .click()
+    .catch(() => page.locator('[data-testid=preview-tab-html]').click())
   return ms
 }
 
@@ -234,8 +297,13 @@ const result = {
 }
 
 const { app, page } = await launch()
-result.environment.electron = await app.evaluate(({}) => `${process.versions.electron} (Chromium ${process.versions.chrome})`)
-await page.getByTestId('preview-tab-html').click().catch(() => undefined)
+result.environment.electron = await app.evaluate(
+  () => `${process.versions.electron} (Chromium ${process.versions.chrome})`
+)
+await page
+  .getByTestId('preview-tab-html')
+  .click()
+  .catch(() => undefined)
 await page.waitForTimeout(500)
 
 try {
@@ -248,7 +316,8 @@ try {
       entry.renderTime = await renderTimes(page)
       Object.assign(entry, await measureTyping(page, quick ? 12 : 40))
       entry.renderAfterTyping = await renderTimes(page)
-      if (!quick || name === 'mixed (diagrams, tables, math, code)') entry.pdfPreviewMs = await pdfTime(page)
+      if (!quick || name === 'mixed (diagrams, tables, math, code)')
+        entry.pdfPreviewMs = await pdfTime(page)
     } catch (error) {
       entry.error = String(error).split('\n')[0]
     }
@@ -268,7 +337,10 @@ try {
   const mainBefore = await mainMemory(app)
   console.error('main before', mainBefore)
   await page.screenshot({ path: '/tmp/bench-before-memory.png' })
-  await page.locator('.monaco-editor .view-lines').first().click({ position: { x: 5, y: 5 }, force: true })
+  await page
+    .locator('.monaco-editor .view-lines')
+    .first()
+    .click({ position: { x: 5, y: 5 }, force: true })
   await page.keyboard.press('Control+End')
   const cycles = quick ? 15 : 60
   for (let i = 0; i < cycles; i++) {
@@ -288,7 +360,8 @@ try {
 
   console.error('step: tab switching')
   // Rapid tab switching: open several documents, then switch as fast as possible.
-  for (const file of ['small.md', 'medium.md', 'tables.md', 'large.md', 'mixed.md']) await open(page, file).catch(() => undefined)
+  for (const file of ['small.md', 'medium.md', 'tables.md', 'large.md', 'mixed.md'])
+    await open(page, file).catch(() => undefined)
   const switchStart = Date.now()
   const switches = quick ? 20 : 60
   for (let i = 0; i < switches; i++) await page.keyboard.press('Control+PageDown')
@@ -301,7 +374,13 @@ try {
     settled = (await previewHeading(page)) === expectedTitle
     if (!settled) await sleep(100)
   }
-  result.tabSwitching = { switches, totalMs: switchMs, perSwitchMs: round(switchMs / switches), activeDocument: active.trim(), previewMatchesActiveDocument: settled }
+  result.tabSwitching = {
+    switches,
+    totalMs: switchMs,
+    perSwitchMs: round(switchMs / switches),
+    activeDocument: active.trim(),
+    previewMatchesActiveDocument: settled
+  }
   console.error('tabs:', JSON.stringify(result.tabSwitching))
 
   console.error('step: exports')

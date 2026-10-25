@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { expect, test, type Locator, type Page } from '@playwright/test'
+import { expect, test, type Locator } from '@playwright/test'
 import {
   closeApp,
   createSandbox,
@@ -53,7 +53,13 @@ test('PDF export supports the standard page sizes, orientations and custom sizes
   const { app, page } = await launchWithWorkspace(sandbox)
   try {
     await openFromTree(page, 'report.md')
-    const cases: { size: string; orientation: string; width: number; height: number; custom?: [string, string] }[] = [
+    const cases: {
+      size: string
+      orientation: string
+      width: number
+      height: number
+      custom?: [string, string]
+    }[] = [
       { size: 'A4', orientation: 'portrait', width: 210, height: 297 },
       { size: 'A4', orientation: 'landscape', width: 297, height: 210 },
       { size: 'A5', orientation: 'portrait', width: 148, height: 210 },
@@ -231,10 +237,14 @@ test('standalone HTML export works offline with its theme, fonts, math, diagrams
       document.querySelector<HTMLAnchorElement>('a[href="#feature-table"]')!.click()
       await new Promise((resolve) => setTimeout(resolve, 100))
       return {
-        resources: resources.filter((name) => !name.startsWith('file:') && !name.startsWith('data:')),
+        resources: resources.filter(
+          (name) => !name.startsWith('file:') && !name.startsWith('data:')
+        ),
         svgWidth: svg.width,
         katexWidth: katex.width,
-        fontLoaded: [...document.fonts].some((f) => f.family.startsWith('KaTeX') && f.status === 'loaded'),
+        fontLoaded: [...document.fonts].some(
+          (f) => f.family.startsWith('KaTeX') && f.status === 'loaded'
+        ),
         hash: location.hash,
         scripts: document.scripts.length,
         targetTop: target.getBoundingClientRect().top,
@@ -337,7 +347,11 @@ test('export presets: built-ins, custom presets, editing, deleting, restoring an
     const file = path.join(sandbox.userData, 'export-presets', 'board-report.json')
     await expect.poll(() => existsSync(file)).toBe(true)
     const stored = JSON.parse(readFileSync(file, 'utf8'))
-    expect(stored).toMatchObject({ id: 'board-report', name: 'Board report', data: { theme: 'report', format: 'pdf' } })
+    expect(stored).toMatchObject({
+      id: 'board-report',
+      name: 'Board report',
+      data: { theme: 'report', format: 'pdf' }
+    })
     expect(stored.data.pdf.margins.top).toBe(30)
 
     // A workspace preset lives in the project.
@@ -346,7 +360,11 @@ test('export presets: built-ins, custom presets, editing, deleting, restoring an
     await page.keyboard.press('Enter')
     await page.getByRole('button', { name: 'This workspace' }).click()
     await expect
-      .poll(() => existsSync(path.join(sandbox.workspace, '.markdown-studio', 'export-presets', 'team-handout.json')))
+      .poll(() =>
+        existsSync(
+          path.join(sandbox.workspace, '.markdown-studio', 'export-presets', 'team-handout.json')
+        )
+      )
       .toBe(true)
     await expect(select.locator('option', { hasText: 'Team handout' })).toHaveCount(1)
 
@@ -380,7 +398,9 @@ test('export presets: built-ins, custom presets, editing, deleting, restoring an
     await openFromTree(page, 'report.md')
     await page.getByRole('button', { name: 'Export as PDF' }).click()
     dialog = page.getByRole('dialog', { name: 'Export' })
-    await expect(dialog.getByTestId('export-preset').locator('option', { hasText: 'Team handout · workspace' })).toHaveCount(1)
+    await expect(
+      dialog.getByTestId('export-preset').locator('option', { hasText: 'Team handout · workspace' })
+    ).toHaveCount(1)
     await page.keyboard.press('Escape')
   } finally {
     await closeApp(app)
@@ -402,7 +422,9 @@ test('presets export with their own theme and page setup', async () => {
     const pages = await readPdf(target)
     // Compact Notes: A4, small type and a page number in the bottom right.
     expect(pages[0].widthMm).toBeCloseTo(210, 0)
-    expect(pages[0].items.some((i) => i.text.trim() === '1' && i.y > pages[0].heightMm - 14 && i.x > 150)).toBe(true)
+    expect(
+      pages[0].items.some((i) => i.text.trim() === '1' && i.y > pages[0].heightMm - 14 && i.x > 150)
+    ).toBe(true)
     // It remains the active setup for the PDF preview afterwards.
     await page.getByTestId('preview-tab-pdf').click()
     await expect(page.getByTestId('pdf-setup-label')).toContainText('Compact Notes')
@@ -416,25 +438,40 @@ test('damaged or outdated configuration never prevents startup', async () => {
   seedDocuments(sandbox, { 'report.md': '# Hello\n' })
   mkdirSync(path.join(sandbox.userData, 'export-presets'), { recursive: true })
   writeFileSync(path.join(sandbox.userData, 'export-presets', 'broken.json'), '{ nope')
-  writeFileSync(path.join(sandbox.userData, 'export-presets', 'obsolete.json'), JSON.stringify({ version: 0, id: 'obsolete', name: 'Old preset', format: 'html', unknown: [1] }))
+  writeFileSync(
+    path.join(sandbox.userData, 'export-presets', 'obsolete.json'),
+    JSON.stringify({ version: 0, id: 'obsolete', name: 'Old preset', format: 'html', unknown: [1] })
+  )
   mkdirSync(path.join(sandbox.workspace, '.markdown-studio'), { recursive: true })
   writeFileSync(path.join(sandbox.workspace, '.markdown-studio', 'presentation.json'), '[1,2,3]')
   const { app, page } = await launch(sandbox, {
     version: 1,
     theme: 'light',
-    document: { theme: 'nonexistent', customization: [1], pdf: 'text', math: 5, exportPreset: '../../../x' },
+    document: {
+      theme: 'nonexistent',
+      customization: [1],
+      pdf: 'text',
+      math: 5,
+      exportPreset: '../../../x'
+    },
     workspace: { restoreLastWorkspace: true, lastWorkspace: sandbox.workspace, recent: [] }
   })
   try {
     await openFromTree(page, 'report.md')
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
     await expect
-      .poll(() => page.frameLocator('iframe.html-preview').locator('main').getAttribute('data-theme'))
+      .poll(() =>
+        page.frameLocator('iframe.html-preview').locator('main').getAttribute('data-theme')
+      )
       .toBe('minimal')
     await page.getByRole('button', { name: 'Export as PDF' }).click()
     const dialog = page.getByRole('dialog', { name: 'Export' })
-    await expect(dialog.getByTestId('export-preset').locator('option', { hasText: 'Old preset' })).toHaveCount(1)
-    await expect(dialog.getByTestId('export-preset').locator('option', { hasText: 'broken' })).toHaveCount(0)
+    await expect(
+      dialog.getByTestId('export-preset').locator('option', { hasText: 'Old preset' })
+    ).toHaveCount(1)
+    await expect(
+      dialog.getByTestId('export-preset').locator('option', { hasText: 'broken' })
+    ).toHaveCount(0)
     await expect(dialog.getByTestId('export-run')).toBeEnabled()
     await page.keyboard.press('Escape')
   } finally {
@@ -468,12 +505,21 @@ test('the Export dialog is fully keyboard accessible and restores focus', async 
 
     // Every control has an accessible name.
     const unnamed = await page.evaluate(() =>
-      [...document.querySelectorAll('[role="dialog"] input, [role="dialog"] select, [role="dialog"] textarea, [role="dialog"] button')]
+      [
+        ...document.querySelectorAll(
+          '[role="dialog"] input, [role="dialog"] select, [role="dialog"] textarea, [role="dialog"] button'
+        )
+      ]
         .filter((el) => (el as HTMLElement).offsetParent !== null)
         .filter((el) => {
           const element = el as HTMLInputElement
           const label = element.labels?.[0]?.textContent?.trim()
-          return !(label || el.getAttribute('aria-label') || el.textContent?.trim() || el.getAttribute('title'))
+          return !(
+            label ||
+            el.getAttribute('aria-label') ||
+            el.textContent?.trim() ||
+            el.getAttribute('title')
+          )
         })
         .map((el) => el.outerHTML.slice(0, 100))
     )
@@ -482,7 +528,9 @@ test('the Export dialog is fully keyboard accessible and restores focus', async 
     // Escape closes it and focus returns to where it was.
     await page.keyboard.press('Escape')
     await expect(dialog).toHaveCount(0)
-    await expect(page.locator('.monaco-editor.focused, .monaco-editor .inputarea:focus')).not.toHaveCount(0)
+    await expect(
+      page.locator('.monaco-editor.focused, .monaco-editor .inputarea:focus')
+    ).not.toHaveCount(0)
 
     // Same from the command palette.
     await page.keyboard.press(`${mod}+Shift+P`)

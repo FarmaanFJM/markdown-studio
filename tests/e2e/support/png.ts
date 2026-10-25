@@ -43,4 +43,3 @@ export function makePng(size: number): Buffer {
     chunk('IEND', Buffer.alloc(0))
   ])
 }
-

@@ -5,10 +5,20 @@ import { resolveTheme } from '@shared/presentation/theme'
 
 const fake = vi.hoisted(() => {
   const state = { requests: [] as { id: string; source: string; variant: string; svgId: string }[] }
-  const render = async (request: { id: string; source: string; variant: string; svgId: string }) => {
+  const render = async (request: {
+    id: string
+    source: string
+    variant: string
+    svgId: string
+  }) => {
     state.requests.push(request)
     if (request.source.includes('BROKEN')) {
-      return { id: request.id, ok: false, message: 'Parse error on line 2:\n...A -->\nExpecting a node', line: 2 }
+      return {
+        id: request.id,
+        ok: false,
+        message: 'Parse error on line 2:\n...A -->\nExpecting a node',
+        line: 2
+      }
     }
     const evil = request.source.includes('EVIL')
       ? '<script>alert(1)</script><rect onclick="alert(2)" width="1" height="1"/><image href="https://evil.example/a.png"/><style>@import "https://evil.example/x.css";.n{fill:red}</style>'
@@ -26,9 +36,12 @@ const fake = vi.hoisted(() => {
   return state
 })
 
-const { buildStandaloneHtml, buildPdfSourceHtml } = await import('../../src/renderer/src/markdown/exporters')
-const { renderDocumentBody, buildHtmlDocument, DEFAULT_PRESENTATION } = await import('../../src/renderer/src/markdown/document')
-const { clearDiagramCache, diagramCacheSize, hydrateDiagrams } = await import('../../src/renderer/src/markdown/diagrams')
+const { buildStandaloneHtml, buildPdfSourceHtml } =
+  await import('../../src/renderer/src/markdown/exporters')
+const { renderDocumentBody, DEFAULT_PRESENTATION } =
+  await import('../../src/renderer/src/markdown/document')
+const { clearDiagramCache, diagramCacheSize, hydrateDiagrams } =
+  await import('../../src/renderer/src/markdown/diagrams')
 const { diagramStyleFor } = await import('../../src/renderer/src/markdown/diagramStyle')
 const { katexStylesheet } = await import('../../src/renderer/src/markdown/katexCss')
 
@@ -83,11 +96,16 @@ describe('standalone HTML export', () => {
 
   it('keeps the exact fenced source next to the rendered diagram', async () => {
     const { html } = await buildStandaloneHtml(exportSource(DOC))
-    expect(html).toContain('<pre class="ms-diagram-source"><code class="language-mermaid">flowchart TD\n    A --&gt; B</code></pre>')
+    expect(html).toContain(
+      '<pre class="ms-diagram-source"><code class="language-mermaid">flowchart TD\n    A --&gt; B</code></pre>'
+    )
   })
 
   it('uses the dark diagram variant on a dark page', async () => {
-    const dark = { ...DEFAULT_PRESENTATION, theme: resolveTheme('minimal', { pageBackground: '#101418' }) }
+    const dark = {
+      ...DEFAULT_PRESENTATION,
+      theme: resolveTheme('minimal', { pageBackground: '#101418' })
+    }
     await buildStandaloneHtml(exportSource(DOC), dark)
     expect(fake.requests[0].variant).toBe('dark')
   })
@@ -128,7 +146,9 @@ describe('standalone HTML export', () => {
   })
 
   it('embeds the validated custom CSS and neutralises style-element escapes', async () => {
-    const checked = validateCustomCss('h1{color:#123456} p::after{content:"</style><script>alert(1)</script>"}')
+    const checked = validateCustomCss(
+      'h1{color:#123456} p::after{content:"</style><script>alert(1)</script>"}'
+    )
     expect(checked.ok).toBe(true)
     if (!checked.ok) return
     const { html } = await buildStandaloneHtml(exportSource('# Hi\n'), {
@@ -200,7 +220,9 @@ describe('diagram cache and hydration', () => {
     expect(ids).toHaveLength(2)
     expect(new Set(ids).size).toBe(2)
     expect(ids[1]).toBe(`${ids[0]}-2`)
-    expect([...el.querySelectorAll('[id]')].map((n) => n.id).length).toBe(new Set([...el.querySelectorAll('[id]')].map((n) => n.id)).size)
+    expect([...el.querySelectorAll('[id]')].map((n) => n.id).length).toBe(
+      new Set([...el.querySelectorAll('[id]')].map((n) => n.id)).size
+    )
   })
 
   it('redraws when the presentation changes, with deterministic ids', async () => {

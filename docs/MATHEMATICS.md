@@ -41,12 +41,12 @@ with extra spacing. In the editor, typing `/equation` on an empty line offers th
 
 ## Delimiters and what counts as math
 
-| Delimiter  | Kind    | Example                |
-| ---------- | ------- | ---------------------- |
-| `$…$`      | inline  | `$a^2 + b^2 = c^2$`    |
-| `\(…\)`    | inline  | `\(a^2 + b^2 = c^2\)`  |
-| `$$…$$`    | display | `$$ x = \frac{1}{2} $$` |
-| `\[…\]`    | display | `\[ x = \frac{1}{2} \]` |
+| Delimiter | Kind    | Example                 |
+| --------- | ------- | ----------------------- |
+| `$…$`     | inline  | `$a^2 + b^2 = c^2$`     |
+| `\(…\)`   | inline  | `\(a^2 + b^2 = c^2\)`   |
+| `$$…$$`   | display | `$$ x = \frac{1}{2} $$` |
+| `\[…\]`   | display | `\[ x = \frac{1}{2} \]` |
 
 A display equation may be written on one line or across several; the opening and closing
 `$$` may be on their own lines.
@@ -226,12 +226,12 @@ $$
 
 What has been verified (see `tests/e2e/mathematics.spec.ts`):
 
-| Output                | `\tag{1}` shown | Notes                                    |
-| --------------------- | --------------- | ---------------------------------------- |
-| HTML preview          | yes             |                                          |
-| PDF preview           | yes             | same Chromium print pipeline as export   |
-| Standalone HTML export | yes            | no JavaScript needed                     |
-| PDF export            | yes             | real, selectable text                    |
+| Output                 | `\tag{1}` shown | Notes                                  |
+| ---------------------- | --------------- | -------------------------------------- |
+| HTML preview           | yes             |                                        |
+| PDF preview            | yes             | same Chromium print pipeline as export |
+| Standalone HTML export | yes             | no JavaScript needed                   |
+| PDF export             | yes             | real, selectable text                  |
 
 ![Tagged equations, and the automatic numbers of an `align` block, in the PDF preview](screenshots/math-numbered.png)
 
@@ -271,6 +271,7 @@ the equation is replaced by a highlighted note that says what is wrong and shows
 
 ```markdown
 <!-- expect-error -->
+
 An unfinished fraction: $\frac{1}{$ and an unknown command: $\undefinedcommand{x}$.
 ```
 
@@ -299,17 +300,17 @@ class, load packages, or typeset a whole document. Markdown Studio uses KaTeX's 
 untrusted content disabled, so commands that would load resources or inject markup are not
 available.
 
-| You may know from LaTeX                       | In Markdown Studio                                        |
-| --------------------------------------------- | --------------------------------------------------------- |
-| `amsmath` environments (`aligned`, `cases`, `matrix` family, `gather`, `align`) | Supported by KaTeX |
-| `\tag{…}`, `\tag*{…}`                         | Supported, display math only, numbers are manual           |
-| `equation` / `align` / `gather` numbering     | Numbered per equation, restarting at (1); **no document-wide sequence** |
-| `\label{…}`, `\ref{…}`, `\eqref{…}`           | **Not supported** (reported as an unknown command)         |
-| `\newcommand`, `\renewcommand`, `\def`        | Only inside one expression; **nothing persists** (below)   |
-| `\usepackage`, document classes, preamble     | **Not supported**                                          |
-| `theorem`, `proof` and similar environments   | **Not supported** (write them in Markdown)                 |
-| TikZ, `tabular`, floats, bibliography, indexes | **Not supported**                                         |
-| `\href`, `\url`, `\includegraphics`, `\html…` | Disabled for safety; shown as unsupported text             |
+| You may know from LaTeX                                                         | In Markdown Studio                                                      |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `amsmath` environments (`aligned`, `cases`, `matrix` family, `gather`, `align`) | Supported by KaTeX                                                      |
+| `\tag{…}`, `\tag*{…}`                                                           | Supported, display math only, numbers are manual                        |
+| `equation` / `align` / `gather` numbering                                       | Numbered per equation, restarting at (1); **no document-wide sequence** |
+| `\label{…}`, `\ref{…}`, `\eqref{…}`                                             | **Not supported** (reported as an unknown command)                      |
+| `\newcommand`, `\renewcommand`, `\def`                                          | Only inside one expression; **nothing persists** (below)                |
+| `\usepackage`, document classes, preamble                                       | **Not supported**                                                       |
+| `theorem`, `proof` and similar environments                                     | **Not supported** (write them in Markdown)                              |
+| TikZ, `tabular`, floats, bibliography, indexes                                  | **Not supported**                                                       |
+| `\href`, `\url`, `\includegraphics`, `\html…`                                   | Disabled for safety; shown as unsupported text                          |
 
 ## What is not supported
 
@@ -335,6 +336,7 @@ it as a snippet (**Templates → Save Selection as Snippet…**).
 
 ```markdown
 <!-- expect-error -->
+
 This label does not work: $$ a = b \label{eq:one} $$ and neither does \ref{eq:one} $\ref{eq:one}$.
 ```
 

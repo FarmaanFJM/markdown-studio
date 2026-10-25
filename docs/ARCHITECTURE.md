@@ -362,5 +362,6 @@ labels and cross-references would extend the markdown-it configuration with attr
 a pure numbering function; definitions would extend the macro table handed to KaTeX (and the
 render-cache key); a reference manager would add parsers in `shared/` and a CSL engine in the
 renderer; book projects would build on the export pipeline and the reference-aware file moves.
+
 - **Image tooling** (resizing, optimisation, clipboard screenshots) — all asset writes go through
   `AssetService` and all references through `imageReference.ts`.

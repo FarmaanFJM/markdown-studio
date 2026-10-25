@@ -6,7 +6,8 @@ function clean(svg: string): string {
   return sanitizeSvg(svg) ?? ''
 }
 
-const wrap = (inner: string, attrs = '') => `<svg xmlns="http://www.w3.org/2000/svg" ${attrs}>${inner}</svg>`
+const wrap = (inner: string, attrs = '') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" ${attrs}>${inner}</svg>`
 
 describe('diagram SVG sanitising', () => {
   it('keeps ordinary diagram markup', () => {
@@ -25,7 +26,10 @@ describe('diagram SVG sanitising', () => {
 
   it('removes scripts and event handlers', () => {
     const svg = clean(
-      wrap('<script>alert(1)</script><rect width="1" height="1" onclick="alert(2)" onload="alert(3)"/><a xlink:href="javascript:alert(4)"><text>x</text></a>', 'onload="alert(5)"')
+      wrap(
+        '<script>alert(1)</script><rect width="1" height="1" onclick="alert(2)" onload="alert(3)"/><a xlink:href="javascript:alert(4)"><text>x</text></a>',
+        'onload="alert(5)"'
+      )
     )
     expect(svg.toLowerCase()).not.toContain('script')
     expect(svg).not.toMatch(/\son\w+=/i)
@@ -38,7 +42,8 @@ describe('diagram SVG sanitising', () => {
         '<foreignObject width="100" height="100"><iframe src="https://evil.example"></iframe><object data="x"></object><form action="https://evil.example"><input></form><div>label</div></foreignObject>'
       )
     )
-    for (const tag of ['iframe', 'object', 'form', 'input', 'embed']) expect(svg).not.toContain(`<${tag}`)
+    for (const tag of ['iframe', 'object', 'form', 'input', 'embed'])
+      expect(svg).not.toContain(`<${tag}`)
     expect(svg).not.toContain('evil.example')
   })
 
@@ -67,7 +72,9 @@ describe('diagram SVG sanitising', () => {
 
   it('applies the CSS policy to embedded style elements', () => {
     const svg = clean(
-      wrap('<style>@import url("https://evil.example/a.css"); .a{fill:red} .b{background:url(file:///etc/passwd)}</style><rect class="a" width="1" height="1"/>')
+      wrap(
+        '<style>@import url("https://evil.example/a.css"); .a{fill:red} .b{background:url(file:///etc/passwd)}</style><rect class="a" width="1" height="1"/>'
+      )
     )
     expect(svg).not.toContain('evil.example')
     expect(svg).not.toContain('passwd')
@@ -77,7 +84,9 @@ describe('diagram SVG sanitising', () => {
 
   it('removes animation elements that can set attributes on other nodes', () => {
     const svg = clean(
-      wrap('<a><animate attributeName="href" values="javascript:alert(1)"/><set attributeName="onmouseover" to="alert(1)"/><text>x</text></a>')
+      wrap(
+        '<a><animate attributeName="href" values="javascript:alert(1)"/><set attributeName="onmouseover" to="alert(1)"/><text>x</text></a>'
+      )
     )
     expect(svg).not.toContain('<animate')
     expect(svg).not.toContain('<set')

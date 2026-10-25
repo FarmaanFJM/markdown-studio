@@ -61,7 +61,10 @@ export function auditExportedHtml(html: string): AuditResult {
     }
   })
   doc.querySelectorAll('style').forEach((el) => {
-    const css = analyzeCss(el.textContent ?? '', 'stylesheet', { fragmentUrls: true, unlimited: true })
+    const css = analyzeCss(el.textContent ?? '', 'stylesheet', {
+      fragmentUrls: true,
+      unlimited: true
+    })
     if (css.problems.length > 0)
       add(`A stylesheet breaks the CSS policy: ${css.problems[0].message}`)
   })

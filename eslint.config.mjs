@@ -25,7 +25,20 @@ export default tseslint.config(
   },
   {
     files: ['scripts/**/*.mjs'],
-    languageOptions: { globals: { process: 'readonly' } }
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        setTimeout: 'readonly',
+        // Code passed to page.evaluate runs in the browser.
+        document: 'readonly',
+        window: 'readonly',
+        performance: 'readonly',
+        requestAnimationFrame: 'readonly',
+        PerformanceObserver: 'readonly'
+      }
+    }
   },
   {
     rules: {

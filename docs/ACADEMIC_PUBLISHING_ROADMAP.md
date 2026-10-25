@@ -33,27 +33,27 @@ Principles, inherited from the application and applied to every item below:
 
 ## Where Phase 3 ends
 
-| Capability                                   | Phase 3 (today)                                             |
-| -------------------------------------------- | ----------------------------------------------------------- |
-| KaTeX inline and display math                | Implemented                                                 |
-| Manual equation numbers (`\tag{…}`)          | Implemented, verified in HTML/PDF preview and export        |
-| Numbers inside one `align`/`equation` block  | KaTeX's own, restarting at (1) in every equation            |
-| Labels, `\ref`, `\eqref`, cross-references   | **Not implemented**                                         |
-| Document-wide automatic numbering            | **Not implemented**                                         |
-| Persistent macros                            | **Not implemented** (a macro lives for one expression)      |
-| Citations, bibliography, CSL styles          | **Not implemented**                                         |
-| Figure/table/section numbering and references | **Not implemented**                                        |
-| Multi-file book projects, EPUB               | **Not implemented**                                         |
-| Mermaid diagrams, themes, page setup, presets | Implemented                                                |
+| Capability                                    | Phase 3 (today)                                        |
+| --------------------------------------------- | ------------------------------------------------------ |
+| KaTeX inline and display math                 | Implemented                                            |
+| Manual equation numbers (`\tag{…}`)           | Implemented, verified in HTML/PDF preview and export   |
+| Numbers inside one `align`/`equation` block   | KaTeX's own, restarting at (1) in every equation       |
+| Labels, `\ref`, `\eqref`, cross-references    | **Not implemented**                                    |
+| Document-wide automatic numbering             | **Not implemented**                                    |
+| Persistent macros                             | **Not implemented** (a macro lives for one expression) |
+| Citations, bibliography, CSL styles           | **Not implemented**                                    |
+| Figure/table/section numbering and references | **Not implemented**                                    |
+| Multi-file book projects, EPUB                | **Not implemented**                                    |
+| Mermaid diagrams, themes, page setup, presets | Implemented                                            |
 
 ## Proposed syntax (Quarto/Pandoc compatible)
 
 The roadmap standardises on these forms. They are plain text, readable without tooling, and
 understood by Pandoc/Quarto.
 
-````markdown
+```markdown
 ---
-title: "On Gaussian integrals"
+title: 'On Gaussian integrals'
 bibliography: references.bib
 csl: apa.csl
 ---
@@ -75,15 +75,16 @@ $$ {#eq-gauss}
 : Summary statistics {#tbl-stats}
 
 Refer to @sec-intro, @tbl-stats and @eq-gauss anywhere in the book.
-````
+$$
+```
 
-| Object      | Label prefix | Reference form | Pandoc/Quarto equivalent                |
-| ----------- | ------------ | -------------- | --------------------------------------- |
-| Equation    | `eq-`        | `@eq-name`     | Quarto `{#eq-name}` after `$$ … $$`     |
-| Figure      | `fig-`       | `@fig-name`    | Quarto `{#fig-name}` on an image        |
-| Table       | `tbl-`       | `@tbl-name`    | Quarto `{#tbl-name}` on a table caption |
-| Section     | `sec-`       | `@sec-name`    | Quarto `{#sec-name}` on a heading       |
-| Citation    | citation key | `@key`, `[@key]`, `[@a; @b, p. 3]` | Pandoc citation syntax |
+| Object   | Label prefix | Reference form                     | Pandoc/Quarto equivalent                |
+| -------- | ------------ | ---------------------------------- | --------------------------------------- |
+| Equation | `eq-`        | `@eq-name`                         | Quarto `{#eq-name}` after `$$ … $$`     |
+| Figure   | `fig-`       | `@fig-name`                        | Quarto `{#fig-name}` on an image        |
+| Table    | `tbl-`       | `@tbl-name`                        | Quarto `{#tbl-name}` on a table caption |
+| Section  | `sec-`       | `@sec-name`                        | Quarto `{#sec-name}` on a heading       |
+| Citation | citation key | `@key`, `[@key]`, `[@a; @b, p. 3]` | Pandoc citation syntax                  |
 
 Where Pandoc/Quarto behaviour is ambiguous or version-dependent, the roadmap items name the
 exact subset Markdown Studio will support and add tests against that subset.
@@ -191,11 +192,11 @@ f(x) := x^2 + 1
 
 **Scopes and precedence** (narrowest wins):
 
-| Scope         | Stored in                                              | Visible to              |
-| ------------- | ------------------------------------------------------ | ----------------------- |
-| **Document**  | the document itself (front matter or a definitions block) | that document only   |
-| **Workspace** | `.markdown-studio/definitions.md` in the project        | every document in it    |
-| **Global**    | the user's data folder                                  | every document, everywhere |
+| Scope         | Stored in                                                 | Visible to                 |
+| ------------- | --------------------------------------------------------- | -------------------------- |
+| **Document**  | the document itself (front matter or a definitions block) | that document only         |
+| **Workspace** | `.markdown-studio/definitions.md` in the project          | every document in it       |
+| **Global**    | the user's data folder                                    | every document, everywhere |
 
 Shadowing is reported by a diagnostic, not applied silently.
 
@@ -280,11 +281,11 @@ subset of Quarto's `_quarto.yml` book configuration so the same folder builds el
 project:
   type: book
 book:
-  title: "A Book About Integrals"
-  author: "Ada Lovelace"
+  title: 'A Book About Integrals'
+  author: 'Ada Lovelace'
   chapters:
     - index.md
-    - part: "Foundations"
+    - part: 'Foundations'
       chapters:
         - limits.md
         - derivatives.md
@@ -329,14 +330,14 @@ Each stage is useful on its own and builds on the previous one.
 
 1. **Foundations:** a document model for labelled objects (attribute blocks, `{#id}` parsing in
    the shared markdown-it configuration), identifier diagnostics, numbering as a pure function.
-   *(items 3 and 6, equations first)*
-2. **Equation Editor and Equations & Definitions panel** on top of that model. *(items 1, 2)*
-3. **Definitions with scopes**, with deterministic macro tables and cache keys. *(item 4)*
+   _(items 3 and 6, equations first)_
+2. **Equation Editor and Equations & Definitions panel** on top of that model. _(items 1, 2)_
+3. **Definitions with scopes**, with deterministic macro tables and cache keys. _(item 4)_
 4. **References:** BibTeX/CSL JSON parsing, citation syntax and completion, CSL rendering,
-   bibliography output, diagnostics. *(item 5)*
+   bibliography output, diagnostics. _(item 5)_
 5. **Books:** project file, multi-file numbering and references, front matter, contents, page
-   numbering, PDF. *(item 7)*
-6. **EPUB** and a multi-page HTML site. *(item 7)*
+   numbering, PDF. _(item 7)_
+6. **EPUB** and a multi-page HTML site. _(item 7)_
 
 ## Cross-cutting requirements
 

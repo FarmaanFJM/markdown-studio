@@ -27,7 +27,10 @@ export async function rasterizePdf(
   const dist = path.dirname(require.resolve('pdfjs-dist/package.json'))
   const work = mkdtempSync(path.join(tmpdir(), 'ms-raster-'))
   copyFileSync(path.join(dist, 'build', 'pdf.min.mjs'), path.join(work, 'pdf.min.mjs'))
-  copyFileSync(path.join(dist, 'build', 'pdf.worker.min.mjs'), path.join(work, 'pdf.worker.min.mjs'))
+  copyFileSync(
+    path.join(dist, 'build', 'pdf.worker.min.mjs'),
+    path.join(work, 'pdf.worker.min.mjs')
+  )
   writeFileSync(path.join(work, 'doc.pdf'), readFileSync(file))
   writeFileSync(
     path.join(work, 'index.html'),
@@ -77,7 +80,13 @@ export async function rasterizePdf(
       scale
     )
     return (
-      rendered as { width: number; height: number; url: string; ink: RasterPage['ink']; inkRatio: number }[]
+      rendered as {
+        width: number
+        height: number
+        url: string
+        ink: RasterPage['ink']
+        inkRatio: number
+      }[]
     ).map((p, index) => ({
       index,
       width: p.width,
