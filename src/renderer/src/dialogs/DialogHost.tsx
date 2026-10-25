@@ -160,8 +160,13 @@ function ChoiceDialog({ request }: { request: Extract<DialogRequest, { kind: 'ch
               {option.label}
             </button>
           ))}
-          <button type="button" className="button" onClick={() => request.resolve(null)}>
-            Cancel
+          <button
+            type="button"
+            className={`button${request.options.length === 0 ? ' primary' : ''}`}
+            data-autofocus={request.options.length === 0 ? '' : undefined}
+            onClick={() => request.resolve(null)}
+          >
+            {request.options.length === 0 ? 'Close' : 'Cancel'}
           </button>
         </>
       }

@@ -2054,3 +2054,54 @@ input[type='range'] {
 .status-notes {
   color: var(--text-3);
 }
+
+/* ---------- Folder picker and drag-and-drop move ---------- */
+
+.folder-picker-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: var(--text-2);
+}
+
+.folder-picker-list {
+  margin: 0;
+  padding: 0;
+  max-height: 40vh;
+  overflow: auto;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--editor-bg);
+}
+
+.folder-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.folder-picker-item:hover,
+.folder-picker-item:focus-visible {
+  background: var(--accent-soft);
+  outline: none;
+}
+
+.folder-picker-empty {
+  padding: 10px;
+}
+
+.tree-row.drop-target {
+  background: var(--accent-soft);
+  outline: 1px dashed var(--accent);
+  outline-offset: -1px;
+}

@@ -4,14 +4,11 @@ import { basename, dirname, relativePath, stripExtension } from '@shared/paths'
 import { api, errorMessage } from '../bridge'
 import { getActiveEditor } from '../editor/models'
 import { insertImages } from '../editor/imageDrop'
-import {
-  activeDocument,
-  handlePathDeleted,
-  handlePathRenamed,
-  openDocument
-} from '../state/documents'
+import { activeDocument, handlePathDeleted, openDocument } from '../state/documents'
 import { dialogs, notify, type ContextMenuItem } from '../state/ui'
 import { useWorkspace } from '../state/workspace'
+import { FolderPicker } from '../references/FolderPicker'
+import { moveWithReferences, renameWithReferences } from '../references/moveWithReferences'
 
 const isWindows = window.markdownStudio.platform === 'win32'
 const trashName = isWindows ? 'Recycle Bin' : 'Trash'
@@ -83,15 +80,25 @@ export async function renameEntry(entry: DirEntry): Promise<void> {
     validate: validateName
   })
   if (!name || name === entry.name) return
-  try {
-    const renamed = await api.fs.rename(entry.path, name)
-    handlePathRenamed(entry.path, renamed)
-    const workspace = useWorkspace.getState()
-    await workspace.refresh([dirname(entry.path)])
-    workspace.select(renamed)
-  } catch (error) {
-    notify('error', errorMessage(error))
-  }
+  // Markdown references to the file (and a document's own relative links) are kept valid.
+  await renameWithReferences(entry, name)
+}
+
+/** Moves a file or folder into another folder of the workspace, chosen in a dialog. */
+export async function moveEntry(entry: DirEntry): Promise<void> {
+  const root = useWorkspace.getState().root
+  if (!root) return
+  const target = await dialogs.custom<string>((done) => (
+    <FolderPicker
+      title={`Move "${entry.name}" to…`}
+      root={root}
+      start={dirname(entry.path)}
+      excluded={entry.path}
+      confirmLabel="Move Here"
+      onDone={done}
+    />
+  ))
+  if (target) await moveWithReferences(entry, target)
 }
 
 export async function deleteEntry(entry: DirEntry): Promise<void> {
@@ -189,6 +196,7 @@ export function entryContextMenu(entry: DirEntry | null, folder: string): Contex
         run: () => copyText((root && relativePath(root, entry.path)) ?? basename(entry.path))
       },
       { label: 'Rename…', run: () => void renameEntry(entry), separatorBefore: true },
+      { label: 'Move…', run: () => void moveEntry(entry) },
       { label: 'Delete', run: () => void deleteEntry(entry), danger: true }
     )
   } else {
