@@ -43,7 +43,7 @@ exports.
 > [Release status](#release-status)). The guides:
 > [Authoring](docs/AUTHORING.md) · [Mathematics](docs/MATHEMATICS.md) ·
 > [Publishing](docs/PUBLISHING.md) · [Architecture](docs/ARCHITECTURE.md) ·
-> [Performance](docs/PERFORMANCE.md) · [Academic publishing roadmap](docs/ACADEMIC_PUBLISHING_ROADMAP.md)
+> [Performance](docs/PERFORMANCE.md) · [Product roadmap](docs/ROADMAP.md) · [Academic publishing roadmap](docs/ACADEMIC_PUBLISHING_ROADMAP.md)
 > (future work, not implemented).
 
 ## Screenshots
@@ -502,7 +502,9 @@ in a `templates` folder.
 **Phase 3 — Professional polish and release:** implemented (see above). Signed release builds
 need signing credentials that are not part of the repository.
 
-**Beyond Phase 3 (planned, not implemented):** automatic equation numbering and
+**Beyond Phase 3 (planned, not implemented):** the long-term direction (school-ready core,
+two-column layouts, structured documents, an extension system, chess and academic extensions,
+book projects) is in the [product roadmap](docs/ROADMAP.md). In detail: automatic equation numbering and
 cross-references, reusable definitions, a reference manager with citations and bibliographies,
 numbered figures and tables, and multi-file book projects with EPUB. See the
 [academic publishing roadmap](docs/ACADEMIC_PUBLISHING_ROADMAP.md).
