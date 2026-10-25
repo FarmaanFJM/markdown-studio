@@ -186,3 +186,24 @@ describe('project service', () => {
     await expect(project.setPublication({})).rejects.toThrow(/Open a folder/)
   })
 })
+
+describe('pasting the same picture later', () => {
+  it('reuses the earlier pasted file even when the generated name differs', async () => {
+    const assets = new AssetService(access)
+    const dir = path.join(root, 'assets')
+    const first = await assets.saveClipboardImage(
+      PNG,
+      'image/png',
+      dir,
+      'pasted-image-20261025-100000'
+    )
+    const later = await assets.saveClipboardImage(
+      PNG,
+      'image/png',
+      dir,
+      'pasted-image-20261025-100007'
+    )
+    expect(later).toEqual({ path: first.path, copied: false })
+    expect(readdirSync(dir)).toHaveLength(1)
+  })
+})

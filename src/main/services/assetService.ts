@@ -147,6 +147,20 @@ export class AssetService {
     const fileName = `${stem}.${CLIPBOARD_TYPES[mime]}`
     await fs.mkdir(targetDir, { recursive: true })
     const data = Buffer.from(bytes)
+    // Pasting the same picture again (even a second later, when the generated name differs)
+    // reuses the earlier file instead of piling up copies.
+    const extension = path.extname(fileName)
+    const earlier = await fs.readdir(targetDir).catch(() => [] as string[])
+    for (const name of earlier
+      .filter((n) => n.startsWith('pasted-image-') && n.endsWith(extension))
+      .slice(-200)) {
+      const candidate = path.join(targetDir, name)
+      const stat = await fs.stat(candidate).catch(() => null)
+      if (stat?.isFile() && stat.size === data.length) {
+        const existing = await fs.readFile(candidate).catch(() => null)
+        if (existing && existing.equals(data)) return { path: candidate, copied: false }
+      }
+    }
     for (let attempt = 0; attempt < MAX_COLLISION_ATTEMPTS; attempt++) {
       const target = path.join(targetDir, candidateName(fileName, attempt))
       try {
