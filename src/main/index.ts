@@ -42,6 +42,8 @@ let mainWindow: BrowserWindow | null = null
 let allowClose = false
 /** Exported files the user may reveal in the system file manager. */
 const exportedFiles = new Set<string>()
+/** Folders the user picked in the folder dialog; only these and recent folders may be opened. */
+const pickedFolders = new Set<string>()
 
 const watcher = new WorkspaceWatcher((directories) => {
   mainWindow?.webContents.send(IPC.workspaceChanged, directories)
@@ -159,15 +161,17 @@ function registerIpc(): void {
       properties: ['openDirectory', 'createDirectory']
     })
     if (result.canceled || result.filePaths.length === 0) return null
-    return openWorkspace(result.filePaths[0])
+    const picked = path.resolve(result.filePaths[0])
+    pickedFolders.add(picked)
+    return picked
   })
   handle(IPC.workspaceOpen, async (folder: string) => {
-    const known = settings.get().workspace.recent
+    const allowed = [...settings.get().workspace.recent, ...pickedFolders]
     if (
       typeof folder !== 'string' ||
-      !known.some((p) => path.resolve(p) === path.resolve(folder))
+      !allowed.some((p) => path.resolve(p) === path.resolve(folder))
     ) {
-      throw new Error('Only folders from the recent list can be reopened directly.')
+      throw new Error('Only folders chosen in the folder dialog or the recent list can be opened.')
     }
     return openWorkspace(folder)
   })

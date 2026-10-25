@@ -7,3 +7,4 @@ playwright-report/
 package-lock.json
 tests/fixtures/
 resources/
+THIRD_PARTY_NOTICES.md

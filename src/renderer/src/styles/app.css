@@ -624,7 +624,7 @@ input[type='range'] {
 
 .tree:focus-within .tree-row.selected {
   background: var(--accent-soft);
-  border-color: rgba(18, 201, 142, 0.45);
+  border-color: rgba(18, 201, 142, 0.3);
 }
 
 .tree-chevron {
@@ -1245,20 +1245,24 @@ input[type='range'] {
 }
 
 .setting-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 0;
+  padding: 9px 0;
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.setting-text label {
+.setting-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 26px;
+}
+
+.setting-line label {
   color: var(--text);
 }
 
 .setting-hint {
-  margin: 3px 0 0;
+  margin: 4px 0 0;
   color: var(--text-3);
   font-size: 12px;
 }

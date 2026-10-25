@@ -54,8 +54,10 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
         { type: 'separator' },
         item('Close Editor', 'file.closeEditor', 'CmdOrCtrl+W'),
         item('Close Folder', 'file.closeFolder'),
-        { type: 'separator' },
-        isMac ? { role: 'close' } : { label: 'E&xit', click: () => window.close() }
+        // On macOS, Quit lives in the application menu.
+        ...(isMac
+          ? []
+          : [{ type: 'separator' as const }, { label: 'E&xit', click: () => window.close() }])
       ]
     },
     {

@@ -21,7 +21,8 @@
     "test": "npm run test:unit && npm run build && npm run test:e2e",
     "package:win": "npm run build && electron-builder --win --publish never",
     "package:linux": "npm run build && electron-builder --linux --publish never",
-    "package:mac": "npm run build && electron-builder --mac --publish never"
+    "package:mac": "npm run build && electron-builder --mac --publish never",
+    "notices": "node scripts/generate-notices.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

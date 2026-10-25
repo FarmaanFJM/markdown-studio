@@ -207,6 +207,27 @@ export async function confirmCloseAll(): Promise<boolean> {
   return true
 }
 
+/**
+ * Closes the tabs of files inside `folder`, asking about unsaved changes first. Used before the
+ * workspace changes, because access to the old folder ends with it.
+ */
+export async function closeDocumentsIn(folder: string): Promise<boolean> {
+  const inside = useDocuments
+    .getState()
+    .documents.filter((d) => d.path && isPathInside(folder, d.path))
+  const dirty = inside.filter((d) => d.dirty)
+  if (dirty.length > 0) {
+    activateDocument(dirty[0].id)
+    const choice = await dialogs.unsaved(dirty.map(documentName))
+    if (choice === 'cancel') return false
+    if (choice === 'save') {
+      for (const doc of dirty) if (!(await saveDocument(doc.id))) return false
+    }
+  }
+  for (const doc of inside) removeDocument(doc.id)
+  return true
+}
+
 /** Keeps open tabs pointing at files and folders renamed in the Explorer. */
 export function handlePathRenamed(oldPath: string, newPath: string): void {
   for (const doc of useDocuments.getState().documents) {

@@ -48,9 +48,15 @@ export async function launch(
 ): Promise<Launched> {
   if (settings)
     writeFileSync(path.join(sandbox.userData, 'settings.json'), JSON.stringify(settings))
+  // MARKDOWN_STUDIO_EXECUTABLE runs the suite against a packaged build instead of `out/`.
+  const executablePath = process.env.MARKDOWN_STUDIO_EXECUTABLE
   const app = await electron.launch({
+    executablePath,
     // Chromium's sandbox cannot start as root inside CI containers; it is not disabled elsewhere.
-    args: [...(process.platform === 'linux' ? ['--no-sandbox'] : []), ROOT],
+    args: [
+      ...(process.platform === 'linux' ? ['--no-sandbox'] : []),
+      ...(executablePath ? [] : [ROOT])
+    ],
     env: {
       ...process.env,
       // Chromium on Linux needs a UTF-8 locale to map non-ASCII file names of dropped files.

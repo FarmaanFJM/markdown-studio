@@ -43,11 +43,11 @@ function Row({
 }) {
   return (
     <div className="setting-row">
-      <div className="setting-text">
+      <div className="setting-line">
         <label htmlFor={htmlFor}>{label}</label>
-        {hint && <p className="setting-hint">{hint}</p>}
+        <div className="setting-control">{children}</div>
       </div>
-      <div className="setting-control">{children}</div>
+      {hint && <p className="setting-hint">{hint}</p>}
     </div>
   )
 }

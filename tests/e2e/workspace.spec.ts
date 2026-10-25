@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import {
@@ -6,6 +6,7 @@ import {
   createSandbox,
   launch,
   launchWithWorkspace,
+  mod,
   stubOpenDialog,
   treeRow
 } from './helpers'
@@ -138,9 +139,60 @@ test('reflects changes made outside the application', async () => {
   const { app, page } = await launchWithWorkspace(sandbox)
   try {
     await expect(treeRow(page, 'README.md')).toBeVisible()
-    const { writeFileSync } = await import('node:fs')
     writeFileSync(path.join(sandbox.workspace, 'added-externally.md'), '# Hello\n')
     await expect(treeRow(page, 'added-externally.md')).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('closing or switching the folder resolves its open documents first', async () => {
+  const sandbox = createSandbox()
+  const other = path.join(sandbox.base, 'Other Project')
+  mkdirSync(other)
+  writeFileSync(path.join(other, 'notes.md'), '# Other\n')
+  const { app, page } = await launchWithWorkspace(sandbox)
+  try {
+    await treeRow(page, 'README.md').click()
+    await page.keyboard.press(`${mod}+N`)
+    await page.locator('.monaco-editor .view-lines').click()
+    await page.keyboard.type('Untitled text survives')
+    await page.locator('.tab[data-name="README.md"]').click()
+    await page.locator('.monaco-editor .view-lines').click()
+    await page.keyboard.type('Changed ')
+
+    // Cancelling keeps the current folder and its tabs.
+    await stubOpenDialog(app, [other])
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('menu:command', {
+        command: 'file.openFolder'
+      })
+    })
+    const dialog = page.getByRole('dialog', { name: 'Unsaved Changes' })
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.locator('.workspace-name')).toHaveText('Atlas Project')
+    await expect(page.locator('.tab')).toHaveCount(2)
+
+    // Saving switches folders and closes only the old folder's tabs.
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('menu:command', {
+        command: 'file.openFolder'
+      })
+    })
+    await dialog.getByRole('button', { name: 'Save', exact: true }).click()
+    await expect(page.locator('.workspace-name')).toHaveText('Other Project')
+    await expect(page.locator('.tab')).toHaveCount(1)
+    await expect(page.locator('.tab .tab-label')).toHaveText('Untitled-1')
+    expect(readFileSync(path.join(sandbox.workspace, 'README.md'), 'utf8')).toContain('Changed ')
+
+    // Close Folder leaves untitled documents alone.
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()[0].webContents.send('menu:command', {
+        command: 'file.closeFolder'
+      })
+    })
+    await expect(page.getByText('No folder is open.')).toBeVisible()
+    await expect(page.locator('.tab')).toHaveCount(1)
   } finally {
     await closeApp(app)
   }

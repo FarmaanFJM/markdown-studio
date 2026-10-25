@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import {
@@ -6,9 +6,11 @@ import {
   createSandbox,
   editorText,
   focusEditor,
+  inPreview,
   launchWithWorkspace,
   mod,
   openFromTree,
+  stubOpenDialog,
   stubSaveDialog,
   treeRow,
   waitForExit
@@ -234,4 +236,33 @@ test('asks about unsaved documents when the window closes', async () => {
   await dialog.getByRole('button', { name: "Don't Save" }).click()
   await exited
   expect(readFileSync(path.join(sandbox.workspace, 'README.md'), 'utf8')).not.toContain('unsaved')
+})
+
+test('Ctrl+O opens a Markdown file outside the workspace, with its images', async () => {
+  const sandbox = createSandbox()
+  const notes = path.join(sandbox.external, 'loose-notes.md')
+  writeFileSync(notes, '# Loose notes\n\n![Team](<Team Photo (2024).png>)\n')
+  const { app, page } = await launchWithWorkspace(sandbox)
+  try {
+    await stubOpenDialog(app, [notes])
+    await page.keyboard.press(`${mod}+O`)
+    await expect(page.locator('.tab.active .tab-label')).toHaveText('loose-notes.md')
+    await expect
+      .poll(() =>
+        inPreview(page, (doc) => {
+          const img = doc.querySelector('img')
+          return img ? img.complete && img.naturalWidth > 0 : false
+        })
+      )
+      .toBe(true)
+
+    await focusEditor(page)
+    await page.keyboard.press(`${mod}+End`)
+    await page.keyboard.type('Edited outside the workspace.\n')
+    await page.keyboard.press(`${mod}+S`)
+    await expect(page.locator('.tab.active')).not.toHaveClass(/dirty/)
+    expect(readFileSync(notes, 'utf8')).toContain('Edited outside the workspace.')
+  } finally {
+    await closeApp(app)
+  }
 })

@@ -8,6 +8,7 @@ import {
   activateDocument,
   activeDocument,
   closeDocument,
+  closeDocumentsIn,
   documentName,
   newDocument,
   openDocument,
@@ -54,8 +55,11 @@ function revealAction(path: string) {
 
 async function openFolder(path?: string): Promise<void> {
   try {
-    const root = path ? await api.workspace.open(path) : await api.workspace.openDialog()
-    if (!root) return
+    const target = path ?? (await api.workspace.openDialog())
+    if (!target) return
+    const current = useWorkspace.getState().root
+    if (current && !(await closeDocumentsIn(current))) return
+    const root = await api.workspace.open(target)
     useWorkspace.getState().setRoot(root)
     showSidebar('explorer')
     await refreshSettings()
@@ -98,6 +102,8 @@ export const commands = {
   openFolder,
 
   async closeFolder() {
+    const root = useWorkspace.getState().root
+    if (!root || !(await closeDocumentsIn(root))) return
     await api.workspace.close()
     useWorkspace.getState().setRoot(null)
     await refreshSettings()

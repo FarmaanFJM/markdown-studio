@@ -120,9 +120,9 @@ export interface MarkdownStudioApi {
     update(patch: SettingsPatch): Promise<AppSettings>
   }
   workspace: {
-    /** Shows the native folder picker and opens the selection as the workspace. */
+    /** Shows the native folder picker; the chosen folder may then be passed to `open`. */
     openDialog(): Promise<string | null>
-    /** Re-opens a folder from the recent-workspace list kept by the main process. */
+    /** Opens a folder picked in the dialog or listed in the recent folders kept by main. */
     open(path: string): Promise<string>
     close(): Promise<void>
     onChanged(listener: (directories: string[]) => void): () => void

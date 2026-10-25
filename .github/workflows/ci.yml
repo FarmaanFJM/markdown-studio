@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  # Branches of this repository are covered by `push`; this runs CI for pull requests from forks.
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Lint, unit and desktop E2E (Linux)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm run build
+      # Real Electron windows on a virtual display.
+      - run: xvfb-run -a -s "-screen 0 1440x900x24" npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: linux-test-results
+          path: test-results/
+          retention-days: 7
+
+  windows:
+    name: Desktop E2E and installer (Windows)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:unit
+      - run: npm run build
+      - run: npm run test:e2e
+      - name: Build the Windows installer
+        run: npx electron-builder --win --publish never
+      - name: Run the E2E suite against the packaged application
+        run: |
+          export MARKDOWN_STUDIO_EXECUTABLE="$(ls -d "$PWD"/release/*/win-unpacked)/MarkdownStudio.exe"
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        with:
+          name: markdown-studio-windows-installer
+          path: release/*/Markdown-Studio-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 30
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: windows-test-results
+          path: test-results/
+          retention-days: 7
+
+  release:
+    name: Draft GitHub release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: markdown-studio-windows-installer
+          path: dist
+      - name: Create a draft release with the installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*/Markdown-Studio-Setup-*.exe \
+            --repo "$GITHUB_REPOSITORY" --draft --title "Markdown Studio $GITHUB_REF_NAME" --generate-notes
