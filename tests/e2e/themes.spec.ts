@@ -100,6 +100,10 @@ test('the four document themes look genuinely different and apply without distur
     await focusEditor(page)
     await page.keyboard.press(`${mod}+End`)
     await page.keyboard.type('\n\nUnsaved paragraph.')
+    // Let the preview catch up with the typing before the themes are switched.
+    await expect
+      .poll(() => inPreview(page, (doc) => doc.body.textContent ?? ''), { timeout: 20_000 })
+      .toContain('Unsaved paragraph.')
     await page.keyboard.press('Shift+Home')
     await expect(page.getByTestId('cursor-position')).toContainText('selected')
     await inPreview(page, (doc) => {

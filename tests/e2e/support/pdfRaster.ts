@@ -1,7 +1,7 @@
 import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import type { ElectronApplication } from '@playwright/test'
+import type { ElectronApplication, Page } from '@playwright/test'
 
 export interface RasterPage {
   index: number
@@ -66,13 +66,22 @@ export async function rasterizePdf(
     </script>`
   )
   const index = path.join(work, 'index.html')
-  const [viewer] = await Promise.all([
-    app.waitForEvent('window'),
-    app.evaluate(({ BrowserWindow }, target) => {
-      const window = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
-      void window.loadFile(target)
-    }, index)
-  ])
+  await app.evaluate(({ BrowserWindow }, target) => {
+    const window = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
+    void window.loadFile(target)
+  }, index)
+  // The application may still be closing the window of an earlier export, so the viewer is the
+  // window that loaded this page, not simply the next one to open.
+  const marker = path.basename(work)
+  const deadline = Date.now() + 30_000
+  let viewer: Page | undefined
+  while (!viewer) {
+    viewer = app.windows().find((candidate) => candidate.url().includes(marker))
+    if (!viewer) {
+      if (Date.now() > deadline) throw new Error('The PDF viewer window did not open.')
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+  }
   try {
     await viewer.waitForFunction(() => (window as unknown as { ready?: boolean }).ready === true)
     const rendered = await viewer.evaluate(

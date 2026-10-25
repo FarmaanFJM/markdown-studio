@@ -116,11 +116,17 @@ jobs:
       - name: Core editor E2E tests
         run: npm run test:e2e:core
       - name: Build the Windows installer
+        shell: bash
         env:
-          # electron-builder signs only when a certificate is provided.
-          CSC_LINK: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
-          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        run: npx electron-builder --win --publish never
+          WINDOWS_CERTIFICATE_BASE64: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          # electron-builder signs only when a certificate is provided; an empty CSC_LINK would be
+          # read as a path, so the variables are exported only when the secrets exist.
+          if [ -n "$WINDOWS_CERTIFICATE_BASE64" ]; then
+            export CSC_LINK="$WINDOWS_CERTIFICATE_BASE64" CSC_KEY_PASSWORD="$WINDOWS_CERTIFICATE_PASSWORD"
+          fi
+          npx electron-builder --win --publish never
       - name: Report the signing status of the installer
         shell: pwsh
         run: |
@@ -183,16 +189,21 @@ jobs:
       - run: npm run build
       - name: Package the application (unsigned unless a certificate is configured)
         env:
-          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
-          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MAC_CERTIFICATE_BASE64 != '' }}
+          MAC_CERTIFICATE_BASE64: ${{ secrets.MAC_CERTIFICATE_BASE64 }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           EXTRA=""
-          # Notarisation needs a Developer ID certificate and the Apple credentials together.
-          if [ -n "$CSC_LINK" ] && [ -n "$APPLE_ID" ]; then EXTRA="-c.mac.notarize=true"; fi
+          if [ -n "$MAC_CERTIFICATE_BASE64" ]; then
+            export CSC_LINK="$MAC_CERTIFICATE_BASE64" CSC_KEY_PASSWORD="$MAC_CERTIFICATE_PASSWORD"
+            # Notarisation needs a Developer ID certificate and the Apple credentials together.
+            if [ -n "$APPLE_ID" ]; then EXTRA="-c.mac.notarize=true"; fi
+          else
+            # No certificate: build an unsigned application and do not search the keychain.
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+          fi
           npx electron-builder --mac --publish never $EXTRA
       - name: Smoke-test the packaged application
         run: |
