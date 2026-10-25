@@ -4,14 +4,23 @@ import { basename, dirname, relativePath, stripExtension } from '@shared/paths'
 import { api, errorMessage } from '../bridge'
 import { getActiveEditor } from '../editor/models'
 import { insertImages } from '../editor/imageDrop'
-import { activeDocument, handlePathDeleted, handlePathRenamed, openDocument } from '../state/documents'
+import {
+  activeDocument,
+  handlePathDeleted,
+  handlePathRenamed,
+  openDocument
+} from '../state/documents'
 import { dialogs, notify, type ContextMenuItem } from '../state/ui'
 import { useWorkspace } from '../state/workspace'
 
 const isWindows = window.markdownStudio.platform === 'win32'
 const trashName = isWindows ? 'Recycle Bin' : 'Trash'
 const fileManagerName =
-  window.markdownStudio.platform === 'darwin' ? 'Finder' : isWindows ? 'File Explorer' : 'File Manager'
+  window.markdownStudio.platform === 'darwin'
+    ? 'Finder'
+    : isWindows
+      ? 'File Explorer'
+      : 'File Manager'
 
 function validateName(value: string): string | null {
   const name = value.trim()
@@ -160,12 +169,20 @@ export function entryContextMenu(entry: DirEntry | null, folder: string): Contex
     })
   }
   items.push(
-    { label: 'New Markdown File…', run: () => void createFileIn(target), separatorBefore: items.length > 0 },
+    {
+      label: 'New Markdown File…',
+      run: () => void createFileIn(target),
+      separatorBefore: items.length > 0
+    },
     { label: 'New Folder…', run: () => void createFolderIn(target) }
   )
   if (entry) {
     items.push(
-      { label: `Reveal in ${fileManagerName}`, run: () => void api.shell.showItemInFolder(entry.path), separatorBefore: true },
+      {
+        label: `Reveal in ${fileManagerName}`,
+        run: () => void api.shell.showItemInFolder(entry.path),
+        separatorBefore: true
+      },
       { label: 'Copy Path', run: () => copyText(entry.path) },
       {
         label: 'Copy Relative Path',
@@ -175,7 +192,11 @@ export function entryContextMenu(entry: DirEntry | null, folder: string): Contex
       { label: 'Delete', run: () => void deleteEntry(entry), danger: true }
     )
   } else {
-    items.push({ label: 'Refresh', run: () => void useWorkspace.getState().refresh(), separatorBefore: true })
+    items.push({
+      label: 'Refresh',
+      run: () => void useWorkspace.getState().refresh(),
+      separatorBefore: true
+    })
   }
   return items
 }

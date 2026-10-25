@@ -49,7 +49,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     try {
       const entries = await api.fs.readDir(path)
       if (!get().root) return
-      set((s) => ({ directories: { ...s.directories, [key]: { entries, loading: false, error: null } } }))
+      set((s) => ({
+        directories: { ...s.directories, [key]: { entries, loading: false, error: null } }
+      }))
     } catch (error) {
       set((s) => ({
         directories: {

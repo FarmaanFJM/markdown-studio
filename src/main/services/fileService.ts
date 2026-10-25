@@ -24,11 +24,14 @@ export function validateEntryName(raw: unknown): string {
   if (!name) throw new FileOperationError('A name is required.')
   if (name === '.' || name === '..') throw new FileOperationError(`"${name}" is not a valid name.`)
   if (/[/\\]/.test(name)) throw new FileOperationError('Names cannot contain "/" or "\\".')
+  // Control characters are invalid in file names on every platform.
+  // eslint-disable-next-line no-control-regex
   if (/[<>:"|?*\u0000-\u001f]/.test(name)) {
     throw new FileOperationError('Names cannot contain any of these characters: < > : " | ? *')
   }
   if (/[. ]$/.test(name)) throw new FileOperationError('Names cannot end with a space or a period.')
-  if (WINDOWS_RESERVED.test(name)) throw new FileOperationError(`"${name}" is a reserved name on Windows.`)
+  if (WINDOWS_RESERVED.test(name))
+    throw new FileOperationError(`"${name}" is a reserved name on Windows.`)
   if (Buffer.byteLength(name) > 255) throw new FileOperationError('The name is too long.')
   return name
 }

@@ -32,7 +32,13 @@ export function Welcome() {
         <div className="welcome-recent">
           <h2>Recent folders</h2>
           {recent.slice(0, 5).map((path) => (
-            <button key={path} type="button" className="link-button" title={path} onClick={() => void commands.openFolder(path)}>
+            <button
+              key={path}
+              type="button"
+              className="link-button"
+              title={path}
+              onClick={() => void commands.openFolder(path)}
+            >
               {basename(path) || path} <span className="muted">{path}</span>
             </button>
           ))}
@@ -40,8 +46,8 @@ export function Welcome() {
       )}
       {root && (
         <p className="welcome-hint">
-          Open a Markdown file from the Explorer. Drag images from the Explorer or from your file manager into a document to
-          insert them.
+          Open a Markdown file from the Explorer. Drag images from the Explorer or from your file
+          manager into a document to insert them.
         </p>
       )}
     </div>

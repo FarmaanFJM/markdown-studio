@@ -22,7 +22,10 @@ describe('settings schema', () => {
   })
 
   it('clamps numeric values', () => {
-    const s = sanitizeSettings({ editor: { fontSize: 400 }, layout: { previewRatio: 2, sidebarWidth: 10 } })
+    const s = sanitizeSettings({
+      editor: { fontSize: 400 },
+      layout: { previewRatio: 2, sidebarWidth: 10 }
+    })
     expect(s.editor.fontSize).toBe(40)
     expect(s.layout.previewRatio).toBe(0.85)
     expect(s.layout.sidebarWidth).toBe(170)
@@ -39,7 +42,10 @@ describe('settings schema', () => {
   })
 
   it('applies nested patches', () => {
-    const s = applySettingsPatch(DEFAULT_SETTINGS, { layout: { previewMode: 'pdf' }, editor: { fontSize: 18 } })
+    const s = applySettingsPatch(DEFAULT_SETTINGS, {
+      layout: { previewMode: 'pdf' },
+      editor: { fontSize: 18 }
+    })
     expect(s.layout.previewMode).toBe('pdf')
     expect(s.layout.sidebarWidth).toBe(DEFAULT_SETTINGS.layout.sidebarWidth)
     expect(s.editor.fontSize).toBe(18)
@@ -78,5 +84,17 @@ describe('SettingsService', () => {
     expect(service.load()).toEqual(DEFAULT_SETTINGS)
     await new Promise((r) => setTimeout(r, 50))
     expect(existsSync(`${file}.corrupt`)).toBe(true)
+  })
+})
+
+describe('SettingsService.flushSync', () => {
+  it('writes pending changes immediately, as needed when the app quits', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'ms-settings-'))
+    const file = path.join(dir, 'settings.json')
+    const service = new SettingsService(file)
+    service.load()
+    service.update({ editor: { fontSize: 20 } })
+    service.flushSync()
+    expect(JSON.parse(readFileSync(file, 'utf8')).editor.fontSize).toBe(20)
   })
 })

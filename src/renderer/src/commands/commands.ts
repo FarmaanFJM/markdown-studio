@@ -46,7 +46,10 @@ function exportDefaultPath(doc: EditorDocument, extension: string): string {
 }
 
 function revealAction(path: string) {
-  return { label: 'Show in folder', run: () => void api.shell.showItemInFolder(path).catch(() => undefined) }
+  return {
+    label: 'Show in folder',
+    run: () => void api.shell.showItemInFolder(path).catch(() => undefined)
+  }
 }
 
 async function openFolder(path?: string): Promise<void> {
@@ -67,9 +70,9 @@ function showSidebar(view: 'explorer' | 'settings'): void {
 }
 
 function setPreview(mode: PreviewMode): void {
-  useSettings
-    .getState()
-    .update({ layout: { previewMode: mode, ...(mode !== 'none' ? { lastPreviewKind: mode } : {}) } })
+  useSettings.getState().update({
+    layout: { previewMode: mode, ...(mode !== 'none' ? { lastPreviewKind: mode } : {}) }
+  })
 }
 
 function setFontSize(size: number): void {
@@ -116,7 +119,10 @@ export const commands = {
       const target = await api.render.exportHtml(html, exportDefaultPath(doc, '.html'))
       if (!target) return
       if (missingImages.length > 0) {
-        notify('error', `Exported ${basename(target)}, but these images were not found: ${missingImages.join(', ')}`)
+        notify(
+          'error',
+          `Exported ${basename(target)}, but these images were not found: ${missingImages.join(', ')}`
+        )
       } else {
         notify('success', `Exported ${basename(target)}.`, revealAction(target))
       }
@@ -130,7 +136,10 @@ export const commands = {
     const source = doc && exportSourceFor(doc)
     if (!doc || !source) return notify('info', 'Open a Markdown document to export it.')
     try {
-      const target = await api.render.exportPdf(buildPdfSourceHtml(source), exportDefaultPath(doc, '.pdf'))
+      const target = await api.render.exportPdf(
+        buildPdfSourceHtml(source),
+        exportDefaultPath(doc, '.pdf')
+      )
       if (target) notify('success', `Exported ${basename(target)}.`, revealAction(target))
     } catch (error) {
       notify('error', `PDF export failed: ${errorMessage(error)}`)

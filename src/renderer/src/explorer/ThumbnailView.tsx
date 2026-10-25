@@ -3,7 +3,15 @@ import { ArrowUp, ChevronRight } from 'lucide-react'
 import type { DirEntry } from '@shared/ipc'
 import { thumbnailUrl } from '@shared/ipc'
 import { isImagePath } from '@shared/fileTypes'
-import { basename, dirname, isPathInside, pathKey, pathsEqual, relativePath, joinPath } from '@shared/paths'
+import {
+  basename,
+  dirname,
+  isPathInside,
+  pathKey,
+  pathsEqual,
+  relativePath,
+  joinPath
+} from '@shared/paths'
 import { useSettings } from '../state/settings'
 import { useUi } from '../state/ui'
 import { useWorkspace } from '../state/workspace'
@@ -64,7 +72,8 @@ export function ThumbnailView({ root }: { root: string }) {
   const gridRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!state?.entries && !state?.loading && !state?.error) void useWorkspace.getState().loadDirectory(folder)
+    if (!state?.entries && !state?.loading && !state?.error)
+      void useWorkspace.getState().loadDirectory(folder)
   }, [folder, state])
 
   const entries = state?.entries ?? []
@@ -161,7 +170,9 @@ export function ThumbnailView({ root }: { root: string }) {
         onContextMenu={(e) => onContextMenu(e, null)}
       >
         {!state?.entries && !state?.error && <div className="explorer-message">Loading…</div>}
-        {state?.entries && entries.length === 0 && <div className="explorer-message">This folder is empty.</div>}
+        {state?.entries && entries.length === 0 && (
+          <div className="explorer-message">This folder is empty.</div>
+        )}
         {entries.map((entry) => {
           const isSelected = !!selected && pathsEqual(selected, entry.path)
           const image = entry.kind === 'file' && isImagePath(entry.path)
@@ -179,7 +190,10 @@ export function ThumbnailView({ root }: { root: string }) {
               onDoubleClick={() => activate(entry)}
               onContextMenu={(e) => onContextMenu(e, entry)}
             >
-              <div className={`thumb-frame${image ? ' image' : ''}`} style={{ width: size, height: size }}>
+              <div
+                className={`thumb-frame${image ? ' image' : ''}`}
+                style={{ width: size, height: size }}
+              >
                 {image ? (
                   <Thumbnail entry={entry} size={size} />
                 ) : (

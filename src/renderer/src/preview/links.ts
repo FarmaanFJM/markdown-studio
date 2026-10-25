@@ -10,7 +10,11 @@ import { notify } from '../state/ui'
  * fragments scroll, web links open in the system browser and links to Markdown files open
  * them in a tab. Anything else is refused.
  */
-export function handlePreviewClick(event: MouseEvent, previewDocument: Document, context: DocumentContext): void {
+export function handlePreviewClick(
+  event: MouseEvent,
+  previewDocument: Document,
+  context: DocumentContext
+): void {
   const anchor = (event.target as Element | null)?.closest?.('a')
   if (!anchor) return
   event.preventDefault()
@@ -32,5 +36,8 @@ export function handlePreviewClick(event: MouseEvent, previewDocument: Document,
     void openDocument(local)
     return
   }
-  notify('info', local ? `${basename(local)} cannot be opened from the preview.` : `Unsupported link: ${href}`)
+  notify(
+    'info',
+    local ? `${basename(local)} cannot be opened from the preview.` : `Unsupported link: ${href}`
+  )
 }

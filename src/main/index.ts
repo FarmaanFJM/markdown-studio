@@ -48,7 +48,9 @@ const watcher = new WorkspaceWatcher((directories) => {
 })
 
 function rendererUrl(): string | null {
-  return !app.isPackaged && process.env.ELECTRON_RENDERER_URL ? process.env.ELECTRON_RENDERER_URL : null
+  return !app.isPackaged && process.env.ELECTRON_RENDERER_URL
+    ? process.env.ELECTRON_RENDERER_URL
+    : null
 }
 
 function isOwnPage(url: string): boolean {
@@ -85,7 +87,11 @@ function handle<A extends unknown[], R>(
   handler: (...args: A) => R | Promise<R>
 ): void {
   ipcMain.handle(channel, async (event: IpcMainInvokeEvent, ...args: unknown[]) => {
-    if (!mainWindow || event.sender !== mainWindow.webContents || event.senderFrame !== event.sender.mainFrame) {
+    if (
+      !mainWindow ||
+      event.sender !== mainWindow.webContents ||
+      event.senderFrame !== event.sender.mainFrame
+    ) {
       throw new Error('Unauthorised IPC sender.')
     }
     return handler(...(args as A))
@@ -100,7 +106,10 @@ async function openWorkspace(folder: string): Promise<string> {
   watcher.start(resolved)
   const current = settings.get()
   settings.update({
-    workspace: { lastWorkspace: resolved, recent: withRecentWorkspace(current.workspace.recent, resolved) }
+    workspace: {
+      lastWorkspace: resolved,
+      recent: withRecentWorkspace(current.workspace.recent, resolved)
+    }
   })
   if (mainWindow) buildApplicationMenu(mainWindow, settings.get().workspace.recent)
   return resolved
@@ -133,7 +142,9 @@ function registerIpc(): void {
     const safeWorkspace = workspace
       ? {
           restoreLastWorkspace: workspace.restoreLastWorkspace,
-          ...(Array.isArray(workspace.recent) && workspace.recent.length === 0 ? { recent: [] } : {})
+          ...(Array.isArray(workspace.recent) && workspace.recent.length === 0
+            ? { recent: [] }
+            : {})
         }
       : undefined
     const updated = settings.update({ ...rest, workspace: safeWorkspace })
@@ -152,7 +163,10 @@ function registerIpc(): void {
   })
   handle(IPC.workspaceOpen, async (folder: string) => {
     const known = settings.get().workspace.recent
-    if (typeof folder !== 'string' || !known.some((p) => path.resolve(p) === path.resolve(folder))) {
+    if (
+      typeof folder !== 'string' ||
+      !known.some((p) => path.resolve(p) === path.resolve(folder))
+    ) {
       throw new Error('Only folders from the recent list can be reopened directly.')
     }
     return openWorkspace(folder)
@@ -204,7 +218,9 @@ function registerIpc(): void {
     return result.filePath
   })
 
-  handle(IPC.assetsImportImage, (source: string, target: string) => assets.importImage(source, target))
+  handle(IPC.assetsImportImage, (source: string, target: string) =>
+    assets.importImage(source, target)
+  )
 
   handle(IPC.renderPdf, async (html: string) => {
     if (typeof html !== 'string') throw new Error('Invalid document.')
@@ -247,7 +263,11 @@ function registerIpc(): void {
   })
   handle(IPC.shellShowItem, (target: string) => {
     const resolved = path.resolve(String(target))
-    if (!access.canAccessFile(resolved) && !exportedFiles.has(resolved) && resolved !== settings.filePath) {
+    if (
+      !access.canAccessFile(resolved) &&
+      !exportedFiles.has(resolved) &&
+      resolved !== settings.filePath
+    ) {
       throw new Error('This item cannot be revealed.')
     }
     shell.showItemInFolder(resolved)
@@ -334,7 +354,9 @@ if (!app.requestSingleInstanceLock()) {
     const last = settings.get().workspace
     if (last.restoreLastWorkspace && last.lastWorkspace) {
       // Restoring is best-effort: a removed folder simply leaves the Explorer empty.
-      await openWorkspace(last.lastWorkspace).catch(() => settings.update({ workspace: { lastWorkspace: null } }))
+      await openWorkspace(last.lastWorkspace).catch(() =>
+        settings.update({ workspace: { lastWorkspace: null } })
+      )
     }
     applySecurityPolicies()
     msfile.register()
@@ -351,11 +373,6 @@ if (!app.requestSingleInstanceLock()) {
     if (process.platform !== 'darwin') app.quit()
   })
 
-  let flushed = false
-  app.on('before-quit', (event) => {
-    if (flushed) return
-    event.preventDefault()
-    flushed = true
-    void settings.flush().finally(() => app.quit())
-  })
+  // Runs after every window has closed (including the final window-bounds update).
+  app.on('will-quit', () => settings.flushSync())
 }

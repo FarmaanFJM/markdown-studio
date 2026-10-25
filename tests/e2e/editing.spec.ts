@@ -143,7 +143,9 @@ test('creates an untitled document and saves it with Save As', async () => {
     await page.keyboard.press(`${mod}+S`)
     await expect(page.locator('.tab.active .tab-label')).toHaveText('meeting-notes.md')
     await expect(treeRow(page, 'meeting-notes.md')).toBeVisible()
-    expect(readFileSync(path.resolve(target), 'utf8')).toBe('# Meeting notes\n\n- Decide on export themes\n')
+    expect(readFileSync(path.resolve(target), 'utf8')).toBe(
+      '# Meeting notes\n\n- Decide on export themes\n'
+    )
 
     // Ctrl+Shift+S saves a copy under a new name and switches the tab to it.
     const copy = path.join(sandbox.workspace, 'meeting-notes-copy.md')
@@ -186,7 +188,8 @@ test('find, replace and layout shortcuts', async () => {
     await expect(page.getByTestId('sidebar')).toBeVisible()
 
     // Ctrl+Shift+V toggles the preview; the editor reclaims the space.
-    const editorWidth = () => page.getByTestId('editor-column').evaluate((el) => el.getBoundingClientRect().width)
+    const editorWidth = () =>
+      page.getByTestId('editor-column').evaluate((el) => el.getBoundingClientRect().width)
     const withPreview = await editorWidth()
     await page.keyboard.press(`${mod}+Shift+V`)
     await expect(page.getByTestId('preview-panel')).toBeHidden()
@@ -195,7 +198,11 @@ test('find, replace and layout shortcuts', async () => {
     await expect(page.getByTestId('preview-panel')).toBeVisible()
 
     // Ctrl+= changes the editor font size.
-    const fontSize = () => page.locator('.monaco-editor .view-line').first().evaluate((el) => getComputedStyle(el).fontSize)
+    const fontSize = () =>
+      page
+        .locator('.monaco-editor .view-line')
+        .first()
+        .evaluate((el) => getComputedStyle(el).fontSize)
     const before = await fontSize()
     await page.keyboard.press(`${mod}+=`)
     await expect.poll(fontSize).not.toBe(before)
@@ -213,7 +220,8 @@ test('asks about unsaved documents when the window closes', async () => {
   await focusEditor(page)
   await page.keyboard.type('unsaved ')
 
-  const closeWindow = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close())
+  const closeWindow = () =>
+    app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.close())
   await closeWindow()
   const dialog = page.getByRole('dialog', { name: 'Unsaved Changes' })
   await expect(dialog).toBeVisible()

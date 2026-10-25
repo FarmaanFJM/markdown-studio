@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, Maximize, MoveHorizontal, RefreshCw, ZoomIn, ZoomOut } from 'lucide-react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Maximize,
+  MoveHorizontal,
+  RefreshCw,
+  ZoomIn,
+  ZoomOut
+} from 'lucide-react'
 import * as pdfjs from 'pdfjs-dist'
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
@@ -24,7 +32,17 @@ interface PageSize {
   height: number
 }
 
-function PdfPage({ pdf, index, size, scale }: { pdf: PDFDocumentProxy; index: number; size: PageSize; scale: number }) {
+function PdfPage({
+  pdf,
+  index,
+  size,
+  scale
+}: {
+  pdf: PDFDocumentProxy
+  index: number
+  size: PageSize
+  scale: number
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const holderRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
@@ -66,7 +84,11 @@ function PdfPage({ pdf, index, size, scale }: { pdf: PDFDocumentProxy; index: nu
       data-page={index + 1}
       style={{ width: size.width * scale, height: size.height * scale }}
     >
-      <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} aria-label={`Page ${index + 1}`} />
+      <canvas
+        ref={canvasRef}
+        style={{ width: '100%', height: '100%' }}
+        aria-label={`Page ${index + 1}`}
+      />
     </div>
   )
 }
@@ -204,7 +226,9 @@ export function PdfPreview() {
     const total = sizes.length
     if (!total) return
     const target = Math.min(total, Math.max(1, number))
-    const element = scrollRef.current?.querySelector<HTMLElement>(`.pdf-page[data-page="${target}"]`)
+    const element = scrollRef.current?.querySelector<HTMLElement>(
+      `.pdf-page[data-page="${target}"]`
+    )
     if (element && scrollRef.current) scrollRef.current.scrollTop = element.offsetTop - PAGE_GAP
     setPage(target)
     setPageInput(String(target))
@@ -220,7 +244,14 @@ export function PdfPreview() {
   return (
     <div className="pdf-preview" data-testid="pdf-preview">
       <div className="pdf-toolbar" role="toolbar" aria-label="PDF controls">
-        <button type="button" className="icon-button" title="Previous page" aria-label="Previous page" disabled={page <= 1} onClick={() => goToPage(page - 1)}>
+        <button
+          type="button"
+          className="icon-button"
+          title="Previous page"
+          aria-label="Previous page"
+          disabled={page <= 1}
+          onClick={() => goToPage(page - 1)}
+        >
           <ChevronLeft size={15} />
         </button>
         <input
@@ -236,15 +267,36 @@ export function PdfPreview() {
         <span className="page-count" data-testid="pdf-page-count">
           / {total}
         </span>
-        <button type="button" className="icon-button" title="Next page" aria-label="Next page" disabled={page >= total} onClick={() => goToPage(page + 1)}>
+        <button
+          type="button"
+          className="icon-button"
+          title="Next page"
+          aria-label="Next page"
+          disabled={page >= total}
+          onClick={() => goToPage(page + 1)}
+        >
           <ChevronRight size={15} />
         </button>
         <span className="toolbar-divider" />
-        <button type="button" className="icon-button" title="Zoom out" aria-label="Zoom out" onClick={() => zoom(1 / 1.2)}>
+        <button
+          type="button"
+          className="icon-button"
+          title="Zoom out"
+          aria-label="Zoom out"
+          onClick={() => zoom(1 / 1.2)}
+        >
           <ZoomOut size={15} />
         </button>
-        <span className="zoom-label" data-testid="pdf-zoom">{Math.round(scale * 100)}%</span>
-        <button type="button" className="icon-button" title="Zoom in" aria-label="Zoom in" onClick={() => zoom(1.2)}>
+        <span className="zoom-label" data-testid="pdf-zoom">
+          {Math.round(scale * 100)}%
+        </span>
+        <button
+          type="button"
+          className="icon-button"
+          title="Zoom in"
+          aria-label="Zoom in"
+          onClick={() => zoom(1.2)}
+        >
           <ZoomIn size={15} />
         </button>
         <button
@@ -282,11 +334,21 @@ export function PdfPreview() {
         </button>
       </div>
       <div ref={scrollRef} className="pdf-scroll" onScroll={onScroll}>
-        {status === 'error' && <div className="preview-message error">PDF generation failed: {error}</div>}
-        {!activeId && <div className="preview-message">Open a Markdown document to preview it as PDF.</div>}
+        {status === 'error' && (
+          <div className="preview-message error">PDF generation failed: {error}</div>
+        )}
+        {!activeId && (
+          <div className="preview-message">Open a Markdown document to preview it as PDF.</div>
+        )}
         {pdf &&
           sizes.map((size, index) => (
-            <PdfPage key={`${index}-${pdf.fingerprints[0]}`} pdf={pdf} index={index} size={size} scale={scale} />
+            <PdfPage
+              key={`${index}-${pdf.fingerprints[0]}`}
+              pdf={pdf}
+              index={index}
+              size={size}
+              scale={scale}
+            />
           ))}
       </div>
     </div>

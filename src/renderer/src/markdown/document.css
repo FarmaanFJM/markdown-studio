@@ -24,8 +24,16 @@ body {
   margin: 0;
   color: var(--doc-text);
   background: #ffffff;
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Noto Sans', Helvetica, Arial, sans-serif,
-    'Apple Color Emoji', 'Segoe UI Emoji';
+  font-family:
+    'Segoe UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Noto Sans',
+    Helvetica,
+    Arial,
+    sans-serif,
+    'Apple Color Emoji',
+    'Segoe UI Emoji';
   font-size: 16px;
   line-height: 1.6;
   word-wrap: break-word;
@@ -196,7 +204,8 @@ code,
 kbd,
 pre,
 samp {
-  font-family: 'Cascadia Code', 'Cascadia Mono', Consolas, 'SFMono-Regular', Menlo, 'Liberation Mono',
+  font-family:
+    'Cascadia Code', 'Cascadia Mono', Consolas, 'SFMono-Regular', Menlo, 'Liberation Mono',
     monospace;
 }
 

@@ -3,7 +3,16 @@ import tseslint from 'typescript-eslint'
 import reactHooks from 'eslint-plugin-react-hooks'
 
 export default tseslint.config(
-  { ignores: ['out/**', 'dist/**', 'release/**', 'node_modules/**', 'test-results/**', 'playwright-report/**'] },
+  {
+    ignores: [
+      'out/**',
+      'dist/**',
+      'release/**',
+      'node_modules/**',
+      'test-results/**',
+      'playwright-report/**'
+    ]
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -16,7 +25,10 @@ export default tseslint.config(
   },
   {
     rules: {
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+      ]
     }
   }
 )

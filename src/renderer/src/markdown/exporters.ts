@@ -37,7 +37,11 @@ export interface StandaloneHtml {
  * Builds a self-contained HTML document: local images are embedded as data URIs so the
  * file can be opened anywhere without depending on paths on this computer.
  */
-export async function buildStandaloneHtml({ source, fileName, context }: ExportSource): Promise<StandaloneHtml> {
+export async function buildStandaloneHtml({
+  source,
+  fileName,
+  context
+}: ExportSource): Promise<StandaloneHtml> {
   const body = renderDocumentBody(source, context)
   const container = document.createElement('template')
   container.innerHTML = body

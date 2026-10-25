@@ -27,12 +27,17 @@ export function StatusBar() {
     <footer className="status-bar" data-testid="status-bar">
       <div className="status-group">
         {doc && (
-          <span className={`status-item save-state${doc.dirty ? ' dirty' : ''}`} data-testid="save-state">
+          <span
+            className={`status-item save-state${doc.dirty ? ' dirty' : ''}`}
+            data-testid="save-state"
+          >
             {doc.dirty ? <Circle size={9} fill="currentColor" /> : <Check size={12} />}
             {doc.dirty ? 'Unsaved changes' : doc.path ? 'Saved' : 'New document'}
           </span>
         )}
-        {previewMode !== 'none' && <span className="status-item">Preview: {previewMode.toUpperCase()}</span>}
+        {previewMode !== 'none' && (
+          <span className="status-item">Preview: {previewMode.toUpperCase()}</span>
+        )}
       </div>
       {doc && info && (
         <div className="status-group">

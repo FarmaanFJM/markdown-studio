@@ -19,12 +19,19 @@ let pending: SettingsPatch[] = []
 let timer: ReturnType<typeof setTimeout> | null = null
 
 function mergePatches(patches: SettingsPatch[]): SettingsPatch {
-  const merge = (a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> => {
+  const merge = (
+    a: Record<string, unknown>,
+    b: Record<string, unknown>
+  ): Record<string, unknown> => {
     const out = { ...a }
     for (const [key, value] of Object.entries(b)) {
       const prev = out[key]
       out[key] =
-        value && typeof value === 'object' && !Array.isArray(value) && prev && typeof prev === 'object'
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        prev &&
+        typeof prev === 'object'
           ? merge(prev as Record<string, unknown>, value as Record<string, unknown>)
           : value
     }

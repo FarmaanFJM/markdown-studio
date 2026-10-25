@@ -68,7 +68,14 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', 'Noto Sans', Ubuntu,
+  font-family:
+    'Segoe UI Variable Text',
+    'Segoe UI',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Inter',
+    'Noto Sans',
+    Ubuntu,
     sans-serif;
   font-size: 13px;
   line-height: 1.4;
@@ -815,7 +822,8 @@ input[type='range'] {
 
 .thumb-frame.image {
   background-color: var(--checker);
-  background-image: linear-gradient(45deg, var(--surface) 25%, transparent 25%),
+  background-image:
+    linear-gradient(45deg, var(--surface) 25%, transparent 25%),
     linear-gradient(-45deg, var(--surface) 25%, transparent 25%),
     linear-gradient(45deg, transparent 75%, var(--surface) 75%),
     linear-gradient(-45deg, transparent 75%, var(--surface) 75%);

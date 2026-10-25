@@ -1,4 +1,12 @@
-import { FilePlus, FolderOpen, FolderPlus, LayoutGrid, List, ListCollapse, RefreshCw } from 'lucide-react'
+import {
+  FilePlus,
+  FolderOpen,
+  FolderPlus,
+  LayoutGrid,
+  List,
+  ListCollapse,
+  RefreshCw
+} from 'lucide-react'
 import { basename, dirname, pathsEqual } from '@shared/paths'
 import { LIMITS } from '@shared/settings'
 import { commands } from '../commands/commands'
@@ -148,7 +156,13 @@ export function Explorer() {
         </div>
       )}
       <div className="sidebar-body">
-        {!root ? <NoFolder /> : mode === 'tree' ? <TreeView root={root} /> : <ThumbnailView root={root} />}
+        {!root ? (
+          <NoFolder />
+        ) : mode === 'tree' ? (
+          <TreeView root={root} />
+        ) : (
+          <ThumbnailView root={root} />
+        )}
       </div>
     </section>
   )

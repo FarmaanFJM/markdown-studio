@@ -20,7 +20,13 @@ export function registerSchemePrivileges(): void {
   protocol.registerSchemesAsPrivileged([
     {
       scheme: MSFILE_SCHEME,
-      privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true }
+      privileges: {
+        standard: true,
+        secure: true,
+        supportFetchAPI: true,
+        corsEnabled: true,
+        stream: true
+      }
     }
   ])
 }
@@ -55,7 +61,10 @@ export class MsFileProtocol {
         case 'local':
           return await this.serveImage(decodePath(url))
         case 'thumb':
-          return await this.serveThumbnail(decodePath(url), Number(url.searchParams.get('s')) || 128)
+          return await this.serveThumbnail(
+            decodePath(url),
+            Number(url.searchParams.get('s')) || 128
+          )
         case 'render':
           return this.serveRenderDocument(url.pathname.slice(1))
         default:
@@ -101,7 +110,10 @@ export class MsFileProtocol {
     let png = this.thumbnails.get(cacheKey)
     if (!png) {
       try {
-        const image = await nativeImage.createThumbnailFromPath(resolved, { width: edge, height: edge })
+        const image = await nativeImage.createThumbnailFromPath(resolved, {
+          width: edge,
+          height: edge
+        })
         if (image.isEmpty()) return this.serveImage(resolved)
         png = image.toPNG()
       } catch {

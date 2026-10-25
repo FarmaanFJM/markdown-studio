@@ -47,7 +47,11 @@ export class PdfService {
       }
     })
     try {
-      await withTimeout(window.loadURL(hosted.url), LOAD_TIMEOUT_MS, 'The document took too long to load.')
+      await withTimeout(
+        window.loadURL(hosted.url),
+        LOAD_TIMEOUT_MS,
+        'The document took too long to load.'
+      )
       return await window.webContents.printToPDF(PDF_OPTIONS)
     } finally {
       hosted.dispose()

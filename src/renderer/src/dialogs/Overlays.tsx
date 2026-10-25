@@ -8,7 +8,8 @@ export function Toasts() {
   return (
     <div className="toasts" role="status" aria-live="polite">
       {toasts.map((toast) => {
-        const Icon = toast.kind === 'error' ? CircleAlert : toast.kind === 'success' ? CircleCheck : Info
+        const Icon =
+          toast.kind === 'error' ? CircleAlert : toast.kind === 'success' ? CircleCheck : Info
         return (
           <div key={toast.id} className={`toast ${toast.kind}`} data-testid={`toast-${toast.kind}`}>
             <Icon size={16} className="toast-icon" />
@@ -25,7 +26,12 @@ export function Toasts() {
                 {toast.action.label}
               </button>
             )}
-            <button type="button" className="icon-button" aria-label="Dismiss" onClick={() => dismiss(toast.id)}>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Dismiss"
+              onClick={() => dismiss(toast.id)}
+            >
               <X size={14} />
             </button>
           </div>
@@ -77,10 +83,13 @@ export function ContextMenu() {
       role="menu"
       style={{ left: position.x, top: position.y }}
       onKeyDown={(e) => {
-        const buttons = [...(ref.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])]
+        const buttons = [
+          ...(ref.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)') ?? [])
+        ]
         const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
         if (e.key === 'ArrowDown') buttons[(index + 1) % buttons.length]?.focus()
-        else if (e.key === 'ArrowUp') buttons[(index - 1 + buttons.length) % buttons.length]?.focus()
+        else if (e.key === 'ArrowUp')
+          buttons[(index - 1 + buttons.length) % buttons.length]?.focus()
         else return
         e.preventDefault()
       }}

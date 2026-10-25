@@ -30,9 +30,9 @@ describe('AccessControl', () => {
   it('allows the workspace and rejects everything else', async () => {
     await expect(files.readDir(root)).resolves.toBeTruthy()
     await expect(files.readDir(outside)).rejects.toBeInstanceOf(AccessDeniedError)
-    await expect(files.readText(path.join(root, '..', 'external', 'notes.txt'))).rejects.toBeInstanceOf(
-      AccessDeniedError
-    )
+    await expect(
+      files.readText(path.join(root, '..', 'external', 'notes.txt'))
+    ).rejects.toBeInstanceOf(AccessDeniedError)
     await expect(files.readText(path.join(root, 'docs', '..', '..', 'x'))).rejects.toThrow()
   })
 
@@ -66,7 +66,10 @@ describe('FileService', () => {
     expect(readFileSync(crlf).equals(original)).toBe(true)
 
     const bomFile = path.join(root, 'bom.md')
-    writeFileSync(bomFile, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('# Héllo\n')]))
+    writeFileSync(
+      bomFile,
+      Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('# Héllo\n')])
+    )
     const bom = await files.readText(bomFile)
     expect(bom.hasBom).toBe(true)
     expect(bom.content).toBe('# Héllo\n')
@@ -86,7 +89,9 @@ describe('FileService', () => {
   it('renames and refuses collisions', async () => {
     const renamed = await files.rename(path.join(root, 'docs'), 'manual')
     expect(existsSync(path.join(renamed, 'guide.md'))).toBe(true)
-    await expect(files.rename(path.join(root, 'README.md'), 'unsafe.md')).rejects.toThrow(/already exists/)
+    await expect(files.rename(path.join(root, 'README.md'), 'unsafe.md')).rejects.toThrow(
+      /already exists/
+    )
     await expect(files.rename(root, 'x')).rejects.toThrow(/workspace folder/)
   })
 
@@ -120,23 +125,31 @@ describe('AssetService', () => {
     const result = await assets.importImage(path.join(outside, 'Team Photo (2024).png'), target)
     expect(result.copied).toBe(true)
     expect(result.path).toBe(path.join(target, 'Team Photo (2024).png'))
-    expect(readFileSync(result.path).equals(readFileSync(path.join(outside, 'Team Photo (2024).png')))).toBe(true)
+    expect(
+      readFileSync(result.path).equals(readFileSync(path.join(outside, 'Team Photo (2024).png')))
+    ).toBe(true)
   })
 
   it('never overwrites a different file with the same name', async () => {
     const existing = path.join(root, 'assets', 'architecture.png')
     const before = readFileSync(existing)
-    const result = await assets.importImage(path.join(outside, 'architecture.png'), path.join(root, 'assets'))
+    const result = await assets.importImage(
+      path.join(outside, 'architecture.png'),
+      path.join(root, 'assets')
+    )
     expect(result.path).toBe(path.join(root, 'assets', 'architecture-1.png'))
     expect(readFileSync(existing).equals(before)).toBe(true)
-    const again = await assets.importImage(path.join(outside, 'architecture.png'), path.join(root, 'assets'))
+    const again = await assets.importImage(
+      path.join(outside, 'architecture.png'),
+      path.join(root, 'assets')
+    )
     expect(again).toEqual({ path: result.path, copied: false })
   })
 
   it('rejects non-images and destinations outside the workspace', async () => {
-    await expect(assets.importImage(path.join(outside, 'notes.txt'), path.join(root, 'assets'))).rejects.toThrow(
-      /not a supported image/
-    )
+    await expect(
+      assets.importImage(path.join(outside, 'notes.txt'), path.join(root, 'assets'))
+    ).rejects.toThrow(/not a supported image/)
     await expect(
       assets.importImage(path.join(outside, 'architecture.png'), path.join(outside, 'elsewhere'))
     ).rejects.toBeInstanceOf(AccessDeniedError)

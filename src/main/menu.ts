@@ -100,7 +100,10 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
       label: '&Help',
       submenu: [
         item('Keyboard Shortcuts', 'help.shortcuts'),
-        { label: 'Markdown Studio on GitHub', click: () => void shell.openExternal(REPOSITORY_URL) },
+        {
+          label: 'Markdown Studio on GitHub',
+          click: () => void shell.openExternal(REPOSITORY_URL)
+        },
         { type: 'separator' },
         item(`About ${app.getName()}`, 'help.about')
       ]

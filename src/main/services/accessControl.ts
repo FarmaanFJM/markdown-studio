@@ -75,7 +75,8 @@ export class AccessControl {
 
   /** Resolves and checks a path the renderer wants to read or modify. */
   assertFile(target: unknown): string {
-    if (typeof target !== 'string' || target.length === 0) throw new AccessDeniedError(String(target))
+    if (typeof target !== 'string' || target.length === 0)
+      throw new AccessDeniedError(String(target))
     const resolved = path.resolve(target)
     if (!this.canAccessFile(resolved)) throw new AccessDeniedError(resolved)
     return resolved
@@ -83,7 +84,8 @@ export class AccessControl {
 
   /** Resolves and checks a path that must be inside the open workspace. */
   assertWorkspace(target: unknown): string {
-    if (typeof target !== 'string' || target.length === 0) throw new AccessDeniedError(String(target))
+    if (typeof target !== 'string' || target.length === 0)
+      throw new AccessDeniedError(String(target))
     const resolved = path.resolve(target)
     if (!this.isInWorkspace(resolved)) throw new AccessDeniedError(resolved)
     return resolved

@@ -3,7 +3,11 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { localFileUrl, pathFromLocalFileUrl } from '@shared/ipc'
-import { buildHtmlDocument, documentTitle, renderDocumentBody } from '../../src/renderer/src/markdown/document'
+import {
+  buildHtmlDocument,
+  documentTitle,
+  renderDocumentBody
+} from '../../src/renderer/src/markdown/document'
 import { slugify } from '../../src/renderer/src/markdown/render'
 import { resolveImageSource, resolveLocalPath } from '../../src/renderer/src/markdown/resolve'
 
@@ -38,7 +42,9 @@ describe('Markdown rendering (GitHub Flavored Markdown)', () => {
   it('renders tables with alignment', () => {
     const table = html.querySelector('table')!
     expect(table.querySelectorAll('tbody tr')).toHaveLength(3)
-    expect(table.querySelector('th:last-child')?.getAttribute('style')).toContain('text-align:right')
+    expect(table.querySelector('th:last-child')?.getAttribute('style')).toContain(
+      'text-align:right'
+    )
   })
 
   it('renders ordered lists, nested fenced code and highlighted code', () => {
@@ -83,8 +89,12 @@ describe('Markdown rendering (GitHub Flavored Markdown)', () => {
   })
 
   it('decodes encoded and angle-bracket destinations to the real file name', () => {
-    const img = render('![Team](<assets/Team Photo (2024).png>) ![C](assets/caf%C3%A9.png)').querySelectorAll('img')
-    expect(pathFromLocalFileUrl(img[0].getAttribute('src')!)).toBe(`${WORKSPACE}/assets/Team Photo (2024).png`)
+    const img = render(
+      '![Team](<assets/Team Photo (2024).png>) ![C](assets/caf%C3%A9.png)'
+    ).querySelectorAll('img')
+    expect(pathFromLocalFileUrl(img[0].getAttribute('src')!)).toBe(
+      `${WORKSPACE}/assets/Team Photo (2024).png`
+    )
     expect(pathFromLocalFileUrl(img[1].getAttribute('src')!)).toBe(`${WORKSPACE}/assets/café.png`)
   })
 })
@@ -108,20 +118,30 @@ describe('sanitisation of untrusted documents', () => {
   it('drops unsupported image schemes but keeps web and data images', () => {
     expect(resolveImageSource('javascript:alert(1)', context)).toBeNull()
     expect(resolveImageSource('msfile://local/%2Fetc%2Fpasswd', context)).toBeNull()
-    expect(resolveImageSource('https://img.shields.io/badge/x.svg', context)).toBe('https://img.shields.io/badge/x.svg')
-    expect(resolveImageSource('data:image/png;base64,AAAA', context)).toBe('data:image/png;base64,AAAA')
+    expect(resolveImageSource('https://img.shields.io/badge/x.svg', context)).toBe(
+      'https://img.shields.io/badge/x.svg'
+    )
+    expect(resolveImageSource('data:image/png;base64,AAAA', context)).toBe(
+      'data:image/png;base64,AAAA'
+    )
     expect(resolveImageSource('data:text/html,<script>', context)).toBeNull()
   })
 })
 
 describe('link resolution', () => {
   it('treats a leading slash as the workspace root', () => {
-    expect(resolveLocalPath('/docs/guide.md', { documentDirectory: `${WORKSPACE}/docs`, workspaceRoot: WORKSPACE })).toBe(
-      `${WORKSPACE}/docs/guide.md`
-    )
-    expect(resolveLocalPath('../README.md#top', { documentDirectory: `${WORKSPACE}/docs`, workspaceRoot: WORKSPACE })).toBe(
-      `${WORKSPACE}/README.md`
-    )
+    expect(
+      resolveLocalPath('/docs/guide.md', {
+        documentDirectory: `${WORKSPACE}/docs`,
+        workspaceRoot: WORKSPACE
+      })
+    ).toBe(`${WORKSPACE}/docs/guide.md`)
+    expect(
+      resolveLocalPath('../README.md#top', {
+        documentDirectory: `${WORKSPACE}/docs`,
+        workspaceRoot: WORKSPACE
+      })
+    ).toBe(`${WORKSPACE}/README.md`)
     expect(resolveLocalPath('https://example.com', context)).toBeNull()
     expect(resolveLocalPath('#roadmap', context)).toBeNull()
   })

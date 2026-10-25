@@ -1,10 +1,23 @@
 import { useEffect, useState } from 'react'
-import { LIMITS, normalizeAssetDirectory, type ExplorerMode, type ThemeName } from '@shared/settings'
+import {
+  LIMITS,
+  normalizeAssetDirectory,
+  type ExplorerMode,
+  type ThemeName
+} from '@shared/settings'
 import { api } from '../bridge'
 import { refreshSettings, useSettings } from '../state/settings'
 import { notify } from '../state/ui'
 
-function Toggle({ id, checked, onChange }: { id: string; checked: boolean; onChange(value: boolean): void }) {
+function Toggle({
+  id,
+  checked,
+  onChange
+}: {
+  id: string
+  checked: boolean
+  onChange(value: boolean): void
+}) {
   return (
     <input
       id={id}
@@ -17,7 +30,17 @@ function Toggle({ id, checked, onChange }: { id: string; checked: boolean; onCha
   )
 }
 
-function Row({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: React.ReactNode }) {
+function Row({
+  label,
+  htmlFor,
+  hint,
+  children
+}: {
+  label: string
+  htmlFor: string
+  hint?: string
+  children: React.ReactNode
+}) {
   return (
     <div className="setting-row">
       <div className="setting-text">
@@ -100,15 +123,24 @@ export function SettingsPanel() {
             value={settings.editor.fontSize}
             onChange={(e) => {
               const size = Number(e.target.value)
-              if (size >= LIMITS.fontSize.min && size <= LIMITS.fontSize.max) update({ editor: { fontSize: size } })
+              if (size >= LIMITS.fontSize.min && size <= LIMITS.fontSize.max)
+                update({ editor: { fontSize: size } })
             }}
           />
         </Row>
         <Row label="Word wrap" htmlFor="setting-word-wrap" hint="Alt+Z">
-          <Toggle id="setting-word-wrap" checked={settings.editor.wordWrap} onChange={(v) => update({ editor: { wordWrap: v } })} />
+          <Toggle
+            id="setting-word-wrap"
+            checked={settings.editor.wordWrap}
+            onChange={(v) => update({ editor: { wordWrap: v } })}
+          />
         </Row>
         <Row label="Minimap" htmlFor="setting-minimap">
-          <Toggle id="setting-minimap" checked={settings.editor.minimap} onChange={(v) => update({ editor: { minimap: v } })} />
+          <Toggle
+            id="setting-minimap"
+            checked={settings.editor.minimap}
+            onChange={(v) => update({ editor: { minimap: v } })}
+          />
         </Row>
 
         <h3 className="settings-section">Explorer</h3>
@@ -123,7 +155,11 @@ export function SettingsPanel() {
             <option value="thumbnails">Thumbnails</option>
           </select>
         </Row>
-        <Row label="Thumbnail size" htmlFor="setting-thumb-size" hint={`${settings.explorer.thumbnailSize}px`}>
+        <Row
+          label="Thumbnail size"
+          htmlFor="setting-thumb-size"
+          hint={`${settings.explorer.thumbnailSize}px`}
+        >
           <input
             id="setting-thumb-size"
             type="range"
@@ -145,7 +181,11 @@ export function SettingsPanel() {
         </Row>
 
         <h3 className="settings-section">Preview</h3>
-        <Row label="Refresh PDF automatically" htmlFor="setting-pdf-refresh" hint="Regenerates the PDF shortly after you stop typing.">
+        <Row
+          label="Refresh PDF automatically"
+          htmlFor="setting-pdf-refresh"
+          hint="Regenerates the PDF shortly after you stop typing."
+        >
           <Toggle
             id="setting-pdf-refresh"
             checked={settings.preview.pdfAutoRefresh}
@@ -161,7 +201,11 @@ export function SettingsPanel() {
             onChange={(v) => update({ workspace: { restoreLastWorkspace: v } })}
           />
         </Row>
-        <Row label="Recent folders" htmlFor="setting-clear-recent" hint={`${settings.workspace.recent.length} remembered`}>
+        <Row
+          label="Recent folders"
+          htmlFor="setting-clear-recent"
+          hint={`${settings.workspace.recent.length} remembered`}
+        >
           <button
             id="setting-clear-recent"
             type="button"

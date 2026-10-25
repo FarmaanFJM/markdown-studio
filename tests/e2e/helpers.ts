@@ -1,7 +1,13 @@
 import { cpSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { _electron as electron, expect, type ElectronApplication, type Locator, type Page } from '@playwright/test'
+import {
+  _electron as electron,
+  expect,
+  type ElectronApplication,
+  type Locator,
+  type Page
+} from '@playwright/test'
 
 export const ROOT = path.resolve(__dirname, '../..')
 const FIXTURES = path.join(ROOT, 'tests', 'fixtures')
@@ -36,12 +42,22 @@ export interface Launched {
 }
 
 /** Starts Markdown Studio; optionally pre-seeds settings (for example a workspace to restore). */
-export async function launch(sandbox: Sandbox, settings?: Record<string, unknown>): Promise<Launched> {
-  if (settings) writeFileSync(path.join(sandbox.userData, 'settings.json'), JSON.stringify(settings))
+export async function launch(
+  sandbox: Sandbox,
+  settings?: Record<string, unknown>
+): Promise<Launched> {
+  if (settings)
+    writeFileSync(path.join(sandbox.userData, 'settings.json'), JSON.stringify(settings))
   const app = await electron.launch({
     // Chromium's sandbox cannot start as root inside CI containers; it is not disabled elsewhere.
     args: [...(process.platform === 'linux' ? ['--no-sandbox'] : []), ROOT],
-    env: { ...process.env, MARKDOWN_STUDIO_USER_DATA: sandbox.userData, NODE_ENV: 'production' }
+    env: {
+      ...process.env,
+      // Chromium on Linux needs a UTF-8 locale to map non-ASCII file names of dropped files.
+      LANG: process.env.LANG || 'C.UTF-8',
+      MARKDOWN_STUDIO_USER_DATA: sandbox.userData,
+      NODE_ENV: 'production'
+    }
   })
   const page = await app.firstWindow()
   await page.locator('.app:not(.loading)').waitFor()
@@ -49,22 +65,38 @@ export async function launch(sandbox: Sandbox, settings?: Record<string, unknown
 }
 
 /** Starts the app with the sandbox workspace already open (restored from settings). */
-export function launchWithWorkspace(sandbox: Sandbox, extra: Record<string, unknown> = {}): Promise<Launched> {
+export function launchWithWorkspace(
+  sandbox: Sandbox,
+  extra: Record<string, unknown> = {}
+): Promise<Launched> {
   return launch(sandbox, {
-    workspace: { restoreLastWorkspace: true, lastWorkspace: sandbox.workspace, recent: [sandbox.workspace] },
+    workspace: {
+      restoreLastWorkspace: true,
+      lastWorkspace: sandbox.workspace,
+      recent: [sandbox.workspace]
+    },
     ...extra
   })
 }
 
 export async function stubOpenDialog(app: ElectronApplication, filePaths: string[]): Promise<void> {
   await app.evaluate(({ dialog }, paths) => {
-    dialog.showOpenDialog = (async () => ({ canceled: paths.length === 0, filePaths: paths })) as typeof dialog.showOpenDialog
+    dialog.showOpenDialog = (async () => ({
+      canceled: paths.length === 0,
+      filePaths: paths
+    })) as typeof dialog.showOpenDialog
   }, filePaths)
 }
 
-export async function stubSaveDialog(app: ElectronApplication, filePath: string | null): Promise<void> {
+export async function stubSaveDialog(
+  app: ElectronApplication,
+  filePath: string | null
+): Promise<void> {
   await app.evaluate(({ dialog }, target) => {
-    dialog.showSaveDialog = (async () => ({ canceled: target === null, filePath: target ?? '' })) as typeof dialog.showSaveDialog
+    dialog.showSaveDialog = (async () => ({
+      canceled: target === null,
+      filePath: target ?? ''
+    })) as typeof dialog.showSaveDialog
   }, filePath)
 }
 
@@ -84,7 +116,7 @@ export async function editorText(page: Page): Promise<string> {
     return lines
       .map((line) => ({ top: parseFloat(line.style.top), text: line.textContent ?? '' }))
       .sort((a, b) => a.top - b.top)
-      .map((l) => l.text.replace(/ /g, ' '))
+      .map((l) => l.text.replace(/\u00a0/g, ' '))
       .join('\n')
   })
 }
@@ -136,12 +168,101 @@ export function inPreview<T>(page: Page, fn: (doc: Document) => T): Promise<T> {
  * killed after a grace period so one failure cannot hang the whole run.
  */
 export async function closeApp(app: ElectronApplication): Promise<void> {
-  const timeout = new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), 10_000))
-  const result = await Promise.race([app.close().then(() => 'closed' as const), timeout])
-  if (result === 'timeout') app.process().kill('SIGKILL')
+  const closed = app.close().then(() => true)
+  const wait = (ms: number) => new Promise<false>((resolve) => setTimeout(() => resolve(false), ms))
+  if (await Promise.race([closed, wait(2000)])) return
+  // Documents left unsaved by the test: discard them, as a user would at the prompt.
+  const page = app.windows()[0]
+  await page
+    ?.getByRole('button', { name: "Don't Save" })
+    .click({ timeout: 2000 })
+    .catch(() => undefined)
+  if (!(await Promise.race([closed, wait(8000)]))) app.process().kill('SIGKILL')
 }
 
 /** Waits for the application to exit (after closing the last window). */
 export function waitForExit(app: ElectronApplication): Promise<void> {
   return new Promise((resolve) => app.process().once('exit', () => resolve()))
+}
+
+/**
+ * Drops files from the operating system onto the window at a point. The files are attached
+ * through a real file input so they carry their on-disk paths, exactly like files dragged from
+ * Windows File Explorer, and the drop is dispatched to whatever element is under the point.
+ */
+export async function dropExternalFiles(
+  page: Page,
+  files: string[],
+  point: { x: number; y: number }
+): Promise<void> {
+  await page.evaluate(() => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.multiple = true
+    input.id = 'e2e-file-input'
+    input.style.display = 'none'
+    document.body.appendChild(input)
+  })
+  await page.setInputFiles('#e2e-file-input', files)
+  await page.evaluate(({ x, y }) => {
+    const input = document.getElementById('e2e-file-input') as HTMLInputElement
+    const data = new DataTransfer()
+    for (const file of input.files ?? []) data.items.add(file)
+    input.remove()
+    const target = document.elementFromPoint(x, y)!
+    for (const type of ['dragenter', 'dragover', 'drop']) {
+      target.dispatchEvent(
+        new DragEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: data,
+          clientX: x,
+          clientY: y
+        })
+      )
+    }
+  }, point)
+}
+
+/** HTML5 drag from an Explorer item (tree row or thumbnail tile) to a point in the window. */
+export async function dragFromExplorer(
+  source: Locator,
+  point: { x: number; y: number }
+): Promise<void> {
+  await source.scrollIntoViewIfNeeded()
+  await source.evaluate((element, { x, y }) => {
+    const data = new DataTransfer()
+    element.dispatchEvent(
+      new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: data })
+    )
+    const target = document.elementFromPoint(x, y)!
+    for (const type of ['dragenter', 'dragover', 'drop']) {
+      target.dispatchEvent(
+        new DragEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          dataTransfer: data,
+          clientX: x,
+          clientY: y
+        })
+      )
+    }
+    element.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: data }))
+  }, point)
+}
+
+/**
+ * Opens a file in a separate, plain Electron window (no preload, default security) and returns
+ * it as a Playwright page. Used to check exported documents in an independent browser context.
+ */
+export async function openInViewer(app: ElectronApplication, file: string): Promise<Page> {
+  const [viewer] = await Promise.all([
+    app.waitForEvent('window'),
+    app.evaluate(({ BrowserWindow }, target) => {
+      const window = new BrowserWindow({ show: false, webPreferences: { sandbox: true } })
+      void window.loadFile(target)
+    }, file)
+  ])
+  await viewer.waitForLoadState('load')
+  return viewer
 }

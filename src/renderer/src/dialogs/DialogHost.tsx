@@ -54,7 +54,12 @@ function UnsavedDialog({ request }: { request: Extract<DialogRequest, { kind: 'u
       onCancel={() => request.resolve('cancel')}
       footer={
         <>
-          <button type="button" className="button primary" data-autofocus onClick={() => request.resolve('save')}>
+          <button
+            type="button"
+            className="button primary"
+            data-autofocus
+            onClick={() => request.resolve('save')}
+          >
             {many ? 'Save All' : 'Save'}
           </button>
           <button type="button" className="button" onClick={() => request.resolve('discard')}>
@@ -182,7 +187,12 @@ function AboutDialog({ request }: { request: Extract<DialogRequest, { kind: 'abo
       title="About Markdown Studio"
       onCancel={() => request.resolve()}
       footer={
-        <button type="button" className="button primary" data-autofocus onClick={() => request.resolve()}>
+        <button
+          type="button"
+          className="button primary"
+          data-autofocus
+          onClick={() => request.resolve()}
+        >
           Close
         </button>
       }
@@ -221,7 +231,12 @@ function ShortcutsDialog({ request }: { request: Extract<DialogRequest, { kind: 
       wide
       onCancel={() => request.resolve()}
       footer={
-        <button type="button" className="button primary" data-autofocus onClick={() => request.resolve()}>
+        <button
+          type="button"
+          className="button primary"
+          data-autofocus
+          onClick={() => request.resolve()}
+        >
           Close
         </button>
       }

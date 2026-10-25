@@ -37,7 +37,9 @@ function useApplicationEvents(): void {
         closing = false
       }
     })
-    const offChanged = api.workspace.onChanged((directories) => void useWorkspace.getState().refresh(directories))
+    const offChanged = api.workspace.onChanged(
+      (directories) => void useWorkspace.getState().refresh(directories)
+    )
 
     // Dropping a file anywhere else must never navigate the window away from the application.
     const block = (event: DragEvent) => {
@@ -64,7 +66,11 @@ function useWindowTitle(): void {
   const doc = useDocuments((s) => s.documents.find((d) => d.id === s.activeId) ?? null)
   const root = useWorkspace((s) => s.root)
   useEffect(() => {
-    const parts = [doc ? `${doc.dirty ? '● ' : ''}${documentName(doc)}` : null, root ? basename(root) : null, 'Markdown Studio']
+    const parts = [
+      doc ? `${doc.dirty ? '● ' : ''}${documentName(doc)}` : null,
+      root ? basename(root) : null,
+      'Markdown Studio'
+    ]
     document.title = parts.filter(Boolean).join(' — ')
   }, [doc, root])
 }
@@ -85,7 +91,8 @@ export function App() {
       .load()
       .then((loaded) => {
         // The main process has already re-opened (and authorised) the last workspace.
-        if (loaded.workspace.lastWorkspace) useWorkspace.getState().setRoot(loaded.workspace.lastWorkspace)
+        if (loaded.workspace.lastWorkspace)
+          useWorkspace.getState().setRoot(loaded.workspace.lastWorkspace)
         setReady(true)
       })
   }, [])
@@ -97,7 +104,8 @@ export function App() {
   const { layout } = settings
   const clampSidebar = (width: number) =>
     Math.round(Math.min(LIMITS.sidebarWidth.max, Math.max(LIMITS.sidebarWidth.min, width)))
-  const clampRatio = (ratio: number) => Math.min(LIMITS.previewRatio.max, Math.max(LIMITS.previewRatio.min, ratio))
+  const clampRatio = (ratio: number) =>
+    Math.min(LIMITS.previewRatio.max, Math.max(LIMITS.previewRatio.min, ratio))
 
   if (!ready) return <div className="app loading" />
 
@@ -113,9 +121,15 @@ export function App() {
             <Splitter
               label="Resize sidebar"
               testId="sidebar-splitter"
-              onDrag={(x) => update({ layout: { sidebarWidth: clampSidebar(x - ACTIVITY_BAR_WIDTH) } })}
-              onStep={(d) => update({ layout: { sidebarWidth: clampSidebar(layout.sidebarWidth + d * 16) } })}
-              onReset={() => update({ layout: { sidebarWidth: DEFAULT_SETTINGS.layout.sidebarWidth } })}
+              onDrag={(x) =>
+                update({ layout: { sidebarWidth: clampSidebar(x - ACTIVITY_BAR_WIDTH) } })
+              }
+              onStep={(d) =>
+                update({ layout: { sidebarWidth: clampSidebar(layout.sidebarWidth + d * 16) } })
+              }
+              onReset={() =>
+                update({ layout: { sidebarWidth: DEFAULT_SETTINGS.layout.sidebarWidth } })
+              }
             />
           </>
         )}
@@ -134,10 +148,15 @@ export function App() {
                 testId="preview-splitter"
                 onDrag={(x) => {
                   const rect = editorAreaRef.current?.getBoundingClientRect()
-                  if (rect) update({ layout: { previewRatio: clampRatio((rect.right - x) / rect.width) } })
+                  if (rect)
+                    update({ layout: { previewRatio: clampRatio((rect.right - x) / rect.width) } })
                 }}
-                onStep={(d) => update({ layout: { previewRatio: clampRatio(layout.previewRatio - d * 0.03) } })}
-                onReset={() => update({ layout: { previewRatio: DEFAULT_SETTINGS.layout.previewRatio } })}
+                onStep={(d) =>
+                  update({ layout: { previewRatio: clampRatio(layout.previewRatio - d * 0.03) } })
+                }
+                onReset={() =>
+                  update({ layout: { previewRatio: DEFAULT_SETTINGS.layout.previewRatio } })
+                }
               />
               <div className="preview-slot" style={{ flexBasis: `${layout.previewRatio * 100}%` }}>
                 <PreviewPanel kind={layout.previewMode} />

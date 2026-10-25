@@ -19,9 +19,37 @@ export const IMAGE_EXTENSIONS = Object.keys(IMAGE_MIME_TYPES)
 export type FileKind = 'markdown' | 'image' | 'pdf' | 'html' | 'code' | 'text' | 'other'
 
 const CODE_EXTENSIONS = new Set([
-  '.js', '.mjs', '.cjs', '.ts', '.tsx', '.jsx', '.json', '.css', '.scss', '.py', '.rb', '.go',
-  '.rs', '.java', '.kt', '.c', '.h', '.cpp', '.hpp', '.cs', '.php', '.sh', '.ps1', '.bat',
-  '.yml', '.yaml', '.toml', '.xml', '.sql', '.lua', '.swift'
+  '.js',
+  '.mjs',
+  '.cjs',
+  '.ts',
+  '.tsx',
+  '.jsx',
+  '.json',
+  '.css',
+  '.scss',
+  '.py',
+  '.rb',
+  '.go',
+  '.rs',
+  '.java',
+  '.kt',
+  '.c',
+  '.h',
+  '.cpp',
+  '.hpp',
+  '.cs',
+  '.php',
+  '.sh',
+  '.ps1',
+  '.bat',
+  '.yml',
+  '.yaml',
+  '.toml',
+  '.xml',
+  '.sql',
+  '.lua',
+  '.swift'
 ])
 
 const TEXT_EXTENSIONS = new Set(['.txt', '.log', '.csv', '.ini', '.cfg', '.env', '.gitignore'])

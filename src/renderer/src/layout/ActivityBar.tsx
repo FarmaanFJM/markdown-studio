@@ -33,7 +33,13 @@ export function ActivityBar() {
 
   return (
     <nav className="activity-bar" aria-label="Activities">
-      <button type="button" className="activity-logo" title="About Markdown Studio" aria-label="About Markdown Studio" onClick={commands.about}>
+      <button
+        type="button"
+        className="activity-logo"
+        title="About Markdown Studio"
+        aria-label="About Markdown Studio"
+        onClick={commands.about}
+      >
         <img src={logo} alt="" width={26} height={26} />
       </button>
       {item('explorer', 'Explorer', 'Ctrl+Shift+E', Files)}

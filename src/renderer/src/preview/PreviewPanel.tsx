@@ -9,7 +9,12 @@ export function PreviewPanel({ kind }: { kind: PreviewKind }) {
   const hasDocument = useDocuments((s) => s.activeId !== null)
 
   return (
-    <section className="preview-panel" aria-label="Preview" data-testid="preview-panel" data-kind={kind}>
+    <section
+      className="preview-panel"
+      aria-label="Preview"
+      data-testid="preview-panel"
+      data-kind={kind}
+    >
       <header className="panel-header">
         <div className="segmented" role="radiogroup" aria-label="Preview type">
           {(['html', 'pdf'] as const).map((k) => (
@@ -62,7 +67,9 @@ export function PreviewPanel({ kind }: { kind: PreviewKind }) {
         {kind === 'html' ? (
           <>
             <HtmlPreview />
-            {!hasDocument && <div className="preview-message overlay">Open a Markdown document to preview it.</div>}
+            {!hasDocument && (
+              <div className="preview-message overlay">Open a Markdown document to preview it.</div>
+            )}
           </>
         ) : (
           <PdfPreview />

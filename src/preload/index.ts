@@ -28,9 +28,11 @@ const api: MarkdownStudioApi = {
   fs: {
     readDir: (path) => ipcRenderer.invoke(IPC.fsReadDir, path),
     readText: (path) => ipcRenderer.invoke(IPC.fsReadText, path),
-    writeText: (path, content, hasBom) => ipcRenderer.invoke(IPC.fsWriteText, path, content, hasBom),
+    writeText: (path, content, hasBom) =>
+      ipcRenderer.invoke(IPC.fsWriteText, path, content, hasBom),
     createFile: (directory, name) => ipcRenderer.invoke(IPC.fsCreateFile, directory, name),
-    createDirectory: (directory, name) => ipcRenderer.invoke(IPC.fsCreateDirectory, directory, name),
+    createDirectory: (directory, name) =>
+      ipcRenderer.invoke(IPC.fsCreateDirectory, directory, name),
     rename: (path, newName) => ipcRenderer.invoke(IPC.fsRename, path, newName),
     trash: (path) => ipcRenderer.invoke(IPC.fsTrash, path),
     deletePermanently: (path) => ipcRenderer.invoke(IPC.fsDeletePermanently, path)

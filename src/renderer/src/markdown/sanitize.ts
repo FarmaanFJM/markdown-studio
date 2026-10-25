@@ -10,8 +10,24 @@ import DOMPurify, { type Config } from 'dompurify'
  */
 const CONFIG: Config = {
   FORBID_TAGS: [
-    'script', 'iframe', 'frame', 'frameset', 'object', 'embed', 'applet', 'portal', 'form',
-    'button', 'textarea', 'select', 'option', 'base', 'link', 'meta', 'noscript', 'template'
+    'script',
+    'iframe',
+    'frame',
+    'frameset',
+    'object',
+    'embed',
+    'applet',
+    'portal',
+    'form',
+    'button',
+    'textarea',
+    'select',
+    'option',
+    'base',
+    'link',
+    'meta',
+    'noscript',
+    'template'
   ],
   FORBID_ATTR: ['srcset', 'action', 'formaction', 'ping', 'autofocus'],
   ALLOW_UNKNOWN_PROTOCOLS: false,

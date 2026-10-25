@@ -25,13 +25,20 @@ export function HtmlPreview() {
   const revision = useDocuments((s) => s.revision)
   const root = useWorkspace((s) => s.root)
   const contextRef = useRef<DocumentContext>({ documentDirectory: null, workspaceRoot: null })
-  contextRef.current = { documentDirectory: activePath ? dirname(activePath) : null, workspaceRoot: root }
+  contextRef.current = {
+    documentDirectory: activePath ? dirname(activePath) : null,
+    workspaceRoot: root
+  }
 
-  const shell = useMemo(() => buildHtmlDocument({ title: 'Preview', body: '', purpose: 'preview' }), [])
+  const shell = useMemo(
+    () => buildHtmlDocument({ title: 'Preview', body: '', purpose: 'preview' }),
+    []
+  )
 
   useEffect(() => {
     if (!frameDocument) return
-    const onClick = (event: MouseEvent) => handlePreviewClick(event, frameDocument, contextRef.current)
+    const onClick = (event: MouseEvent) =>
+      handlePreviewClick(event, frameDocument, contextRef.current)
     const onAuxClick = (event: MouseEvent) => event.preventDefault()
     // Keyboard shortcuts keep working while the preview has focus.
     const onKeyDown = (event: KeyboardEvent) => handleGlobalKeydown(event)

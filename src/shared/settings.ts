@@ -124,11 +124,16 @@ function str(value: unknown): string | null {
  */
 export function normalizeAssetDirectory(value: unknown): string | null {
   if (typeof value !== 'string') return null
-  const trimmed = value.trim().replace(/\\/g, '/').replace(/^\.\/+/, '').replace(/\/+$/, '')
+  const trimmed = value
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/^\.\/+/, '')
+    .replace(/\/+$/, '')
   if (!trimmed) return null
   if (trimmed.startsWith('/') || /^[a-zA-Z]:/.test(trimmed)) return null
   const segments = trimmed.split('/').filter((s) => s !== '' && s !== '.')
   if (segments.length === 0 || segments.some((s) => s === '..')) return null
+  // eslint-disable-next-line no-control-regex -- control characters are never valid in names
   if (segments.some((s) => /[<>:"|?*\u0000-\u001f]/.test(s))) return null
   return segments.join('/')
 }
@@ -200,9 +205,17 @@ export function sanitizeSettings(input: unknown): AppSettings {
         LIMITS.sidebarWidth.min,
         LIMITS.sidebarWidth.max
       ),
-      sidebarView: pick(layout.sidebarView, ['explorer', 'settings'] as const, d.layout.sidebarView),
+      sidebarView: pick(
+        layout.sidebarView,
+        ['explorer', 'settings'] as const,
+        d.layout.sidebarView
+      ),
       previewMode: pick(layout.previewMode, ['none', 'html', 'pdf'] as const, d.layout.previewMode),
-      lastPreviewKind: pick(layout.lastPreviewKind, ['html', 'pdf'] as const, d.layout.lastPreviewKind),
+      lastPreviewKind: pick(
+        layout.lastPreviewKind,
+        ['html', 'pdf'] as const,
+        d.layout.lastPreviewKind
+      ),
       previewRatio: num(
         layout.previewRatio,
         d.layout.previewRatio,

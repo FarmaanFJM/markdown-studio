@@ -60,7 +60,7 @@ monaco.editor.defineTheme('markdown-studio-dark', {
     'editorSuggestWidget.background': '#1A1D20',
     'input.background': '#0F1112',
     'input.border': '#2B2E31',
-    'focusBorder': '#10B98199',
+    focusBorder: '#10B98199',
     'scrollbarSlider.background': '#FFFFFF12',
     'scrollbarSlider.hoverBackground': '#FFFFFF20',
     'scrollbarSlider.activeBackground': '#FFFFFF2A',
@@ -91,7 +91,7 @@ monaco.editor.defineTheme('markdown-studio-light', {
     'editor.lineHighlightBorder': '#00000000',
     'editor.selectionBackground': '#10B98138',
     'editor.inactiveSelectionBackground': '#10B9811E',
-    'focusBorder': '#0A9D6E99'
+    focusBorder: '#0A9D6E99'
   }
 })
 

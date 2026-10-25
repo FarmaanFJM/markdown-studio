@@ -57,7 +57,10 @@ function patchDocument(id: string, patch: Partial<EditorDocument>): void {
   }))
 }
 
-function addDocument(doc: Omit<EditorDocument, 'id' | 'dirty' | 'savedVersion'>, content: string): string {
+function addDocument(
+  doc: Omit<EditorDocument, 'id' | 'dirty' | 'savedVersion'>,
+  content: string
+): string {
   const id = String(nextId++)
   const model = documentModels.create(id, content)
   const savedVersion = model.getAlternativeVersionId()
@@ -147,9 +150,9 @@ export async function saveDocumentAs(id = useDocuments.getState().activeId): Pro
   const suggested = doc.path ?? joinPath(root ?? '', `${doc.untitledName ?? 'Untitled'}.md`)
   const target = await api.dialogs.saveMarkdown(suggested)
   if (!target) return false
-  const other = useDocuments.getState().documents.find(
-    (d) => d.id !== doc.id && d.path && pathsEqual(d.path, target)
-  )
+  const other = useDocuments
+    .getState()
+    .documents.find((d) => d.id !== doc.id && d.path && pathsEqual(d.path, target))
   if (other) {
     notify('error', `${basename(target)} is open in another tab. Close it before saving over it.`)
     return false
@@ -171,7 +174,11 @@ function removeDocument(id: string): void {
   const remaining = documents.filter((d) => d.id !== id)
   const nextActive =
     activeId === id ? (remaining[Math.min(index, remaining.length - 1)]?.id ?? null) : activeId
-  useDocuments.setState((s) => ({ documents: remaining, activeId: nextActive, revision: s.revision + 1 }))
+  useDocuments.setState((s) => ({
+    documents: remaining,
+    activeId: nextActive,
+    revision: s.revision + 1
+  }))
   documentModels.dispose(id)
 }
 
@@ -213,7 +220,8 @@ export function handlePathRenamed(oldPath: string, newPath: string): void {
 export function handlePathDeleted(path: string): void {
   for (const doc of useDocuments.getState().documents) {
     if (!doc.path || !isPathInside(path, doc.path)) continue
-    if (doc.dirty) notify('info', `${documentName(doc)} was deleted from disk but still has unsaved changes.`)
+    if (doc.dirty)
+      notify('info', `${documentName(doc)} was deleted from disk but still has unsaved changes.`)
     else removeDocument(doc.id)
   }
 }

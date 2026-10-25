@@ -95,10 +95,7 @@ export function handleGlobalKeydown(event: KeyboardEvent): void {
   const key = normalisedKey(event)
   const binding = KEYBINDINGS.find(
     (b) =>
-      b.key === key &&
-      !!b.mod === mod &&
-      !!b.shift === event.shiftKey &&
-      !!b.alt === event.altKey
+      b.key === key && !!b.mod === mod && !!b.shift === event.shiftKey && !!b.alt === event.altKey
   )
   if (!binding) return
   if (binding.editorHandles) {

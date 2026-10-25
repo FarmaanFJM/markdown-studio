@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent
+} from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { DirEntry } from '@shared/ipc'
 import { isImagePath } from '@shared/fileTypes'
@@ -89,12 +96,15 @@ export function TreeView({ root }: { root: string }) {
         move(rows.length - 1)
         break
       case 'ArrowRight':
-        if (current?.kind === 'directory' && !expanded[pathKey(current.path)]) workspace.toggle(current.path)
+        if (current?.kind === 'directory' && !expanded[pathKey(current.path)])
+          workspace.toggle(current.path)
         else move(index + 1)
         break
       case 'ArrowLeft':
-        if (current?.kind === 'directory' && expanded[pathKey(current.path)]) workspace.toggle(current.path)
-        else if (current && !pathsEqual(dirname(current.path), root)) workspace.select(dirname(current.path))
+        if (current?.kind === 'directory' && expanded[pathKey(current.path)])
+          workspace.toggle(current.path)
+        else if (current && !pathsEqual(dirname(current.path), root))
+          workspace.select(dirname(current.path))
         break
       case 'Enter':
         if (current) activate(current)

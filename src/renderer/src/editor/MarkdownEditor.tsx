@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useDocuments } from '../state/documents'
 import { useSettings } from '../state/settings'
+import { notify } from '../state/ui'
 import { dataTransferHasDroppable, insertImages, sourcesFromDataTransfer } from './imageDrop'
 import { documentModels, setActiveEditor } from './models'
 import { monaco, monacoTheme } from './monaco'
@@ -71,7 +72,8 @@ export function MarkdownEditor() {
 
     // Drop indicator and image drops. Capture phase runs before Monaco's own text drag handling.
     const caret = editor.createDecorationsCollection()
-    const positionAt = (event: DragEvent) => editor.getTargetAtClientPoint(event.clientX, event.clientY)?.position ?? null
+    const positionAt = (event: DragEvent) =>
+      editor.getTargetAtClientPoint(event.clientX, event.clientY)?.position ?? null
     const onDragOver = (event: DragEvent) => {
       if (!dataTransferHasDroppable(event.dataTransfer) || !editor.getModel()) return
       event.preventDefault()
@@ -82,7 +84,12 @@ export function MarkdownEditor() {
         position
           ? [
               {
-                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
+                range: new monaco.Range(
+                  position.lineNumber,
+                  position.column,
+                  position.lineNumber,
+                  position.column
+                ),
                 options: { beforeContentClassName: 'drop-caret' }
               }
             ]
@@ -100,6 +107,13 @@ export function MarkdownEditor() {
       const position = positionAt(event)
       // DataTransfer contents are only readable synchronously, during the event.
       const sources = sourcesFromDataTransfer(event.dataTransfer!)
+      if (sources.length === 0) {
+        notify(
+          'error',
+          'Only files from disk can be dropped here. Save the image to a folder first.'
+        )
+        return
+      }
       void insertImages(editor, sources, position)
     }
     container.addEventListener('dragover', onDragOver, true)

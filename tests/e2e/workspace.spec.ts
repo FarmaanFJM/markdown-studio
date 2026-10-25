@@ -1,7 +1,14 @@
 import { existsSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
-import { closeApp, createSandbox, launch, launchWithWorkspace, stubOpenDialog, treeRow } from './helpers'
+import {
+  closeApp,
+  createSandbox,
+  launch,
+  launchWithWorkspace,
+  stubOpenDialog,
+  treeRow
+} from './helpers'
 
 test('starts with the branded shell and an About dialog', async () => {
   const sandbox = createSandbox()
@@ -37,7 +44,13 @@ test('opens a folder and browses nested files', async () => {
     await expect(page.locator('.workspace-name')).toHaveText('Atlas Project')
     await expect(page).toHaveTitle('Atlas Project — Markdown Studio')
     const labels = page.locator('.tree-row .tree-label')
-    await expect(labels).toHaveText(['assets', 'docs', 'README.md', 'unsafe.md', 'windows-notes.md'])
+    await expect(labels).toHaveText([
+      'assets',
+      'docs',
+      'README.md',
+      'unsafe.md',
+      'windows-notes.md'
+    ])
 
     await treeRow(page, 'docs').click()
     await expect(treeRow(page, 'guide.md')).toBeVisible()
@@ -103,13 +116,18 @@ test('creates, renames and deletes files and folders', async () => {
 
     await treeRow(page, 'unsafe.md').click({ button: 'right' })
     await page.getByRole('menuitem', { name: 'Delete' }).click()
-    await page.getByRole('dialog').getByRole('button', { name: /Move to/ }).click()
+    await page
+      .getByRole('dialog')
+      .getByRole('button', { name: /Move to/ })
+      .click()
     // CI machines may have no trash; then the app offers a permanent delete instead.
     const permanent = page.getByRole('button', { name: 'Delete Permanently' })
     if (await permanent.isVisible({ timeout: 2000 }).catch(() => false)) await permanent.click()
     await expect(treeRow(page, 'unsafe.md')).toBeHidden()
     expect(existsSync(path.join(sandbox.workspace, 'unsafe.md'))).toBe(false)
-    expect(readFileSync(path.join(sandbox.workspace, 'README.md'), 'utf8')).toContain('# Project Atlas')
+    expect(readFileSync(path.join(sandbox.workspace, 'README.md'), 'utf8')).toContain(
+      '# Project Atlas'
+    )
   } finally {
     await closeApp(app)
   }

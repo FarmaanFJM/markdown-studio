@@ -15,8 +15,8 @@ function parseImage(markdown: string): { src: string; alt: string } {
   const image = tokens.find((t) => t.type === 'image')
   if (!image) throw new Error(`No image parsed from ${markdown}`)
   return {
-    src: decodeURIComponent(image.attrGet('src') ?? ''),
-    alt: md.renderer.renderInlineAsText(image.children ?? [], {}, {})
+    src: decodeURIComponent(String(image.attrGet('src') ?? '')),
+    alt: md.renderer.renderInlineAsText(image.children ?? [], md.options, {})
   }
 }
 
@@ -44,12 +44,17 @@ describe('image references', () => {
   })
 
   it('handles Windows paths', () => {
-    const ref = imageReferenceForFile('C:\\Users\\Ana\\Atlas\\docs', 'C:\\Users\\Ana\\Atlas\\assets\\shot.png')
+    const ref = imageReferenceForFile(
+      'C:\\Users\\Ana\\Atlas\\docs',
+      'C:\\Users\\Ana\\Atlas\\assets\\shot.png'
+    )
     expect(ref?.text).toBe('![Shot](../assets/shot.png)')
   })
 
   it('uses angle brackets for names with spaces and parentheses', () => {
-    expect(formatLinkDestination('assets/Team Photo (2024).png')).toBe('<assets/Team Photo (2024).png>')
+    expect(formatLinkDestination('assets/Team Photo (2024).png')).toBe(
+      '<assets/Team Photo (2024).png>'
+    )
     expect(formatLinkDestination('assets/plain.png')).toBe('assets/plain.png')
   })
 

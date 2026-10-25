@@ -1,4 +1,13 @@
-import { File, FileCode, FileImage, FileText, FileType, Folder, FolderOpen, Globe } from 'lucide-react'
+import {
+  File,
+  FileCode,
+  FileImage,
+  FileText,
+  FileType,
+  Folder,
+  FolderOpen,
+  Globe
+} from 'lucide-react'
 import { fileKind } from '@shared/fileTypes'
 
 interface FileIconProps {

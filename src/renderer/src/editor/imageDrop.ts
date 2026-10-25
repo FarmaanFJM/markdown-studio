@@ -1,5 +1,9 @@
 import { isImagePath } from '@shared/fileTypes'
-import { imageReferenceForFile } from '@shared/imageReference'
+import {
+  altTextFromFileName,
+  buildImageReference,
+  imagePathForDocument
+} from '@shared/imageReference'
 import { basename, dirname, isPathInside, joinPath, relativePath } from '@shared/paths'
 import { api, errorMessage } from '../bridge'
 import { activeDocument, type EditorDocument } from '../state/documents'
@@ -93,16 +97,19 @@ export async function insertImages(
 
   // Track the drop point with a decoration so it survives edits made while files are copied.
   const at = position ?? editor.getPosition() ?? { lineNumber: 1, column: 1 }
-  const [marker] = model.deltaDecorations([], [
-    {
-      range: new monaco.Range(at.lineNumber, at.column, at.lineNumber, at.column),
-      options: { stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges }
-    }
-  ])
+  const [marker] = model.deltaDecorations(
+    [],
+    [
+      {
+        range: new monaco.Range(at.lineNumber, at.column, at.lineNumber, at.column),
+        options: { stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges }
+      }
+    ]
+  )
 
   const references: { text: string; altOffset: number; altLength: number }[] = []
   const copied: string[] = []
-  let range: monaco.Range | null = null
+  let range: monaco.Range | null
   try {
     for (const source of images) {
       let imagePath = source.path
@@ -116,12 +123,13 @@ export async function insertImages(
           continue
         }
       }
-      const reference = imageReferenceForFile(placement.baseDirectory, imagePath)
-      if (!reference) {
+      const relative = imagePathForDocument(placement.baseDirectory, imagePath)
+      if (relative === null) {
         notify('error', `${basename(imagePath)} is on a different drive than the document.`)
         continue
       }
-      references.push(reference)
+      // Alt text describes the file the user chose, even if the copy had to be renamed.
+      references.push(buildImageReference(altTextFromFileName(source.path), relative))
     }
   } finally {
     // Read the tracked position before removing the marker.
@@ -158,7 +166,9 @@ export async function insertImages(
     const root = useWorkspace.getState().root
     const shown = copied.map((p) => (root ? (relativePath(root, p) ?? p) : basename(p)))
     notify('success', `Copied ${shown.join(', ')} into the project.`)
-    void useWorkspace.getState().refresh([placement.assetDirectory, dirname(placement.assetDirectory)])
+    void useWorkspace
+      .getState()
+      .refresh([placement.assetDirectory, dirname(placement.assetDirectory)])
   }
   return true
 }
