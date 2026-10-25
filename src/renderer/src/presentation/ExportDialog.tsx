@@ -116,7 +116,8 @@ export function ExportDialog({
 
   const choosePreset = (id: string) => {
     setPresetId(id)
-    const next = presets.find((p) => p.id === id)
+    // Read the store, not the render's copy: presets may just have been changed or restored.
+    const next = useExportSetup.getState().presets.find((p) => p.id === id)
     setDraft(next ? setupFromPreset(next, documentSettings) : settingsSetup(documentSettings))
     setFailure(null)
   }
