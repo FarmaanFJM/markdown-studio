@@ -261,7 +261,10 @@ test('standalone HTML export works offline with its theme, fonts, math, diagrams
     expect(facts.targetTop).toBeLessThan(80)
     expect(facts.selectable).toBe(true)
     expect(facts.h1Border).not.toBe('0px')
-    await viewer.screenshot({ path: path.join(sandbox.base, 'visual', 'mixed-html.png') })
+    // Evidence only, not an assertion: a hidden window cannot always be captured on every platform.
+    await viewer
+      .screenshot({ path: path.join(sandbox.base, 'visual', 'mixed-html.png'), timeout: 5000 })
+      .catch(() => undefined)
   } finally {
     await closeApp(app)
   }
