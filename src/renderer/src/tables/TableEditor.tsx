@@ -1,4 +1,4 @@
-import { useRef, useState, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import {
   AlignCenter,
   AlignLeft,
@@ -69,17 +69,25 @@ export function TableEditor({ title, initial, confirmLabel, stale, onDone }: Pro
   const [table, setTable] = useState<TableModel>(() => toEditable(initial))
   const [active, setActive] = useState<Active>({ row: -1, column: 0 })
   const gridRef = useRef<HTMLTableElement>(null)
+  /** A cell to focus once the next render has been committed (after rows or columns change). */
+  const pendingFocus = useRef<Active | null>(null)
   const isStale = useSyncExternalStore(
     stale?.subscribe ?? noSubscription,
     () => stale?.isStale() ?? false
   )
 
   const columns = table.header.length
+  useEffect(() => {
+    const target = pendingFocus.current
+    if (!target) return
+    pendingFocus.current = null
+    gridRef.current
+      ?.querySelector<HTMLInputElement>(`[data-cell="${target.row}:${target.column}"]`)
+      ?.focus()
+  })
   const focusCell = (row: number, column: number) => {
+    pendingFocus.current = { row, column }
     setActive({ row, column })
-    requestAnimationFrame(() =>
-      gridRef.current?.querySelector<HTMLInputElement>(`[data-cell="${row}:${column}"]`)?.focus()
-    )
   }
 
   const mutate = (next: TableModel, row: number, column: number) => {

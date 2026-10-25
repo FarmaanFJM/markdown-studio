@@ -5,6 +5,7 @@ import { documentModels } from '../editor/models'
 import { buildHtmlDocument, renderDocumentBody } from '../markdown/document'
 import type { DocumentContext } from '../markdown/resolve'
 import { useDocuments } from '../state/documents'
+import { adaptiveDelay } from '../state/timing'
 import { useWorkspace } from '../state/workspace'
 import { handlePreviewClick } from './links'
 
@@ -54,12 +55,15 @@ export function HtmlPreview() {
 
   useEffect(() => {
     if (!frameDocument) return
-    const timer = setTimeout(() => {
-      const main = frameDocument.querySelector('main')
-      if (!main) return
-      const model = documentModels.get(activeId)
-      main.innerHTML = model ? renderDocumentBody(model.getValue(), contextRef.current) : ''
-    }, RENDER_DELAY_MS)
+    const timer = setTimeout(
+      () => {
+        const main = frameDocument.querySelector('main')
+        if (!main) return
+        const model = documentModels.get(activeId)
+        main.innerHTML = model ? renderDocumentBody(model.getValue(), contextRef.current) : ''
+      },
+      adaptiveDelay(RENDER_DELAY_MS, documentModels.get(activeId)?.getValueLength() ?? 0)
+    )
     return () => clearTimeout(timer)
   }, [frameDocument, activeId, activePath, revision, root])
 

@@ -6,7 +6,7 @@ import {
   createSandbox,
   editorText,
   focusEditor,
-  launchWithWorkspace,
+  launchEditing,
   mod,
   openFromTree,
   treeRow
@@ -31,7 +31,7 @@ async function renameViaKeyboard(page: Page, current: string[], newName: string)
 test('renaming an image updates the references after confirmation', async () => {
   const sandbox = createSandbox()
   const readme = read(sandbox, 'README.md')
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await renameViaKeyboard(page, ['assets', 'architecture.png'], 'system-architecture.png')
     const confirm = dialog(page, 'Rename and Update References')
@@ -58,7 +58,7 @@ test('renaming an image updates the references after confirmation', async () => 
 test('cancelling changes nothing; renaming without updating leaves the documents alone', async () => {
   const sandbox = createSandbox()
   const readme = read(sandbox, 'README.md')
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await renameViaKeyboard(page, ['assets', 'architecture.png'], 'renamed.png')
     const confirm = dialog(page, 'Rename and Update References')
@@ -80,7 +80,7 @@ test('cancelling changes nothing; renaming without updating leaves the documents
 
 test('a file nothing refers to is renamed without any question', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await renameViaKeyboard(page, ['windows-notes.md'], 'notes.md')
     await expect(treeRow(page, 'notes.md')).toBeVisible()
@@ -92,7 +92,7 @@ test('a file nothing refers to is renamed without any question', async () => {
 
 test('moving a document fixes its own relative links and the links to it', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await treeRow(page, 'docs').click()
     await treeRow(page, 'guide.md').click({ button: 'right' })
@@ -109,12 +109,13 @@ test('moving a document fixes its own relative links and the links to it', async
     await confirm.getByRole('button', { name: 'Move and Update References' }).click()
     await expect(confirm).toBeHidden()
 
+    // Documents are updated one after another, so wait for each rather than reading mid-write.
     await expect.poll(() => read(sandbox, 'README.md')).toContain('[user guide](guide.md)')
-    expect(existsSync(path.join(sandbox.workspace, 'guide.md'))).toBe(true)
+    await expect
+      .poll(() => read(sandbox, 'guide.md'))
+      .toContain('![Screenshot](assets/screenshot.jpg)')
     expect(existsSync(path.join(sandbox.workspace, 'docs', 'guide.md'))).toBe(false)
-    const guide = read(sandbox, 'guide.md')
-    expect(guide).toContain('![Screenshot](assets/screenshot.jpg)')
-    expect(guide).toContain('[project overview](README.md)')
+    expect(read(sandbox, 'guide.md')).toContain('[project overview](README.md)')
   } finally {
     await closeApp(app)
   }
@@ -122,7 +123,7 @@ test('moving a document fixes its own relative links and the links to it', async
 
 test('renaming a folder updates references to everything inside it', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await renameViaKeyboard(page, ['assets'], 'media')
     const confirm = dialog(page, 'Rename and Update References')
@@ -143,7 +144,7 @@ test('renaming a folder updates references to everything inside it', async () =>
 
 test('open documents are updated in the editor; unsaved ones stay unsaved', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     // README has unsaved work; guide is open and saved.
     await openFromTree(page, 'README.md')
@@ -179,7 +180,7 @@ test('open documents are updated in the editor; unsaved ones stay unsaved', asyn
 
 test('never overwrites a document that changed on disk meanwhile', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await renameViaKeyboard(page, ['assets'], 'media')
     const confirm = dialog(page, 'Rename and Update References')
@@ -236,7 +237,7 @@ test.describe('drag and drop', () => {
 
   test('dropping a file on a folder moves it and offers to update references', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await dragTo(page, 'windows-notes.md', 'docs')
       // The move finishes asynchronously (the row is visible before and after it).
@@ -263,7 +264,7 @@ test.describe('drag and drop', () => {
 
   test('a folder cannot be dropped into itself', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await dragTo(page, 'docs', 'docs')
       await expect(page.getByTestId('toast-error')).toContainText('cannot be moved into itself')

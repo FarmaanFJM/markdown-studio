@@ -5,6 +5,7 @@ import { documentModels } from '../editor/models'
 import { analysisFor } from '../editor/markdown/model'
 import { goToLine } from '../editor/markdown/navigation'
 import { useDocuments } from '../state/documents'
+import { adaptiveDelay } from '../state/timing'
 import { useSettings } from '../state/settings'
 
 interface OutlineNode {
@@ -70,7 +71,10 @@ function useOutline(): { analysis: DocumentAnalysis | null; activeId: string | n
       return
     }
     // Typing updates the outline after a short pause; switching tabs updates it at once.
-    const timer = setTimeout(() => setAnalysis(analysisFor(model)), 200)
+    const timer = setTimeout(
+      () => setAnalysis(analysisFor(model)),
+      adaptiveDelay(200, model.getValueLength())
+    )
     return () => clearTimeout(timer)
     // `revision` changes whenever the active text does.
   }, [activeId, revision])

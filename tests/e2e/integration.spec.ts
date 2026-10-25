@@ -8,7 +8,7 @@ import {
   editorText,
   focusEditor,
   launch,
-  launchWithWorkspace,
+  launchEditing,
   mod,
   newDocumentWith,
   openFromTree,
@@ -18,7 +18,7 @@ import {
 
 test('the formatting toolbar runs the same commands and can be hidden', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     const toolbar = page.getByTestId('format-toolbar')
     await expect(toolbar).toBeHidden() // no document yet
@@ -59,7 +59,7 @@ test('the formatting toolbar runs the same commands and can be hidden', async ()
 
 test('the Format, Insert and Table menus run editor commands', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page, 'word')
     await page.keyboard.press('Home')
@@ -87,7 +87,7 @@ test('the Format, Insert and Table menus run editor commands', async () => {
 
 test('the command palette lists commands, explains unavailable ones and restores focus', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await page.keyboard.press(`${mod}+Shift+P`)
     const list = page.getByTestId('palette-list')
@@ -125,7 +125,7 @@ test('the command palette lists commands, explains unavailable ones and restores
 
 test('multiple cursors are formatted together as one undoable step', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page, 'cat and cat and cat')
     await page.keyboard.press('Home')
@@ -149,7 +149,7 @@ test('edits keep CRLF line endings and the UTF-8 byte-order mark', async () => {
   const bom = path.join(sandbox.workspace, 'bom.md')
   writeFileSync(crlf, 'Title\r\n\r\ntext\r\n')
   writeFileSync(bom, Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from('plain words\n')]))
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await openFromTree(page, 'crlf.md')
     await expect(page.getByTestId('status-bar')).toContainText('CRLF')
@@ -185,7 +185,7 @@ test('edits keep CRLF line endings and the UTF-8 byte-order mark', async () => {
 
 test('the context menu offers table commands only inside tables', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page, 'Intro text\n\n| a | b |\n|---|---|\n| 1 | 2 |')
     await page.keyboard.press(`${mod}+Home`)
@@ -212,7 +212,7 @@ test('the context menu offers table commands only inside tables', async () => {
 
 test('Markdown settings change the editor immediately and persist', async () => {
   const sandbox = createSandbox()
-  let { app, page } = await launchWithWorkspace(sandbox)
+  let { app, page } = await launchEditing(sandbox)
   try {
     await page.getByTestId('activity-settings').click()
     const panel = page.getByTestId('settings-panel')
@@ -273,6 +273,67 @@ test('Markdown settings change the editor immediately and persist', async () => 
     const text = await saveAndRead(app, page, path.join(sandbox.workspace, 'toc-title.md'))
     expect(text).toContain('- [Title](#title)')
     expect(text).toContain('  - [Part](#part)')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('heading commands leave underlined headings alone', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchEditing(sandbox)
+  try {
+    await newDocumentWith(page, 'Title\n=====\n\nPlain line')
+    await page.keyboard.press(`${mod}+Home`)
+    await runPaletteCommand(page, 'Heading 2')
+    await expect(page.getByTestId('toast-info')).toContainText(
+      'Underlined headings cannot be changed'
+    )
+    await expect.poll(() => editorText(page)).toBe('Title\n=====\n\nPlain line')
+    // The outline still lists it.
+    await expect(page.getByTestId('outline-item')).toHaveText([/H1\s*Title/])
+    // Ordinary lines are changed as usual.
+    await page.keyboard.press(`${mod}+End`)
+    await runPaletteCommand(page, 'Heading 2')
+    await expect.poll(() => editorText(page)).toBe('Title\n=====\n\n## Plain line')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+test('large documents open, outline and edit without slowing down', async () => {
+  const sandbox = createSandbox()
+  const section = (i: number) =>
+    `## Section ${i}\n\nText with a [link](docs/guide.md) and **bold** words on line one.\nSecond line of the paragraph.\n\n| Name | Value | Notes |\n|------|------:|-------|\n| a${i} | ${i} | note |\n\n- item\n  - nested\n\n`
+  const big = `# Big document\n\n${Array.from({ length: 2000 }, (_, i) => section(i)).join('')}`
+  expect(big.length).toBeGreaterThan(400_000) // beyond the style-check limit as well
+  writeFileSync(path.join(sandbox.workspace, 'big.md'), big)
+  const { app, page } = await launchEditing(sandbox)
+  try {
+    await openFromTree(page, 'big.md')
+    await expect(page.getByTestId('outline-item').first()).toContainText('Big document')
+    await expect(page.getByTestId('outline-item')).toHaveCount(2001)
+
+    await focusEditor(page)
+    await page.keyboard.press(`${mod}+End`)
+    const started = Date.now()
+    await page.keyboard.type('- first')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('second')
+    // Smart lists work, and a fence found by scanning keeps Enter plain inside code.
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('```')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('- not a list')
+    await page.keyboard.press('Enter')
+    await page.keyboard.type('still code')
+    await expect
+      .poll(() => editorText(page))
+      .toContain('- first\n- second\n```\n- not a list\nstill code')
+    expect(Date.now() - started).toBeLessThan(20_000)
+
+    // Style checks are skipped for such a large document; link checks still run.
+    await expect(page.getByTestId('problem-notes')).toHaveText('0 notes')
   } finally {
     await closeApp(app)
   }

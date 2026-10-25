@@ -9,6 +9,7 @@ import { getActiveEditor } from '../editor/models'
 import { monaco } from '../editor/monaco'
 import { useDocuments } from '../state/documents'
 import { useSettings } from '../state/settings'
+import { adaptiveDelay } from '../state/timing'
 import { notify } from '../state/ui'
 import { anchorsOfFile, workspaceFiles } from '../workspace'
 import { lintText } from './lintClient'
@@ -241,7 +242,9 @@ export function installDiagnostics(editor: Editor): monaco.IDisposable {
 
   const disposables: monaco.IDisposable[] = [
     editor.onDidChangeModel(() => schedule(0)),
-    editor.onDidChangeModelContent(() => schedule(TYPING_DELAY_MS))
+    editor.onDidChangeModelContent(() =>
+      schedule(adaptiveDelay(TYPING_DELAY_MS, editor.getModel()?.getValueLength() ?? 0))
+    )
   ]
   const unsubscribeSettings = useSettings.subscribe((state, previous) => {
     if (state.settings.markdown.diagnostics !== previous.settings.markdown.diagnostics) schedule(0)

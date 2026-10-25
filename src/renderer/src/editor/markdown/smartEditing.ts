@@ -1,10 +1,9 @@
-import { isInCodeBlock } from '@shared/markdown/analysis'
 import type { EditPlan, EditResult } from '@shared/markdown/formatting'
 import { enterEdit, indentListItem, outdentListItem } from '@shared/markdown/lists'
 import { useSettings } from '../../state/settings'
 import { monaco } from '../monaco'
 import { applyResults, currentSelections } from './apply'
-import { analysisFor, lineAccess } from './model'
+import { isCodeAt, lineAccess } from './model'
 import { tableCommands } from './tableCommands'
 
 type Editor = monaco.editor.IStandaloneCodeEditor
@@ -24,7 +23,7 @@ function handleEnter(editor: Editor): boolean {
   const position = editor.getPosition()
   if (!model || !position || !enabled().lists) return false
   const line = position.lineNumber - 1
-  if (isInCodeBlock(analysisFor(model), line)) return false
+  if (isCodeAt(model, line)) return false
   const edit = enterEdit(lineAccess(model), line, position.column - 1)
   if (!edit) return false
 
@@ -60,7 +59,7 @@ function handleTab(editor: Editor, direction: 1 | -1): boolean {
 
   if (settings.tables && tableCommands.navigate(editor, direction)) return true
   if (!settings.lists) return false
-  if (isInCodeBlock(analysisFor(model), line)) return false
+  if (isCodeAt(model, line)) return false
 
   const lines = lineAccess(model)
   const change = direction === 1 ? indentListItem(lines, line) : outdentListItem(lines, line)

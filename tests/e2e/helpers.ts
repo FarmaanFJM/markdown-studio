@@ -85,6 +85,18 @@ export function launchWithWorkspace(
   })
 }
 
+/**
+ * Like `launchWithWorkspace`, with soft word wrap off. Editor text is read from the rendered
+ * lines, and a long line that wraps (the Windows CI display is narrow) would otherwise be read
+ * as several lines. Wrapping itself is covered by the Phase 1 settings tests.
+ */
+export function launchEditing(
+  sandbox: Sandbox,
+  extra: Record<string, unknown> = {}
+): Promise<Launched> {
+  return launchWithWorkspace(sandbox, { editor: { wordWrap: false }, ...extra })
+}
+
 export async function stubOpenDialog(app: ElectronApplication, filePaths: string[]): Promise<void> {
   await app.evaluate(({ dialog }, paths) => {
     dialog.showOpenDialog = (async () => ({

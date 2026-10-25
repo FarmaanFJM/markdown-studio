@@ -8,7 +8,7 @@ import {
   focusEditor,
   goToLine,
   inPreview,
-  launchWithWorkspace,
+  launchEditing,
   mod,
   newDocumentWith,
   openFromTree,
@@ -44,7 +44,7 @@ const items = (page: import('@playwright/test').Page) => page.getByTestId('outli
 test('shows the heading hierarchy, ignores code, and navigates on click', async () => {
   const sandbox = createSandbox()
   writeFileSync(path.join(sandbox.workspace, 'outline.md'), OUTLINE_DOC)
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await expect(page.getByTestId('outline')).toContainText('Open a Markdown document')
     await openFromTree(page, 'outline.md')
@@ -84,7 +84,7 @@ test('shows the heading hierarchy, ignores code, and navigates on click', async 
 test('groups collapse and expand, with keyboard support', async () => {
   const sandbox = createSandbox()
   writeFileSync(path.join(sandbox.workspace, 'outline.md'), OUTLINE_DOC)
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await openFromTree(page, 'outline.md')
     const installation = items(page).filter({ hasText: 'Installation' })
@@ -106,7 +106,7 @@ test('groups collapse and expand, with keyboard support', async () => {
 
 test('updates while typing and works with the preview hidden', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await page.keyboard.press(`${mod}+Shift+V`)
     await expect(page.getByTestId('preview-panel')).toBeHidden()
@@ -129,7 +129,7 @@ test('updates while typing and works with the preview hidden', async () => {
 test('Go to Heading picks a heading from the palette', async () => {
   const sandbox = createSandbox()
   writeFileSync(path.join(sandbox.workspace, 'outline.md'), OUTLINE_DOC)
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await openFromTree(page, 'outline.md')
     await focusEditor(page)
@@ -176,7 +176,7 @@ const TOC_DOC = [
 
 test('inserts a table of contents whose links match the preview anchors', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(
       page,
@@ -224,7 +224,7 @@ test('updating changes only the managed region', async () => {
   const sandbox = createSandbox()
   const file = path.join(sandbox.workspace, 'guide.md')
   writeFileSync(file, TOC_DOC.replace(/\n/g, '\r\n'))
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await openFromTree(page, 'guide.md')
     await focusEditor(page)

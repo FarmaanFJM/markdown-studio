@@ -7,7 +7,7 @@ import {
   editorText,
   focusEditor,
   goToLine,
-  launchWithWorkspace,
+  launchEditing,
   mod,
   newDocumentWith,
   openFromTree,
@@ -38,7 +38,7 @@ test.describe('path and anchor completion', () => {
     const sandbox = createSandbox()
     mkdirSync(path.join(sandbox.workspace, 'docs', 'api'))
     writeFileSync(path.join(sandbox.workspace, 'docs', 'api', 'rest.md'), '# REST\n')
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page)
       await typeLink(page, '[Documentation]', 'docs/')
@@ -66,7 +66,7 @@ test.describe('path and anchor completion', () => {
 
   test('is relative to the folder of the document that is being edited', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await openFromTree(page, 'docs', 'guide.md')
       await endOfDocument(page)
@@ -91,7 +91,7 @@ test.describe('path and anchor completion', () => {
     for (const name of ['Team Photo (2024).png', 'naïve-café_überblick.png']) {
       copyFileSync(path.join(sandbox.external, name), path.join(sandbox.workspace, 'assets', name))
     }
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page)
       await typeLink(page, '![Photo]', 'assets/')
@@ -115,7 +115,7 @@ test.describe('path and anchor completion', () => {
 
   test('suggests heading anchors for this document and for another file', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page, '# Intro\n\n## Setup Steps\n\nSee [steps](#')
       await expect(suggestions(page).filter({ hasText: 'Setup Steps' })).toBeVisible()
@@ -138,7 +138,7 @@ test.describe('path and anchor completion', () => {
 
   test('does not suggest paths outside links, or inside code', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page)
       await page.keyboard.type('plain text (docs/')
@@ -159,7 +159,7 @@ test.describe('reference validation', () => {
 
   test('flags missing files, images and anchors but not valid references', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await openFromTree(page, 'README.md')
       // The fixture README only has valid links, images and anchors.
@@ -194,7 +194,7 @@ test.describe('reference validation', () => {
       path.join(sandbox.external, 'Team Photo (2024).png'),
       path.join(sandbox.workspace, 'assets', 'Team Photo (2024).png')
     )
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(
         page,
@@ -214,7 +214,7 @@ test.describe('reference validation', () => {
 
   test('offers a safe fix for a moved file and applies it as one undoable edit', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page, 'Read [the guide](old/guide.md#installation).')
       await expect(warnings(page)).toHaveText('1')
@@ -237,7 +237,7 @@ test.describe('reference validation', () => {
 
   test('revalidates when files appear or disappear on disk', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page, '[later](later.md)')
       await expect(warnings(page)).toHaveText('1')
@@ -250,7 +250,7 @@ test.describe('reference validation', () => {
 
   test('reports tables the renderer would not display as written', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page, '| a | b | c |\n|---|---|\n| 1 | 2 | 3 |\n')
       await expect(warnings(page)).toHaveText('1')
@@ -270,7 +270,7 @@ test.describe('style checks', () => {
 
   test('reports spacing problems as notes and fixes them on request', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page, '# Title\n\n\nText   \n## Next\n')
       await expect(notes(page)).not.toHaveText('0 notes')
@@ -289,7 +289,7 @@ test.describe('style checks', () => {
     const file = path.join(sandbox.workspace, 'untidy.md')
     const text = '# Title\n\n\nText   \n'
     writeFileSync(file, text)
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await openFromTree(page, 'untidy.md')
       await expect(notes(page)).not.toHaveText('0 notes')

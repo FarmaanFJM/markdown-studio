@@ -1,7 +1,7 @@
 import { getCommand } from '../../commands/registry'
 import { monaco } from '../monaco'
 import { tableAtLine } from '@shared/markdown/analysis'
-import { analysisFor } from './model'
+import { analysisFor, LARGE_DOCUMENT_CHARACTERS } from './model'
 import { isInTableCell } from './tableCommands'
 
 type Editor = monaco.editor.IStandaloneCodeEditor
@@ -47,7 +47,11 @@ export function installContextMenu(editor: Editor): monaco.IDisposable {
     if (timer) clearTimeout(timer)
     timer = setTimeout(() => {
       timer = null
-      inTable.set(editor.getModel() !== null && isInTableCell(editor))
+      const model = editor.getModel()
+      // Re-parsing a huge document after every pause would be felt while typing; for those the
+      // key is only set when the context menu is opened with the mouse.
+      if (!model || model.getValueLength() > LARGE_DOCUMENT_CHARACTERS) return
+      inTable.set(isInTableCell(editor))
     }, 120)
   }
   const disposables: monaco.IDisposable[] = [

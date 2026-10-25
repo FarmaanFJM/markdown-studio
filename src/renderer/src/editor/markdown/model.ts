@@ -48,3 +48,36 @@ export function protectedLines(model: monaco.editor.ITextModel): (line: number) 
   const analysis = analysisFor(model)
   return (line) => isInCodeBlock(analysis, line)
 }
+
+/** Above this size, per-keystroke features avoid re-parsing the whole document. */
+export const LARGE_DOCUMENT_CHARACTERS = 200_000
+
+const FENCE_PATTERN = /^[ \t>]*(`{3,}|~{3,})(.*)$/
+
+/**
+ * Whether `line` (0-based) is inside a fenced code block, found by scanning fence markers
+ * instead of parsing. Used for very large documents, where a full parse on every Enter would
+ * be noticeable; it follows CommonMark's fence rules (matching character, closing at least as
+ * long, no info string on the closing fence).
+ */
+export function insideFenceByScan(model: monaco.editor.ITextModel, line: number): boolean {
+  let open: { char: string; length: number } | null = null
+  for (let number = 1; number <= line; number++) {
+    const match = FENCE_PATTERN.exec(model.getLineContent(number))
+    if (!match) continue
+    const char = match[1][0]
+    if (!open) {
+      if (char === '`' && match[2].includes('`')) continue // an inline code span, not a fence
+      open = { char, length: match[1].length }
+    } else if (char === open.char && match[1].length >= open.length && match[2].trim() === '') {
+      open = null
+    }
+  }
+  return open !== null
+}
+
+/** True for code blocks, using the cheap scan for very large documents. */
+export function isCodeAt(model: monaco.editor.ITextModel, line: number): boolean {
+  if (model.getValueLength() > LARGE_DOCUMENT_CHARACTERS) return insideFenceByScan(model, line)
+  return isInCodeBlock(analysisFor(model), line)
+}

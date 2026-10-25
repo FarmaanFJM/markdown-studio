@@ -4,7 +4,7 @@ import {
   closeApp,
   createSandbox,
   editorText,
-  launchWithWorkspace,
+  launchEditing,
   mod,
   newDocumentWith,
   saveAndRead
@@ -12,7 +12,7 @@ import {
 
 test('formats selections with shortcuts and toggles them off again', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page, 'some important text here')
     // Select "important text" with the keyboard: Home, then move and extend.
@@ -40,7 +40,7 @@ test('formats selections with shortcuts and toggles them off again', async () =>
 
 test('continues lists, numbers them and leaves them on an empty item', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page)
     await page.keyboard.type('- one')
@@ -82,7 +82,7 @@ const suggestWidget = (page: import('@playwright/test').Page) =>
 
 test('offers block suggestions on request and inserts snippets with placeholders', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page)
     // Ordinary typing never opens a menu.
@@ -122,7 +122,7 @@ test('offers block suggestions on request and inserts snippets with placeholders
 
 test('slash commands insert blocks, and a fenced code block puts the cursor inside', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page)
     await page.keyboard.type('/')
@@ -150,7 +150,7 @@ test('slash commands insert blocks, and a fenced code block puts the cursor insi
 
 test('link and image insertion wrap the selection and offer placeholders', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page, 'read the docs')
     await page.keyboard.press('Shift+Home')

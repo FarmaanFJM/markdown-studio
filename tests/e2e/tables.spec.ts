@@ -8,7 +8,7 @@ import {
   focusEditor,
   focusEditorBehindDialog,
   goToLine,
-  launchWithWorkspace,
+  launchEditing,
   mod,
   newDocumentWith,
   openFromTree,
@@ -48,7 +48,7 @@ test('formats only the table under the cursor and keeps CRLF line endings', asyn
   const sandbox = createSandbox()
   const file = path.join(sandbox.workspace, 'tables.md')
   writeFileSync(file, SOURCE.join('\r\n'))
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await openFromTree(page, 'tables.md')
     await goToLine(page, 5)
@@ -71,7 +71,7 @@ test('formats all tables from the palette, skipping code, and undo restores them
   const sandbox = createSandbox()
   const file = path.join(sandbox.workspace, 'tables.md')
   writeFileSync(file, SOURCE.join('\n'))
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await openFromTree(page, 'tables.md')
     await focusEditor(page)
@@ -94,7 +94,7 @@ test('formats all tables from the palette, skipping code, and undo restores them
 
 test('Tab moves between cells, tidies the table and adds a row at the end', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page, '|a|b|\n|-|-|\n|1|2|')
     await page.keyboard.press(`${mod}+Home`)
@@ -120,7 +120,7 @@ test('Tab moves between cells, tidies the table and adds a row at the end', asyn
 
 test('inserts and deletes rows and columns and changes alignment', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page, '| a | b |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |')
     await goToLine(page, 3)
@@ -153,7 +153,7 @@ test('inserts and deletes rows and columns and changes alignment', async () => {
 
 test('refuses to format a table that would lose cells', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     const original = '|a|b|\n|-|-|\n|1|2|3|'
     await newDocumentWith(page, original)
@@ -171,7 +171,7 @@ test.describe('graphical table editor', () => {
 
   test('applies edits to the source as one undoable change', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page, SOURCE_TABLE)
       await goToLine(page, 5)
@@ -203,7 +203,7 @@ test.describe('graphical table editor', () => {
 
   test('cancel leaves the document untouched', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page, SOURCE_TABLE)
       await goToLine(page, 5)
@@ -227,7 +227,7 @@ test.describe('graphical table editor', () => {
 
   test('does not silently overwrite a table that changed while it was open', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page, SOURCE_TABLE)
       await goToLine(page, 5)
@@ -258,7 +258,7 @@ test.describe('graphical table editor', () => {
 
   test('inserts a new table designed in the grid', async () => {
     const sandbox = createSandbox()
-    const { app, page } = await launchWithWorkspace(sandbox)
+    const { app, page } = await launchEditing(sandbox)
     try {
       await newDocumentWith(page, 'Intro')
       await page.keyboard.press(`${mod}+Shift+T`)

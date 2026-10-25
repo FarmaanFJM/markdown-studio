@@ -7,7 +7,7 @@ import {
   editorText,
   focusEditor,
   launch,
-  launchWithWorkspace,
+  launchEditing,
   mod,
   newDocumentWith,
   openFromTree,
@@ -32,7 +32,7 @@ async function openTemplates(page: Page, via = 'New File from Template'): Promis
 
 test('lists the built-in templates and creates a document with expanded variables', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await page.keyboard.press(`${mod}+Shift+N`)
     const list = page.getByTestId('template-list')
@@ -87,7 +87,7 @@ test('lists the built-in templates and creates a document with expanded variable
 
 test('the author is remembered but never invented, and can be left empty', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await page.keyboard.press(`${mod}+Shift+N`)
     await templateItem(page, 'Report').click()
@@ -110,7 +110,7 @@ test('cancelling creates nothing, and an existing document is never overwritten'
   const existing = path.join(sandbox.workspace, 'README.md')
   const original = readFileSync(existing, 'utf8')
   const before = readdirSync(sandbox.workspace).sort()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await page.keyboard.press(`${mod}+Shift+N`)
     await templateItem(page, 'Project notes').click()
@@ -141,7 +141,7 @@ test('cancelling creates nothing, and an existing document is never overwritten'
 
 test('creates the document in the folder selected in the Explorer', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await treeRow(page, 'docs').click()
     await page.keyboard.press(`${mod}+Shift+N`)
@@ -160,7 +160,7 @@ test('creates the document in the folder selected in the Explorer', async () => 
 
 test('saves the active document as a workspace template that survives a restart', async () => {
   const sandbox = createSandbox()
-  let { app, page } = await launchWithWorkspace(sandbox)
+  let { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page, '# {{title}}\n\nOwner: {{author}}\nCreated {{date}}\n\n{{cursor}}')
     await runPaletteCommand(page, 'Save Document as Template')
@@ -184,7 +184,7 @@ test('saves the active document as a workspace template that survives a restart'
     await closeApp(app)
   }
 
-  ;({ app, page } = await launchWithWorkspace(sandbox))
+  ;({ app, page } = await launchEditing(sandbox))
   try {
     await page.keyboard.press(`${mod}+Shift+N`)
     await expect(
@@ -207,7 +207,7 @@ test('saves the active document as a workspace template that survives a restart'
 
 test('global templates are available in every folder, workspace ones only in theirs', async () => {
   const sandbox = createSandbox()
-  let { app, page } = await launchWithWorkspace(sandbox)
+  let { app, page } = await launchEditing(sandbox)
   try {
     await openTemplates(page, 'Manage Templates and Snippets')
     await page.getByRole('button', { name: 'New Template…' }).click()
@@ -257,7 +257,7 @@ test('global templates are available in every folder, workspace ones only in the
 
 test('edits, duplicates and deletes templates, asking before deleting', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await openTemplates(page, 'Manage Templates and Snippets')
     await page.getByRole('button', { name: 'New Template…' }).click()
@@ -302,7 +302,7 @@ test('edits, duplicates and deletes templates, asking before deleting', async ()
 
 test('saved snippets are inserted from the palette, slash menu and completion list', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await newDocumentWith(page, 'Release checklist: ship it')
     await page.keyboard.press('Home')
@@ -338,7 +338,7 @@ test('saved snippets are inserted from the palette, slash menu and completion li
 
 test('local images are made portable on save and re-pointed for each new document', async () => {
   const sandbox = createSandbox()
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await openFromTree(page, 'README.md')
     await runPaletteCommand(page, 'Save Document as Template')
@@ -380,7 +380,7 @@ test('local images are made portable on save and re-pointed for each new documen
 test('references that cannot be resolved are reported before the document is created', async () => {
   const sandbox = createSandbox()
   mkTemplate(sandbox, 'broken-refs', '# {{title}}\n\n![Missing](images/nowhere.png)\n')
-  const { app, page } = await launchWithWorkspace(sandbox)
+  const { app, page } = await launchEditing(sandbox)
   try {
     await page.keyboard.press(`${mod}+Shift+N`)
     await templateItem(page, 'Broken refs').click()
