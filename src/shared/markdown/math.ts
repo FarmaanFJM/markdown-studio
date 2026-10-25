@@ -141,7 +141,7 @@ function mathBlock(
   }
 
   const afterOpen = lineText.slice(2)
-  let content = ''
+  let content: string
   let nextLine = startLine + 1
   let closed = false
 

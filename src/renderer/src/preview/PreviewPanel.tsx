@@ -1,12 +1,23 @@
-import { FileCode2, FileDown, X } from 'lucide-react'
+import { FileCode2, FileDown, Palette, X } from 'lucide-react'
 import type { PreviewKind } from '@shared/settings'
 import { commands } from '../commands/commands'
+import { openDocumentSettings } from '../commands/phase3'
+import { useActiveSetup, useExportSetup } from '../state/exportSetup'
+import { usePresentation } from '../state/presentation'
+import { BUILTIN_THEMES } from '@shared/presentation/theme'
 import { useDocuments } from '../state/documents'
 import { HtmlPreview } from './HtmlPreview'
 import { PdfPreview } from './PdfPreview'
 
 export function PreviewPanel({ kind }: { kind: PreviewKind }) {
   const hasDocument = useDocuments((s) => s.activeId !== null)
+  const workspaceOverride = usePresentation((s) => s.workspace)
+  const themeName = usePresentation((s) => BUILTIN_THEMES[s.effective.themeId].name)
+  const setup = useActiveSetup()
+  const presets = useExportSetup((s) => s.presets)
+  const setupLabel = setup.presetId
+    ? (presets.find((p) => p.id === setup.presetId)?.name ?? 'Preset')
+    : 'Settings defaults'
 
   return (
     <section
@@ -32,6 +43,21 @@ export function PreviewPanel({ kind }: { kind: PreviewKind }) {
           ))}
         </div>
         <span className="toolbar-spacer" />
+        <button
+          type="button"
+          className="chip-button"
+          data-testid="theme-chip"
+          title="Document theme — click to change it in Settings"
+          onClick={openDocumentSettings}
+        >
+          <Palette size={13} aria-hidden="true" />
+          <span>{themeName}</span>
+          {workspaceOverride && (
+            <span className="chip-badge" data-testid="workspace-override-badge">
+              Workspace
+            </span>
+          )}
+        </button>
         <button
           type="button"
           className="icon-button"
@@ -72,7 +98,7 @@ export function PreviewPanel({ kind }: { kind: PreviewKind }) {
             )}
           </>
         ) : (
-          <PdfPreview />
+          <PdfPreview label={setupLabel} />
         )}
       </div>
     </section>

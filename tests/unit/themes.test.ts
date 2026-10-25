@@ -211,7 +211,7 @@ describe('configuration backward compatibility', () => {
     expect(settings.document.pdf.pageSize).toBe('A4')
     expect(settings.document.pdf.margins.top).toBe(20)
     expect(settings.document.pdf.scale).toBe(1)
-    expect(settings.document.exportPreset).toBe('standard-pdf')
+    expect(settings.document.exportPreset).toBe('')
   })
 
   it('round-trips valid document settings', () => {

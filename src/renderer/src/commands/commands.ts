@@ -1,22 +1,22 @@
 import { LIMITS, DEFAULT_SETTINGS, type ExplorerMode, type PreviewMode } from '@shared/settings'
-import { basename, dirname, joinPath, stripExtension } from '@shared/paths'
 import type { MenuCommandMessage } from '@shared/ipc'
 import { api, errorMessage } from '../bridge'
-import { documentModels, getActiveEditor, runEditorAction } from '../editor/models'
-import { buildPdfSourceHtml, buildStandaloneHtml, type ExportSource } from '../markdown/exporters'
+import { getActiveEditor, runEditorAction } from '../editor/models'
+import { exportSourceFor } from '../export/source'
+import { runExport } from '../export/runExport'
+import { openExportDialog } from '../presentation/openExportDialog'
+import { currentSetup } from '../state/exportSetup'
 import {
   activateDocument,
   activeDocument,
   closeDocument,
   closeDocumentsIn,
-  documentName,
   newDocument,
   openDocument,
   saveAllDocuments,
   saveDocument,
   saveDocumentAs,
-  useDocuments,
-  type EditorDocument
+  useDocuments
 } from '../state/documents'
 import { refreshSettings, useSettings } from '../state/settings'
 import { dialogs, notify } from '../state/ui'
@@ -27,32 +27,7 @@ function settings() {
   return useSettings.getState().settings
 }
 
-export function exportSourceFor(doc: EditorDocument): ExportSource | null {
-  const model = documentModels.get(doc.id)
-  if (!model) return null
-  return {
-    source: model.getValue(),
-    fileName: documentName(doc),
-    context: {
-      documentDirectory: doc.path ? dirname(doc.path) : null,
-      workspaceRoot: useWorkspace.getState().root
-    }
-  }
-}
-
-function exportDefaultPath(doc: EditorDocument, extension: string): string {
-  const name = `${stripExtension(documentName(doc))}${extension}`
-  if (doc.path) return joinPath(dirname(doc.path), name)
-  const root = useWorkspace.getState().root
-  return root ? joinPath(root, name) : name
-}
-
-function revealAction(path: string) {
-  return {
-    label: 'Show in folder',
-    run: () => void api.shell.showItemInFolder(path).catch(() => undefined)
-  }
-}
+export { exportSourceFor } from '../export/source'
 
 async function openFolder(path?: string): Promise<void> {
   try {
@@ -117,40 +92,16 @@ export const commands = {
   nextTab: () => cycleTab(1),
   previousTab: () => cycleTab(-1),
 
-  async exportHtml() {
-    const doc = activeDocument()
-    const source = doc && exportSourceFor(doc)
-    if (!doc || !source) return notify('info', 'Open a Markdown document to export it.')
-    try {
-      const { html, missingImages } = await buildStandaloneHtml(source)
-      const target = await api.render.exportHtml(html, exportDefaultPath(doc, '.html'))
-      if (!target) return
-      if (missingImages.length > 0) {
-        notify(
-          'error',
-          `Exported ${basename(target)}, but these images were not found: ${missingImages.join(', ')}`
-        )
-      } else {
-        notify('success', `Exported ${basename(target)}.`, revealAction(target))
-      }
-    } catch (error) {
-      notify('error', `HTML export failed: ${errorMessage(error)}`)
-    }
-  },
+  exportHtml: () => void openExportDialog('html'),
+  exportPdf: () => void openExportDialog('pdf'),
+  exportDialog: () => void openExportDialog(),
 
-  async exportPdf() {
+  /** Exports with the active preset (or the Settings defaults) without opening the dialog. */
+  async exportWithActiveSetup() {
     const doc = activeDocument()
     const source = doc && exportSourceFor(doc)
     if (!doc || !source) return notify('info', 'Open a Markdown document to export it.')
-    try {
-      const target = await api.render.exportPdf(
-        buildPdfSourceHtml(source),
-        exportDefaultPath(doc, '.pdf')
-      )
-      if (target) notify('success', `Exported ${basename(target)}.`, revealAction(target))
-    } catch (error) {
-      notify('error', `PDF export failed: ${errorMessage(error)}`)
-    }
+    await runExport(doc, source, currentSetup())
   },
 
   undo: () => runEditorAction('undo'),
@@ -209,6 +160,7 @@ export function runMenuCommand({ command, argument }: MenuCommandMessage): void 
     'file.saveAll': commands.saveAll,
     'file.exportHtml': commands.exportHtml,
     'file.exportPdf': commands.exportPdf,
+    'file.export': commands.exportDialog,
     'file.closeEditor': commands.closeEditor,
     'file.closeFolder': commands.closeFolder,
     'edit.undo': commands.undo,

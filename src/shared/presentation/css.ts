@@ -78,6 +78,11 @@ const FORBIDDEN_PROPERTIES = new Set(['behavior', '-moz-binding', '-ms-behavior'
 const SAFE_DATA_URL =
   /^data:(?:image\/(?:png|jpe?g|gif|webp|avif|bmp|svg\+xml)|font\/(?:woff2?|ttf|otf)|application\/(?:font-woff2?|x-font-(?:woff2?|ttf|otf)|vnd\.ms-fontobject))[;,]/i
 
+export interface CssOptions {
+  /** Allow `url(#id)` references to elements of the same document (SVG paint, markers). */
+  fragmentUrls?: boolean
+}
+
 export function isSafeDataUrl(value: string): boolean {
   return SAFE_DATA_URL.test(value.trim())
 }
@@ -107,14 +112,15 @@ function scanTokens(text: string, report: (message: string) => void): void {
   })
 }
 
-function checkUrl(value: string): string | null {
+function checkUrl(value: string, options: CssOptions): string | null {
   if (isSafeDataUrl(value)) return null
+  if (options.fragmentUrls && /^\s*#[A-Za-z0-9_:.-]+\s*$/.test(value)) return null
   if (/^\s*data:/i.test(value)) return 'Only image and font data: URLs are allowed in url().'
   return 'url() may only reference embedded data: images or fonts, not files or web addresses.'
 }
 
 /** Walks the tree, reports violations and removes the offending declarations and rules. */
-function enforce(ast: csstree.CssNode): CssProblem[] {
+function enforce(ast: csstree.CssNode, options: CssOptions): CssProblem[] {
   const problems: CssProblem[] = []
   const removals = new Map<csstree.ListItem<csstree.CssNode>, Slot['list']>()
   let declaration: Slot | null = null
@@ -154,7 +160,7 @@ function enforce(ast: csstree.CssNode): CssProblem[] {
           break
         }
         case 'Url': {
-          const message = checkUrl(node.value)
+          const message = checkUrl(node.value, options)
           if (message) flag(message)
           break
         }
@@ -209,7 +215,8 @@ function neutralise(css: string): string {
  */
 export function analyzeCss(
   text: string,
-  context: 'stylesheet' | 'declarations' = 'stylesheet'
+  context: 'stylesheet' | 'declarations' = 'stylesheet',
+  options: CssOptions = {}
 ): CssAnalysis {
   if (text.length > CSS_LIMITS.bytes) {
     return {
@@ -227,7 +234,7 @@ export function analyzeCss(
   } catch (error) {
     return { css: '', problems: [problem(`CSS could not be parsed: ${(error as Error).message}`)] }
   }
-  const problems = enforce(ast)
+  const problems = enforce(ast, options)
 
   // Token-level pass over the original text: catches escaped function names that the parser
   // folds into ordinary-looking nodes.
@@ -271,9 +278,31 @@ export function validateCustomCss(text: string): CssValidation {
   return { ok: true, css: analysis.css }
 }
 
+/**
+ * Plain declarations (no functions, strings, escapes or at-rules) cannot reference anything. The
+ * overwhelming majority of `style` attributes, including all of KaTeX's, are of this shape, so
+ * they skip the parser.
+ */
+const PLAIN_DECLARATION = /^\s*[a-z][a-z-]*\s*:[-+.\w\s%#,]*$/i
+
+function isPlainDeclarationList(value: string): boolean {
+  return value.split(';').every((part) => part.trim() === '' || PLAIN_DECLARATION.test(part))
+}
+const STYLE_CACHE_LIMIT = 4000
+const styleCache = new Map<string, string>()
+
 /** For `style="..."` attributes of Markdown HTML: offending declarations are dropped. */
-export function sanitizeStyleAttribute(value: string): string {
-  return analyzeCss(value, 'declarations').css
+export function sanitizeStyleAttribute(value: string, options: CssOptions = {}): string {
+  const key = options.fragmentUrls ? `f${value}` : value
+  const hit = styleCache.get(key)
+  if (hit !== undefined) return hit
+  const result =
+    isPlainDeclarationList(value) && !/behavior|binding|expression/i.test(value)
+      ? value.trim()
+      : analyzeCss(value, 'declarations', options).css
+  if (styleCache.size >= STYLE_CACHE_LIMIT) styleCache.delete(styleCache.keys().next().value!)
+  styleCache.set(key, result)
+  return result
 }
 
 /** For `<style>` blocks of Markdown HTML and Mermaid output: offending rules are dropped. */

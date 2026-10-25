@@ -38,7 +38,7 @@ export interface DocumentSettings {
   diagrams: { enabled: boolean }
   pdf: PdfOptions
   html: HtmlOptions
-  /** The export preset last used in the Export dialog. */
+  /** The export preset last used in the Export dialog; empty means the defaults above. */
   exportPreset: string
 }
 
@@ -52,7 +52,7 @@ export const DEFAULT_DOCUMENT_SETTINGS: DocumentSettings = {
   diagrams: { enabled: true },
   pdf: DEFAULT_PDF_OPTIONS,
   html: { embedImages: true },
-  exportPreset: 'standard-pdf'
+  exportPreset: ''
 }
 
 export const CSS_PATH_MAX = 1024
@@ -88,7 +88,8 @@ export function sanitizeDocumentSettings(input: unknown): DocumentSettings {
   const diagrams = isObject(v.diagrams) ? v.diagrams : {}
   const html = isObject(v.html) ? v.html : {}
   const preset =
-    typeof v.exportPreset === 'string' && /^[a-z0-9][a-z0-9-]{0,63}$/.test(v.exportPreset)
+    typeof v.exportPreset === 'string' &&
+    (v.exportPreset === '' || /^[a-z0-9][a-z0-9-]{0,63}$/.test(v.exportPreset))
       ? v.exportPreset
       : d.exportPreset
   return {

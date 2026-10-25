@@ -61,9 +61,27 @@ const api: MarkdownStudioApi = {
     delete: (scope, id) => ipcRenderer.invoke(IPC.templatesDelete, scope, id)
   },
   render: {
-    pdf: (html) => ipcRenderer.invoke(IPC.renderPdf, html),
-    exportPdf: (html, defaultPath) => ipcRenderer.invoke(IPC.exportPdf, html, defaultPath),
-    exportHtml: (html, defaultPath) => ipcRenderer.invoke(IPC.exportHtml, html, defaultPath)
+    pdf: (html, options, values) => ipcRenderer.invoke(IPC.renderPdf, html, options, values)
+  },
+  export: {
+    run: (request) => ipcRenderer.invoke(IPC.exportRun, request),
+    cancel: (jobId) => ipcRenderer.invoke(IPC.exportCancel, jobId)
+  },
+  presets: {
+    list: () => ipcRenderer.invoke(IPC.presetsList),
+    save: (scope, preset) => ipcRenderer.invoke(IPC.presetsSave, scope, preset),
+    delete: (scope, id) => ipcRenderer.invoke(IPC.presetsDelete, scope, id),
+    restoreBuiltins: (scope) => ipcRenderer.invoke(IPC.presetsRestore, scope)
+  },
+  presentation: {
+    getWorkspace: () => ipcRenderer.invoke(IPC.presentationGetWorkspace),
+    setWorkspace: (overrides) => ipcRenderer.invoke(IPC.presentationSetWorkspace, overrides),
+    pickCss: (scope) => ipcRenderer.invoke(IPC.cssPick, scope),
+    readCss: (path) => ipcRenderer.invoke(IPC.cssRead, path)
+  },
+  diagram: {
+    render: (request) => ipcRenderer.invoke(IPC.diagramRender, request),
+    cancel: (ids) => ipcRenderer.invoke(IPC.diagramCancel, ids)
   },
   shell: {
     openExternal: (url) => ipcRenderer.invoke(IPC.shellOpenExternal, url),

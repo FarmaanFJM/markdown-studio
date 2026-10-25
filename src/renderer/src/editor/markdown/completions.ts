@@ -9,6 +9,7 @@ import { formatLinkDestination } from '@shared/imageReference'
 import { baseDirectory, resolveLocalPath, safeDecode } from '@shared/markdown/resolve'
 import {
   BUILT_IN_SNIPPETS,
+  MERMAID_STARTERS,
   snippetPreview,
   type SnippetDefinition
 } from '@shared/markdown/snippets'
@@ -42,6 +43,7 @@ const FENCE_LANGUAGES = [
   'json',
   'kotlin',
   'markdown',
+  'mermaid',
   'php',
   'powershell',
   'python',
@@ -402,6 +404,31 @@ async function provide(
           range,
           sortText: orderOf(index)
         }))
+      }
+    }
+    // An empty mermaid block offers diagram starters (on request only, never while typing).
+    const fence = analysis.fences.find(
+      (f) => line0 > f.start && line0 < (f.closed ? f.end - 1 : f.end)
+    )
+    if (fence && /^mermaid\b/i.test(fence.info)) {
+      const previousEmpty = analysis.lines
+        .slice(fence.start + 1, line0)
+        .every((text) => text.trim() === '')
+      const typed = /^(\s*)([\w-]*)$/.exec(before)
+      if (previousEmpty && typed) {
+        const range = lineRange(typed[1].length + 1)
+        return {
+          suggestions: MERMAID_STARTERS.map((starter, index) => ({
+            label: starter.label,
+            kind: CompletionItemKind.Snippet,
+            detail: starter.detail,
+            documentation: previewDocs(snippetPreview(starter.body)),
+            insertText: starter.body,
+            insertTextRules: CompletionItemInsertTextRule.InsertAsSnippet,
+            range,
+            sortText: orderOf(index)
+          }))
+        }
       }
     }
     return none

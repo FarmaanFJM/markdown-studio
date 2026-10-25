@@ -11,6 +11,7 @@ import { insertTableOfContents, updateTableOfContents } from '../outline/toc'
 import { openCommandPalette, openHeadingPicker } from '../palette/openPalette'
 import { editTableVisually, insertTableVisually } from '../tables/openTableEditor'
 import { registerCommands } from './registry'
+import './phase3'
 
 startTemplateStore()
 

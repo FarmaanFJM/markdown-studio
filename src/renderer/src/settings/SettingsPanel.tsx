@@ -9,6 +9,7 @@ import {
 import { api } from '../bridge'
 import { refreshSettings, useSettings } from '../state/settings'
 import { notify } from '../state/ui'
+import { DocumentSettings } from './DocumentSettings'
 
 function Toggle({
   id,
@@ -170,6 +171,8 @@ export function SettingsPanel() {
             <option value="light">Light</option>
           </select>
         </Row>
+
+        <DocumentSettings />
 
         <h3 className="settings-section">Editor</h3>
         <Row label="Font size" htmlFor="setting-font-size">

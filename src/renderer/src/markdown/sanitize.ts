@@ -1,4 +1,5 @@
 import DOMPurify, { type Config } from 'dompurify'
+import { sanitizeStyleAttribute, sanitizeStylesheet } from '@shared/presentation/css'
 
 /**
  * Sanitisation for rendered Markdown.
@@ -30,6 +31,9 @@ const CONFIG: Config = {
     'template'
   ],
   FORBID_ATTR: ['srcset', 'action', 'formaction', 'ping', 'autofocus'],
+  // KaTeX writes an accessible MathML copy of every equation; DOMPurify keeps MathML except
+  // these two wrappers by default.
+  ADD_TAGS: ['semantics', 'annotation'],
   ALLOW_UNKNOWN_PROTOCOLS: false,
   FORCE_BODY: true
 }
@@ -42,8 +46,23 @@ export interface SanitizeOptions {
 const purifier = DOMPurify(window)
 let activeOptions: SanitizeOptions | null = null
 
+// CSS inside Markdown HTML follows the same policy as custom CSS: nothing may load a file or a
+// web address. Offending declarations and rules are dropped, the rest is kept.
+purifier.addHook('uponSanitizeElement', (node, data) => {
+  if (data.tagName === 'style') {
+    const element = node as Element
+    element.textContent = sanitizeStylesheet(element.textContent ?? '')
+  }
+})
+
 purifier.addHook('afterSanitizeAttributes', (node) => {
   const element = node as Element
+  const style = element.getAttribute('style')
+  if (style !== null) {
+    const cleaned = sanitizeStyleAttribute(style)
+    if (cleaned) element.setAttribute('style', cleaned)
+    else element.removeAttribute('style')
+  }
   switch (element.tagName) {
     case 'IMG': {
       const original = element.getAttribute('src')

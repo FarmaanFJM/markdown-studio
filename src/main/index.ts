@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import {
   app,
   BrowserWindow,
@@ -16,8 +17,12 @@ import iconPath from '../../resources/build/icon.png?asset'
 import { buildApplicationMenu } from './menu'
 import { AccessControl } from './services/accessControl'
 import { AssetService } from './services/assetService'
+import { DiagramService } from './services/diagramService'
+import { ExportService } from './services/exportService'
 import { FileService } from './services/fileService'
 import { PdfService } from './services/pdfService'
+import { PresentationService } from './services/presentationService'
+import { PresetService } from './services/presetService'
 import { MsFileProtocol, registerSchemePrivileges } from './services/protocol'
 import { SettingsService } from './services/settingsService'
 import { TemplateService } from './services/templateService'
@@ -39,6 +44,28 @@ const settings = new SettingsService(path.join(app.getPath('userData'), 'setting
 const templates = new TemplateService(access, path.join(app.getPath('userData'), 'templates'))
 const msfile = new MsFileProtocol(access)
 const pdf = new PdfService(msfile)
+const presets = new PresetService(access, path.join(app.getPath('userData'), 'export-presets'))
+const presentation = new PresentationService(access, () => mainWindow)
+const exportService = new ExportService({
+  pdf,
+  chooseTarget: async (format, defaultPath) => {
+    if (!mainWindow) return null
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: format === 'pdf' ? 'Export as PDF' : 'Export as HTML',
+      defaultPath,
+      properties: ['showOverwriteConfirmation', 'createDirectory'],
+      filters:
+        format === 'pdf'
+          ? [{ name: 'PDF Document', extensions: ['pdf'] }]
+          : [{ name: 'HTML Document', extensions: ['html', 'htm'] }]
+    })
+    return result.canceled || !result.filePath ? null : result.filePath
+  },
+  exported: (file) => {
+    exportedFiles.add(file)
+  }
+})
+let diagrams: DiagramService | null = null
 
 let mainWindow: BrowserWindow | null = null
 let allowClose = false
@@ -119,8 +146,16 @@ async function openWorkspace(folder: string): Promise<string> {
   return resolved
 }
 
-function ensureExtension(file: string, extension: string): string {
-  return path.extname(file).toLowerCase() === extension ? file : `${file}${extension}`
+/** The isolated Mermaid renderer is created on first use. */
+function getDiagrams(): DiagramService {
+  if (!diagrams) {
+    const dev = rendererUrl()
+    const hostUrl = dev
+      ? `${dev.replace(/\/$/, '')}/diagram-host.html`
+      : pathToFileURL(path.join(__dirname, '../renderer/diagram-host.html')).toString()
+    diagrams = new DiagramService(hostUrl)
+  }
+  return diagrams
 }
 
 function registerIpc(): void {
@@ -239,37 +274,29 @@ function registerIpc(): void {
     assets.importImage(source, target)
   )
 
-  handle(IPC.renderPdf, async (html: string) => {
-    if (typeof html !== 'string') throw new Error('Invalid document.')
-    return new Uint8Array(await pdf.print(html))
-  })
-  handle(IPC.exportPdf, async (html: string, defaultPath: string) => {
-    if (!mainWindow || typeof html !== 'string') return null
-    const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'Export as PDF',
-      defaultPath,
-      filters: [{ name: 'PDF Document', extensions: ['pdf'] }]
-    })
-    if (result.canceled || !result.filePath) return null
-    const target = ensureExtension(result.filePath, '.pdf')
-    await fs.writeFile(target, await pdf.print(html))
-    exportedFiles.add(target)
-    return target
-  })
-  handle(IPC.exportHtml, async (html: string, defaultPath: string) => {
-    if (!mainWindow || typeof html !== 'string') return null
-    const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'Export as HTML',
-      defaultPath,
-      filters: [{ name: 'HTML Document', extensions: ['html', 'htm'] }]
-    })
-    if (result.canceled || !result.filePath) return null
-    const ext = path.extname(result.filePath).toLowerCase()
-    const target = ext === '.html' || ext === '.htm' ? result.filePath : `${result.filePath}.html`
-    await fs.writeFile(target, html, 'utf8')
-    exportedFiles.add(target)
-    return target
-  })
+  handle(
+    IPC.renderPdf,
+    (html: string, options: unknown, values: { title?: unknown; file?: unknown }) =>
+      exportService.preview(html, options, {
+        title: typeof values?.title === 'string' ? values.title : '',
+        file: typeof values?.file === 'string' ? values.file : ''
+      })
+  )
+  handle(IPC.exportRun, (request: unknown) => exportService.run(request))
+  handle(IPC.exportCancel, (jobId: unknown) => exportService.cancel(jobId))
+
+  handle(IPC.presetsList, () => presets.list())
+  handle(IPC.presetsSave, (scope: unknown, preset: unknown) => presets.save(scope, preset))
+  handle(IPC.presetsDelete, (scope: unknown, id: unknown) => presets.delete(scope, id))
+  handle(IPC.presetsRestore, (scope: unknown) => presets.restoreBuiltins(scope))
+
+  handle(IPC.presentationGetWorkspace, () => presentation.getWorkspace())
+  handle(IPC.presentationSetWorkspace, (overrides: unknown) => presentation.setWorkspace(overrides))
+  handle(IPC.cssPick, (scope: unknown) => presentation.pickCss(scope))
+  handle(IPC.cssRead, (file: unknown) => presentation.readCss(file))
+
+  handle(IPC.diagramRender, (request: unknown) => getDiagrams().render(request))
+  handle(IPC.diagramCancel, (ids: unknown) => getDiagrams().cancel(ids))
 
   handle(IPC.shellOpenExternal, async (url: string) => {
     const parsed = new URL(url)
@@ -368,6 +395,7 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(async () => {
     settings.load()
+    presentation.grantPersisted(settings.get().document.customCss.path)
     const last = settings.get().workspace
     if (last.restoreLastWorkspace && last.lastWorkspace) {
       // Restoring is best-effort: a removed folder simply leaves the Explorer empty.
@@ -391,5 +419,8 @@ if (!app.requestSingleInstanceLock()) {
   })
 
   // Runs after every window has closed (including the final window-bounds update).
-  app.on('will-quit', () => settings.flushSync())
+  app.on('will-quit', () => {
+    diagrams?.dispose()
+    settings.flushSync()
+  })
 }

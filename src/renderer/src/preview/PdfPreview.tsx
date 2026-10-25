@@ -11,10 +11,13 @@ import {
 import * as pdfjs from 'pdfjs-dist'
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import type { ExportSetup } from '@shared/export/setup'
 import { api, errorMessage } from '../bridge'
-import { exportSourceFor } from '../commands/commands'
-import { buildPdfSourceHtml } from '../markdown/exporters'
+import { exportSourceFor } from '../export/source'
+import { buildPdfSourceHtml, titleFor } from '../markdown/exporters'
 import { activeDocument, useDocuments } from '../state/documents'
+import { useActiveSetup } from '../state/exportSetup'
+import { renderPresentationFor, usePresentation } from '../state/presentation'
 import { useSettings } from '../state/settings'
 import { useWorkspace } from '../state/workspace'
 
@@ -97,7 +100,20 @@ function PdfPage({
  * Real PDF preview: the main process prints the document with Chromium (the same call used for
  * PDF export) and the resulting file is displayed with PDF.js.
  */
-export function PdfPreview() {
+export function PdfPreview({
+  setup: setupProp,
+  label
+}: {
+  /** Page setup to show; defaults to the active export setup. */
+  setup?: ExportSetup
+  /** Names the setup in the toolbar. */
+  label?: string
+} = {}) {
+  const activeSetup = useActiveSetup()
+  const setup = setupProp ?? activeSetup
+  const setupRef = useRef(setup)
+  setupRef.current = setup
+  const presentationVersion = usePresentation((s) => s.render)
   const scrollRef = useRef<HTMLDivElement>(null)
   const generation = useRef(0)
   const loadingTask = useRef<PDFDocumentLoadingTask | null>(null)
@@ -129,7 +145,13 @@ export function PdfPreview() {
     }
     setStatus('generating')
     try {
-      const bytes = await api.render.pdf(buildPdfSourceHtml(source))
+      const current = setupRef.current
+      const presentation = await renderPresentationFor(current.overrides, current.pdf)
+      const { html } = await buildPdfSourceHtml(source, presentation, current.pdf)
+      const bytes = await api.render.pdf(html, current.pdf, {
+        title: titleFor(source),
+        file: source.fileName
+      })
       const task = pdfjs.getDocument({ data: bytes, enableXfa: false })
       const loaded = await task.promise
       const pageSizes = await Promise.all(
@@ -175,6 +197,18 @@ export function PdfPreview() {
     const timer = setTimeout(() => void generate(), AUTO_REFRESH_DELAY_MS)
     return () => clearTimeout(timer)
   }, [activeId, activePath, revision, root, autoRefresh, generate])
+
+  // A different theme, page setup or export preset regenerates at once, whatever the auto refresh.
+  const setupKey = JSON.stringify(setup)
+  const lastSetup = useRef<{ key: string; presentation: unknown } | null>(null)
+  useEffect(() => {
+    const previous = lastSetup.current
+    lastSetup.current = { key: setupKey, presentation: presentationVersion }
+    if (!previous) return
+    if (previous.key === setupKey && previous.presentation === presentationVersion) return
+    const timer = setTimeout(() => void generate(), 250)
+    return () => clearTimeout(timer)
+  }, [setupKey, presentationVersion, generate])
 
   useEffect(
     () => () => {
@@ -320,7 +354,20 @@ export function PdfPreview() {
           <Maximize size={14} />
         </button>
         <span className="toolbar-spacer" />
-        {status === 'generating' && <span className="pdf-status">Generating…</span>}
+        {label && (
+          <span
+            className="pdf-setup-label"
+            data-testid="pdf-setup-label"
+            title="Export setup used by this preview"
+          >
+            {label}
+          </span>
+        )}
+        {status === 'generating' && (
+          <span className="pdf-status" role="status">
+            Generating…
+          </span>
+        )}
         {stale && status !== 'generating' && <span className="pdf-status">Out of date</span>}
         <button
           type="button"
