@@ -127,9 +127,9 @@ test('dragging a project image inserts a relative reference at the drop point', 
     // Surrounding content is untouched, and the existing file was not duplicated.
     await page.keyboard.press(`${mod}+S`)
     const expected = original.split('\n')
-    expected.splice(README_BLANK_LINE - 1, 0, '![Dashboard](assets/screenshot.jpg)')
-    // The drop happened at the start of the empty line, so the line itself now holds the reference.
-    expected.splice(README_BLANK_LINE, 1)
+    // The drop happened on the empty line below the heading, so that line now holds the reference,
+    // followed by one blank line because another image comes next (they must stay separate blocks).
+    expected.splice(README_BLANK_LINE - 1, 1, '![Dashboard](assets/screenshot.jpg)', '')
     // Saving is asynchronous, so the file on disk is polled rather than read once.
     await expect.poll(() => readme(sandbox)).toBe(expected.join('\n'))
     expect(readdirSync(path.join(sandbox.workspace, 'assets'))).toHaveLength(5)
@@ -167,8 +167,9 @@ test('references from nested documents use ../ paths, including from thumbnail m
       await lineCoordinates(page, 4)
     )
     await expect
-      .poll(async () => (await editorText(page)).split('\n')[3])
-      .toBe('![Photo](../assets/photo.webp)')
+      // Dropped on the blank line under a paragraph: a blank line separates the image from it.
+      .poll(async () => (await editorText(page)).split('\n').slice(2, 5))
+      .toEqual([expect.stringContaining('This guide lives'), '', '![Photo](../assets/photo.webp)'])
     await expect
       .poll(
         async () =>
@@ -215,8 +216,13 @@ test('external images are copied into the asset folder without overwriting', asy
       await lineCoordinates(page, line)
     )
     await expect
-      .poll(async () => (await editorText(page)).split('\n')[line - 1])
-      .toBe('![Architecture](assets/architecture-1.png)')
+      // The line above is an image, so a blank line is added to keep the two images apart.
+      .poll(async () => (await editorText(page)).split('\n').slice(line - 2, line + 1))
+      .toEqual([
+        '![Team Photo 2024](<assets/Team Photo (2024).png>)',
+        '',
+        '![Architecture](assets/architecture-1.png)'
+      ])
     expect(
       readFileSync(path.join(sandbox.workspace, 'assets', 'architecture.png')).equals(existing)
     ).toBe(true)
@@ -227,10 +233,11 @@ test('external images are copied into the asset folder without overwriting', asy
     await dropExternalFiles(
       page,
       [path.join(sandbox.external, 'naïve-café_überblick.png')],
-      await lineCoordinates(page, line + 1)
+      await lineCoordinates(page, line + 2)
     )
+    // Again below an image: one blank line, then the picture.
     await expect
-      .poll(async () => (await editorText(page)).split('\n')[line])
+      .poll(async () => (await editorText(page)).split('\n')[line + 2])
       .toBe('![Naïve café überblick](assets/naïve-café_überblick.png)')
 
     // All three render in the preview from their new location.

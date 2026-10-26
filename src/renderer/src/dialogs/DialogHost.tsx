@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import type { AppInfo } from '@shared/ipc'
 import { api } from '../bridge'
 import logo from '../assets/logo-128.png'
-import { EDITOR_SHORTCUTS, formatBinding, KEYBINDINGS } from '../commands/keybindings'
+import { EDITOR_SHORTCUTS, SHORTCUTS, shortcutLabel, type ShortcutGroup } from '@shared/shortcuts'
 import { useUi, type DialogRequest } from '../state/ui'
 import { Modal } from './Modal'
 
@@ -233,9 +233,18 @@ function AboutDialog({ request }: { request: Extract<DialogRequest, { kind: 'abo
   )
 }
 
+const GROUPS: ShortcutGroup[] = [
+  'Formatting',
+  'Insert',
+  'Editing',
+  'Navigation',
+  'Preview',
+  'Files',
+  'Application'
+]
+
 function ShortcutsDialog({ request }: { request: Extract<DialogRequest, { kind: 'shortcuts' }> }) {
-  const seen = new Set<string>()
-  const app = KEYBINDINGS.filter((b) => (seen.has(b.label) ? false : (seen.add(b.label), true)))
+  const platform = window.markdownStudio.platform
   return (
     <Modal
       title="Keyboard Shortcuts"
@@ -254,21 +263,31 @@ function ShortcutsDialog({ request }: { request: Extract<DialogRequest, { kind: 
     >
       <table className="shortcut-table">
         <tbody>
-          {app.map((b) => (
-            <tr key={b.label}>
-              <td>{b.label}</td>
-              <td>
-                <kbd>{formatBinding(b)}</kbd>
-              </td>
-            </tr>
-          ))}
-          {EDITOR_SHORTCUTS.map((s) => (
-            <tr key={s.label}>
-              <td>{s.label}</td>
-              <td>
-                <kbd>{s.keys}</kbd>
-              </td>
-            </tr>
+          {GROUPS.map((group) => (
+            <Fragment key={group}>
+              <tr>
+                <th colSpan={2} className="shortcut-group">
+                  {group}
+                </th>
+              </tr>
+              {SHORTCUTS.filter((spec) => spec.group === group).map((spec) => (
+                <tr key={spec.id}>
+                  <td>{spec.label}</td>
+                  <td>
+                    <kbd>{shortcutLabel(spec, platform)}</kbd>
+                  </td>
+                </tr>
+              ))}
+              {group === 'Editing' &&
+                EDITOR_SHORTCUTS.map((s) => (
+                  <tr key={s.label}>
+                    <td>{s.label}</td>
+                    <td>
+                      <kbd>{(platform === 'darwin' && s.macKeys) || s.keys}</kbd>
+                    </td>
+                  </tr>
+                ))}
+            </Fragment>
           ))}
         </tbody>
       </table>

@@ -101,3 +101,71 @@ describe('table formatting width strategy', () => {
     expect(lines[1]).toMatch(/^\|:-+\|:-+:\|-+:\|$/)
   })
 })
+
+const HEALTH_UI = `| Game | Type health-weergave | Zichtbaarheid tijdens gevechten | Effect op immersie | Toegankelijkheid |
+|:--|---|---|:-:|--:|
+| The Legend of Zelda | Hartjes in de hoek van het scherm | Altijd zichtbaar, duidelijk bij weinig levens | Laag | Goed |
+| Hades | Rode balk onder het personage, aangevuld met een getal | Zichtbaar en direct gekoppeld aan het personage \\| geen aparte HUD | Gemiddeld | Zeer goed |
+| God of War Ragnarök | Geen vaste balk; gezondheid in de HUD verschijnt bij schade | Alleen wanneer nodig, verdwijnt na enkele seconden zodat het beeld vrij blijft | Hoog | Gemiddeld |
+| Dead Space | Balk op de rug van het pak, onderdeel van de wereld | Altijd in beeld, zonder het scherm te vullen met menu-elementen | Zeer hoog | Matig |
+`
+
+describe('a realistic wide comparison table', () => {
+  const table = () => tableOf(HEALTH_UI)
+  const widest = (lines: string[]) => Math.max(...lines.map((l) => displayWidth(l)))
+
+  it('is very wide when every column is aligned in full', () => {
+    expect(widest(formatTable(table(), { maxWidth: 0 }))).toBeGreaterThan(200)
+  })
+
+  it('is balanced to the configured width without losing or reordering a cell', () => {
+    const lines = formatTable(table(), { maxWidth: 100 })
+    // The columns add up to the target (the delimiter row shows it); only cells longer than their
+    // column run past it.
+    expect(displayWidth(lines[1])).toBeLessThanOrEqual(100)
+    expect(widest(lines)).toBeLessThan(widest(formatTable(table(), { maxWidth: 0 })))
+    const cells = lines.map((l) => splitCells(l, 0).map((c) => c.text))
+    expect(cells[0]).toEqual(table().header)
+    expect(cells.slice(2)).toEqual(table().rows)
+  })
+
+  it('renders exactly the same table however it is formatted', () => {
+    const html = rendered(HEALTH_UI)
+    for (const maxWidth of [0, 40, 60, 80, 100, 160, 400]) {
+      expect(rendered(formatTable(table(), { maxWidth }).join('\n')), `maxWidth ${maxWidth}`).toBe(
+        html
+      )
+    }
+  })
+
+  it('is stable: formatting a formatted table changes nothing, at every width', () => {
+    for (const maxWidth of [0, 40, 60, 80, 100, 160]) {
+      const once = formatTable(table(), { maxWidth })
+      const twice = formatTable(tableOf(once.join('\n')), { maxWidth })
+      expect(twice, `maxWidth ${maxWidth}`).toEqual(once)
+    }
+  })
+
+  it('formats to a narrower editor width on request, and never below what is readable', () => {
+    const fit = formatTable(table(), { maxWidth: 60 })
+    expect(widest(fit)).toBeLessThan(widest(formatTable(table(), { maxWidth: 0 })))
+    // Even a tiny target keeps a valid table: compact lines, still one row per source line.
+    const tiny = formatTable(table(), { maxWidth: 20 })
+    expect(tiny).toHaveLength(6)
+    expect(tiny[0].split('|').length).toBe(table().header.length + 2)
+  })
+
+  it('keeps alignment markers and escaped pipes', () => {
+    const lines = formatTable(table(), { maxWidth: 100 })
+    expect(lines[1]).toMatch(/^\|:-+\|-+\|-+\|:-+:\|-+:\|$/)
+    expect(lines.join('\n')).toContain('\\| geen aparte HUD')
+  })
+
+  it('fills missing cells and reports extra ones instead of dropping them', () => {
+    const missing = '| a | b | c |\n|---|---|---|\n| 1 |\n| 2 | 3 | 4 |'
+    expect(formatTable(tableOf(missing))[2]).toBe('| 1   |     |     |')
+    const extra = analyzeDocument('| a | b |\n|---|---|\n| 1 | 2 | 3 |')
+    const parsed = parseTableBlock(extra, extra.tables[0])
+    expect(parsed.ok).toBe(false)
+  })
+})

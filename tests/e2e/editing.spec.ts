@@ -187,10 +187,10 @@ test('find, replace and layout shortcuts', async () => {
     await expect(find).toHaveClass(/replaceToggled/)
     await page.keyboard.press('Escape')
 
-    // Ctrl+B toggles the sidebar.
-    await page.keyboard.press(`${mod}+B`)
+    // Ctrl+\\ toggles the sidebar (Ctrl+B is bold).
+    await page.keyboard.press(`${mod}+\\`)
     await expect(page.getByTestId('sidebar')).toBeHidden()
-    await page.keyboard.press(`${mod}+B`)
+    await page.keyboard.press(`${mod}+\\`)
     await expect(page.getByTestId('sidebar')).toBeVisible()
 
     // Ctrl+Shift+V toggles the preview; the editor reclaims the space.

@@ -73,7 +73,7 @@ const GROUPS: ToolbarButton[][] = [
 ]
 
 function titleFor({ command, label }: ToolbarButton): string {
-  const binding = KEYBINDINGS.find((b) => b.command === command)
+  const binding = KEYBINDINGS.find((b) => b.id === command)
   return binding ? `${label} (${formatBinding(binding)})` : label
 }
 

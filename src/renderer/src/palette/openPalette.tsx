@@ -8,7 +8,7 @@ import { dialogs, notify } from '../state/ui'
 import { CommandPalette, type PaletteItem } from './CommandPalette'
 
 function shortcutFor(commandId: string): string | undefined {
-  const binding = KEYBINDINGS.find((b) => b.command === commandId)
+  const binding = KEYBINDINGS.find((b) => b.id === commandId)
   return binding ? formatBinding(binding) : undefined
 }
 

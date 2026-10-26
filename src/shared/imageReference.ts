@@ -72,31 +72,72 @@ export function imageReferenceForFile(
 export interface ImagePlacement {
   /** Insert at the end of the line instead of at the drop position. */
   atLineEnd: boolean
-  /** Text to insert: every reference on its own line, with a leading line break when needed. */
+  /** Text to insert, including the line breaks that make every reference a block of its own. */
   text: string
   /** Offset within `text` at which the first reference starts. */
   firstOffset: number
+  /** Offset within `text` just after the last reference. */
+  endOffset: number
 }
 
+export interface ImageNeighbours {
+  /** The line above the drop line, or null at the start of the document. */
+  previous: string | null
+  /** The line below the drop line, or null at the end of the document. */
+  next: string | null
+}
+
+const isBlank = (line: string | null): boolean => line === null || line.trim() === ''
+
 /**
- * Decides where image references go when they are dropped, pasted or inserted at `line`.
+ * Decides where image references go when they are dropped, pasted or inserted at `line`, and what
+ * line breaks they need. A single line break would leave the image in the same paragraph as the
+ * text above it, so every reference becomes a separate block:
  *
- * On a blank line they are inserted where they were dropped. On a line that already has content
- * (a paragraph, heading, list item, quote or another image) they go on a new line underneath,
- * never into the middle of the text. A new line below a list item is indented to the item's
- * text and one below a quote keeps the quote marker, so the image stays inside the item or quote.
+ * - On a line with content (paragraph, heading, list item, quote, image) the images go underneath
+ *   after one blank line, and one blank line follows them when text comes next.
+ * - A list item keeps the image inside the item (indented to its text) and a quote keeps its `>`.
+ * - On a blank line they go where they were dropped; a blank line is added above only when the
+ *   line above is text (not a heading), and below only when the line below has content.
+ *
+ * No more blank lines are added than that, so spacing that is already right is left alone.
  */
-export function placeImageReferences(line: string, references: readonly string[]): ImagePlacement {
-  if (line.trim() === '') {
-    return { atLineEnd: false, text: references.join('\n'), firstOffset: 0 }
+export function placeImageReferences(
+  line: string,
+  references: readonly string[],
+  neighbours: ImageNeighbours = { previous: null, next: null }
+): ImagePlacement {
+  if (isBlank(line)) {
+    // A heading ends its own block, so an image on the line below it is already separate.
+    const lead =
+      isBlank(neighbours.previous) || /^ {0,3}#{1,6}(?:\s|$)/.test(neighbours.previous as string)
+        ? ''
+        : '\n'
+    const trail = isBlank(neighbours.next) ? '' : '\n'
+    return {
+      atLineEnd: false,
+      text: lead + references.join('\n\n') + trail,
+      firstOffset: lead.length,
+      endOffset: lead.length + references.join('\n\n').length
+    }
   }
+
   const quote = /^\s*(?:>[ \t]?)+/.exec(line)?.[0]
   const list = quote ? null : /^(\s*)(?:[-*+]|\d{1,9}[.)])([ \t]+)/.exec(line)
   const prefix = quote ?? (list ? ' '.repeat(list[0].length) : '')
-  const lead = `\n${prefix}`
+  // Between blocks of a quote the quote continues on an empty `>` line.
+  const lead = `\n${quote ? quote.trimEnd() : ''}\n${prefix}`
+  let trail = ''
+  if (!isBlank(neighbours.next)) {
+    const next = neighbours.next as string
+    if (quote) trail = /^\s*>/.test(next) ? `\n${quote.trimEnd()}` : '\n'
+    // The next list item starts its own block; anything else would join the image's paragraph.
+    else if (!(list && /^\s*(?:[-*+]|\d{1,9}[.)])[ \t]/.test(next))) trail = '\n'
+  }
   return {
     atLineEnd: true,
-    text: lead + references.join(lead),
-    firstOffset: lead.length
+    text: lead + references.join(lead) + trail,
+    firstOffset: lead.length,
+    endOffset: lead.length + references.join(lead).length
   }
 }

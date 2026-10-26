@@ -20,10 +20,10 @@ test('formats selections with shortcuts and toggles them off again', async () =>
     for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight')
     for (let i = 0; i < 14; i++) await page.keyboard.press('Shift+ArrowRight')
 
-    await page.keyboard.press(`${mod}+Shift+B`)
+    await page.keyboard.press(`${mod}+B`)
     await expect.poll(() => editorText(page)).toBe('some **important text** here')
     // The text stays selected, so the same shortcut removes the formatting again.
-    await page.keyboard.press(`${mod}+Shift+B`)
+    await page.keyboard.press(`${mod}+B`)
     await expect.poll(() => editorText(page)).toBe('some important text here')
 
     await page.keyboard.press(`${mod}+I`)

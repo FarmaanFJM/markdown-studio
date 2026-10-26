@@ -418,6 +418,28 @@ src/renderer/src/publishing/          dialogs, panel, build.ts (chapters → one
 - **Settings page** (`settings/SettingsPage.tsx`): entries (title, keywords, node) grouped by
   category; the search filters entries, the category list scrolls to sections.
 - **AI** (`shared/ai`, `main/services/aiService.ts`, `renderer/src/ai`): see [AI.md](AI.md).
+- **Keyboard shortcuts** (`shared/shortcuts.ts`): one list of every shortcut (id, key, modifiers, platform
+  variants, editor-only flag). The renderer's global key handler (`commands/keybindings.ts`, capture phase)
+  generates its bindings from it, the native menu takes its accelerators from it, the Keyboard Shortcuts dialog
+  renders it, and a unit test checks that no key combination is bound twice on any platform and that
+  `docs/KEYBOARD_SHORTCUTS.md` lists every entry. Formatting shortcuts are `editorOnly`: they act only while
+  Monaco has the text focus, so text fields keep their keys. The handler runs before Monaco, so the Markdown
+  meaning of a key (for example Ctrl+I) wins over Monaco's. A shortcut runs a registry command by id, then a menu
+  command, so toolbar, menu, palette, context menu and keys share one implementation
+  (`editor/markdown/commands.ts` → `shared/markdown/formatting.ts`).
+- **Image placement** (`shared/imageReference.ts`): `placeImageReferences` decides where dropped, pasted or
+  inserted images go and which blank lines they need (a separate block, inside the list item or quote), from the
+  drop line and its neighbours; `editor/imageDrop.ts` only applies the result to the model.
+- **Heading numbers** (`shared/markdown/headingNumbers.ts`, `plugins.ts`): a markdown-it core rule marks typed
+  numbers with `manual-number` and sets the theme counters (`counter-set`) so the Professional Report theme does
+  not number them again.
+- **Settings persistence**: `shared/settings.ts` defines and validates the schema (every value read from disk or
+  IPC passes `sanitizeSettings`); `main/services/settingsService.ts` stores `settings.json` atomically in the user
+  data folder; the renderer's `state/settings.ts` applies changes immediately and writes them shortly after. The AI
+  key is the one setting-like secret and lives in a separate encrypted file.
+- **Monaco configuration** (`editor/MarkdownEditor.tsx`): bundled locally with a few languages; no quick
+  suggestions while typing; drops and pastes handled by the application; `useShadowDOM: false` so menus see the theme
+  variables; inline suggestions provided only by the AI module.
 
 ## Extension points for later work
 

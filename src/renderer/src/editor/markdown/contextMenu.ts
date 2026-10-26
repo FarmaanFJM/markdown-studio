@@ -33,6 +33,7 @@ const ENTRIES: MenuEntry[] = [
   { command: 'insert.mermaid', group: '8_markdown_insert', order: 8 },
   { command: 'table.format', group: '9_markdown_table', order: 1, table: true },
   { command: 'table.editVisually', group: '9_markdown_table', order: 2, table: true },
+  { command: 'table.formatFit', group: '9_markdown_table', order: 1.5, table: true },
   { command: 'table.repair', group: '9_markdown_table', order: 2.5, table: true },
   { command: 'table.insertRowBelow', group: '9_markdown_table', order: 3, table: true },
   { command: 'table.insertColumnRight', group: '9_markdown_table', order: 4, table: true },

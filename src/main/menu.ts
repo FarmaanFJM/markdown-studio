@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron'
 import { IPC, type MenuCommand } from '@shared/ipc'
+import { shortcutAccelerator, shortcutFor } from '@shared/shortcuts'
 
 const REPOSITORY_URL = 'https://github.com/FarmaanFJM/markdown-studio'
 
@@ -11,6 +12,11 @@ const REPOSITORY_URL = 'https://github.com/FarmaanFJM/markdown-studio'
  * (`registerAccelerator: false`). Clipboard items use native roles, which Monaco supports.
  */
 export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: string[]): void {
+  // Accelerators come from the shared shortcut list; the menu only displays them.
+  const accel = (id: string, fallback?: string) => {
+    const spec = shortcutFor(id)
+    return spec ? shortcutAccelerator(spec, process.platform) : fallback
+  }
   const send = (command: MenuCommand, argument?: string) => () => {
     if (!window.isDestroyed()) window.webContents.send(IPC.menuCommand, { command, argument })
   }
@@ -21,7 +27,7 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
     extra: Partial<MenuItemConstructorOptions> = {}
   ): MenuItemConstructorOptions => ({
     label,
-    accelerator,
+    accelerator: accel(command, accelerator),
     registerAccelerator: false,
     click: send(command),
     ...extra
@@ -35,7 +41,7 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
     extra: Partial<MenuItemConstructorOptions> = {}
   ): MenuItemConstructorOptions => ({
     label,
-    accelerator,
+    accelerator: accel(id, accelerator),
     registerAccelerator: false,
     click: send('app.command', id),
     ...extra

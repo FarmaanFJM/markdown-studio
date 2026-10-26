@@ -13,14 +13,14 @@ settings, in the workspace's `.markdown-studio` folder, or in preset files — n
 
 ## Three layers of appearance
 
-| Layer                         | Where you set it                                         | Applies to                                                  |
-| ----------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- |
-| **Application appearance**    | Settings → Appearance (dark / light)                     | Markdown Studio itself only                                 |
-| **Document appearance**       | Settings → Document Appearance (global or per workspace) | Preview, PDF and HTML export                                |
-| **Export-specific overrides** | The Export dialog (or a preset)                          | That export (and the PDF preview while the setup is active) |
+| Layer                         | Where you set it                                                      | Applies to                                                  |
+| ----------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Application appearance**    | Settings → Appearance → Theme (dark / light)                          | Markdown Studio itself only                                 |
+| **Document appearance**       | Settings → Appearance → Document appearance (global or per workspace) | Preview, PDF and HTML export                                |
+| **Export-specific overrides** | The Export dialog (or a preset)                                       | That export (and the PDF preview while the setup is active) |
 
 Later layers win: export overrides over workspace overrides over the application default. The
-Settings panel shows when a workspace override is active, and the preview header shows the
+Settings page shows when a workspace override is active, and the preview header shows the
 current theme (with a "Workspace" badge when the workspace chose it).
 
 ## Document themes
@@ -37,14 +37,47 @@ and page composition:
 | **Editorial**           | Serif body, centred title, drop cap, justified text, ornamental rules, quote marks. |
 | **Professional Report** | Serif body with sans headings, numbered sections (1., 1.1), banded tables.          |
 
-Choose one in **Settings → Document Appearance**, from the command palette (**Document Theme:
+Choose one in **Settings → Appearance → Document appearance**, from the command palette (**Document Theme:
 …**), the **View → Document Theme** menu, or per export in the Export dialog. Changing the theme
 updates the preview in place: your editor focus, selection, scroll position and unsaved text are
 untouched.
 
+### Heading numbers
+
+**Professional Report** numbers sections automatically: level-2 headings become 1., 2., 3. and level-3
+headings 1.1, 1.2, … (the level-1 heading is the document title and is not numbered). The numbers are
+generated when the document is displayed; they are not written into your Markdown. Other themes do not
+number headings.
+
+If you typed the numbers yourself, they are respected and **not added a second time**:
+
+```markdown
+## 1. Inleiding → 1. Inleiding (not "1. 1. Inleiding")
+
+### 4.1 Vergelijkingstabel → 4.1 Vergelijkingstabel (not "4.1 4.1 …")
+```
+
+How it decides, deliberately conservatively:
+
+- A level-2 heading counts as numbered when it starts with a number and a dot or bracket (`1.` or `2)`); a
+  level-3 heading when it starts with a dotted number whose first part is the number of the section it sits
+  in (`4.1` under section 4).
+- A bare number is **not** an enumeration: `## 2024 Resultaten`, `## 3 Redenen` or `### 3.5 miljoen
+gebruikers` under another section keep their automatic number, because the number belongs to the title. Numbers
+  of more than three digits (years) are never treated as numbering.
+- Headings without a typed number are numbered automatically, and counting continues from a typed number:
+  after `## 1. Inleiding` an unnumbered heading becomes 2. If your own numbers skip or repeat, they are shown as
+  you typed them.
+- The same check applies to the **Number sections** option of Document Settings (front matter
+  `number-sections: true`): a heading that already starts with the number that would be added is left as it is, in the
+  text, the table of contents and cross-references. Headings marked `{.unnumbered}` never get a number.
+
+The table of contents and `#heading` links use the heading text as written (`#4-resultaten-en-analyse`), so they
+are the same with or without a typed number.
+
 ### Customising a theme
 
-**Settings → Document Appearance → Fonts, colours and blocks** changes any of: body font and size,
+**Settings → Appearance → Document appearance → Fonts, colours and blocks** changes any of: body font and size,
 heading font and scale, line height, paragraph spacing, content width, text, heading, link and
 accent colours, the page background, and the style of tables, code blocks and block quotes. Empty
 fields show the theme's own value. "Reset customisation" returns to the theme. Fonts are installed
@@ -146,6 +179,15 @@ Limits of the print engine (Chromium): very long unbreakable code lines wrap rat
 a single element taller than a page (for example a huge table row) is split by the engine where it
 must; fonts are your system fonts at export time, so a PDF made on another computer may paginate
 slightly differently if a font is missing.
+
+### HTML and PDF are not identical
+
+Both come from the same renderer, theme and settings, so content, numbering, tables, images, math and diagrams
+match. They differ where paper differs from a screen: the PDF has pages, margins, headers, footers and real page
+numbers and is paginated by Chromium's print engine; the HTML preview is one continuous page that adapts to its
+window. `<!-- pagebreak -->` and the page background option only act in the PDF; wide tables shrink to the
+printable width in the PDF (many columns can break long words). Fonts are your installed
+system fonts, so a PDF produced on another computer can paginate slightly differently.
 
 ## Standalone HTML export
 

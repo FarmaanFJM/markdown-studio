@@ -99,7 +99,48 @@ function withTable(editor: Editor): TableAtCursor | null {
 
 // --- Formatting ---------------------------------------------------------------------------------
 
-function formatBlocks(editor: Editor, from: number, to: number, scope: string): void {
+/** How many characters of a line fit in the editor without scrolling. */
+function visibleColumns(editor: Editor): number {
+  const info = editor.getLayoutInfo()
+  const width = editor.getOption(monaco.editor.EditorOption.fontInfo).typicalHalfwidthCharacterWidth
+  return Math.max(20, Math.floor((info.contentWidth - info.verticalScrollbarWidth) / width) - 1)
+}
+
+/**
+ * After an explicit format: a table that is still wider than the editor is not rewritten into
+ * something else (that could change what it means). The user is told how to read it instead.
+ */
+function hintWideTable(editor: Editor, start: number, end: number): void {
+  const model = editor.getModel()
+  if (!model) return
+  const columns = visibleColumns(editor)
+  let widest = 0
+  for (let line = start + 1; line <= end; line++) {
+    widest = Math.max(widest, model.getLineMaxColumn(line) - 1)
+  }
+  if (widest <= columns) return
+  const wrapping = useSettings.getState().settings.editor.wordWrap
+  notify(
+    'info',
+    wrapping
+      ? 'This table is wider than the editor, so its rows wrap. Turn off word wrap to scroll sideways, or use Fit Table to Editor Width.'
+      : 'This table is wider than the editor; scroll sideways, or use Fit Table to Editor Width.',
+    wrapping
+      ? {
+          label: 'Turn off word wrap',
+          run: () => useSettings.getState().update({ editor: { wordWrap: false } })
+        }
+      : undefined
+  )
+}
+
+function formatBlocks(
+  editor: Editor,
+  from: number,
+  to: number,
+  scope: string,
+  options: TableFormatOptions = tableFormatOptions()
+): void {
   const model = editor.getModel()!
   const analysis = analysisFor(model)
   const blocks = analysis.tables.filter((t) => t.start <= to && t.end > from)
@@ -120,7 +161,7 @@ function formatBlocks(editor: Editor, from: number, to: number, scope: string): 
       skipped.push(`line ${block.start + 1}: ${result.reason}`)
       continue
     }
-    const formatted = formatTable(result.table, tableFormatOptions())
+    const formatted = formatTable(result.table, options)
     if (sameLines(formatted, currentLines(editor, result))) {
       alreadyTidy++
       continue
@@ -194,6 +235,19 @@ export const tableCommands = {
       return notify('error', `${found.error} Use Repair Table to add the missing columns instead.`)
     }
     formatBlocks(editor, found.parsed.start, found.parsed.start, 'cursor')
+    hintWideTable(editor, found.parsed.start, found.parsed.end)
+  },
+
+  /** Formats the table at the cursor so its lines fit the editor as it is now (explicit only). */
+  formatToEditorWidth() {
+    const editor = requireEditor()
+    if (!editor) return
+    const found = tableAtCursor(editor)
+    if (found === null || 'error' in found) return tableCommands.formatAtCursor()
+    formatBlocks(editor, found.parsed.start, found.parsed.start, 'cursor', {
+      maxWidth: Math.max(40, visibleColumns(editor))
+    })
+    hintWideTable(editor, found.parsed.start, found.parsed.end)
   },
 
   repair() {

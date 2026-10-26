@@ -247,6 +247,7 @@ test('Format Table keeps a wide table readable and the rendered table identical'
 
     await goToLine(page, 3)
     await runPaletteCommand(page, 'Format Table')
+    await expect.poll(async () => (await editorText(page)).split('\n')[0]).toMatch(/^\| Onderdeel/)
     const lines = (await editorText(page)).split('\n')
     // The short rows stay within a readable width; only the single long cell runs past it.
     expect(lines[0].length).toBeLessThanOrEqual(100)
@@ -376,52 +377,67 @@ test.describe('dropping images', () => {
       await lineCoordinates(page, line)
     )
 
-  test('goes on its own line below a paragraph, heading, list item, quote and image', async () => {
+  test('becomes its own block after a paragraph, heading, list item, quote or image', async () => {
     // A saved document is needed for relative image paths: use a document of the workspace.
     const second = createSandbox()
     const launched = await launchEditing(second)
     const p = launched.page
+    const image = (prefix: string) =>
+      new RegExp(`^${prefix}!\\[Architecture[^\\]]*\\]\\(.*architecture.*\\.png\\)$`)
     try {
       await openFromTree(p, 'docs', 'guide.md').catch(async () => {
         await treeRow(p, 'docs').click()
         await openFromTree(p, 'guide.md')
       })
       await focusEditor(p)
-      await p.keyboard.press(`${mod}+A`)
-      await p.keyboard.insertText(
-        'Some paragraph text\n\n## A heading\n\n- an item\n\n> a quote\n\n![Old](old.png)\n\n'
-      )
-      const original = await editorText(p)
-
-      const originalLines = original.split('\n')
-      for (const [line, prefix] of [
-        [1, ''],
-        [3, ''],
-        [5, '  '],
-        [7, '> '],
-        [9, '']
-      ] as const) {
+      const SOURCE =
+        'Some paragraph text\n\n## A heading\n\n- an item\n- another item\n\n> a quote\n\n![Old](old.png)\nTrailing text.'
+      const reset = async () => {
         await p.keyboard.press(`${mod}+A`)
-        await p.keyboard.insertText(original)
+        await p.keyboard.insertText(SOURCE)
+        await expect.poll(() => editorText(p)).toBe(SOURCE)
+        // Let the layout settle (scroll position, preview) before positions are measured.
+        await p.keyboard.press(`${mod}+Home`)
+        await p.waitForTimeout(300)
+      }
+      const originalLines = SOURCE.split('\n')
+      // [1-based line, container prefix, blank separator line between blocks]
+      for (const [line, prefix, blank] of [
+        [1, '', ''],
+        [3, '', ''],
+        [5, '  ', ''],
+        [8, '> ', '>'],
+        [10, '', '']
+      ] as const) {
+        await reset()
         await dropOnLine(p, second, line)
         await expect
-          .poll(async () => (await editorText(p)).split('\n')[line])
-          .toMatch(new RegExp(`^${prefix}!\\[Architecture[^\\]]*\\]\\(.*architecture.*\\.png\\)$`))
+          .poll(async () => (await editorText(p)).split('\n')[line + 1])
+          .toMatch(image(prefix))
         const after = (await editorText(p)).split('\n')
-        // The text it was dropped on is untouched, and no blank line was added.
+        // The text it was dropped on is untouched, and exactly one blank line separates the image.
         expect(after[line - 1]).toBe(originalLines[line - 1])
-        expect(after.length).toBe(originalLines.length + 1)
-        expect(after.slice(line + 1)).toEqual(originalLines.slice(line))
+        expect(after[line]).toBe(blank)
+        // The rendered preview shows an image block, not an image inside the text's paragraph.
+        await expect
+          .poll(() =>
+            inPreview(p, (doc) => {
+              const pictures = [...doc.querySelectorAll('img[alt^="Architecture"]')]
+              return (
+                pictures.length === 1 &&
+                pictures.every((img) => (img.parentElement?.textContent ?? '').trim() === '')
+              )
+            })
+          )
+          .toBe(true)
       }
 
-      // On an empty line the image is inserted in place, without extra whitespace.
-      await p.keyboard.press(`${mod}+A`)
-      await p.keyboard.insertText(original)
+      // On a blank line the image is inserted there, adding only the blank lines that are missing.
+      await reset()
       await dropOnLine(p, second, 2)
       await expect
-        .poll(async () => (await editorText(p)).split('\n')[1])
-        .toMatch(/^!\[Architecture[^\]]*\]\(.*architecture.*\.png\)$/)
-      expect((await editorText(p)).split('\n').length).toBe(original.split('\n').length)
+        .poll(async () => (await editorText(p)).split('\n').slice(0, 5))
+        .toEqual(['Some paragraph text', '', expect.stringMatching(image('')), '', '## A heading'])
     } finally {
       await closeApp(launched.app)
     }

@@ -45,7 +45,7 @@ test('the formatting toolbar runs the same commands and can be hidden', async ()
 
     // Buttons carry their shortcut in the tooltip and an accessible name.
     await expect(page.getByTestId('format-markdown.bold')).toHaveAttribute('aria-label', 'Bold')
-    await expect(page.getByTestId('format-markdown.bold')).toHaveAttribute('title', /Shift\+B/)
+    await expect(page.getByTestId('format-markdown.bold')).toHaveAttribute('title', /\+B\)/)
 
     // Hide it from the View menu.
     await clickMenuItem(app, 'View', 'Toggle Formatting Toolbar')
@@ -100,7 +100,7 @@ test('the command palette lists commands, explains unavailable ones and restores
       'true'
     )
     // Names are readable, and the shortcut is shown next to the command.
-    await expect(list.getByRole('option', { name: /Bold/ })).toContainText(/Shift\+B/)
+    await expect(list.getByRole('option', { name: /Bold/ })).toContainText(/Ctrl\+B|Cmd\+B/)
 
     await page.getByTestId('palette-input').fill('toggle prev')
     await expect(page.locator('.palette-item.selected')).toContainText('Toggle Preview')
@@ -134,7 +134,7 @@ test('multiple cursors are formatted together as one undoable step', async () =>
     await page.keyboard.press('Shift+ArrowRight')
     await page.keyboard.press(`${mod}+D`)
     await page.keyboard.press(`${mod}+D`)
-    await page.keyboard.press(`${mod}+Shift+B`)
+    await page.keyboard.press(`${mod}+B`)
     await expect.poll(() => editorText(page)).toBe('**cat** and **cat** and **cat**')
     await page.keyboard.press(`${mod}+Z`)
     await expect.poll(() => editorText(page)).toBe('cat and cat and cat')
@@ -172,7 +172,7 @@ test('edits keep CRLF line endings and the UTF-8 byte-order mark', async () => {
     await focusEditor(page)
     await page.keyboard.press(`${mod}+Home`)
     await page.keyboard.press('Shift+End')
-    await page.keyboard.press(`${mod}+Shift+B`)
+    await page.keyboard.press(`${mod}+B`)
     await page.keyboard.press(`${mod}+S`)
     await expect(page.locator('.tab.active')).not.toHaveClass(/dirty/)
     const raw = readFileSync(bom)
@@ -257,8 +257,8 @@ test('Markdown settings change the editor immediately and persist', async () => 
       await panel.getByLabel('Formatting toolbar').uncheck()
     })
     await expect(page.getByTestId('format-toolbar')).toBeHidden()
-    await page.keyboard.press(`${mod}+B`) // flushes nothing; settings are saved shortly after changes
-    await page.keyboard.press(`${mod}+B`)
+    await page.keyboard.press(`${mod}+\\`) // flushes nothing; settings are saved shortly after changes
+    await page.keyboard.press(`${mod}+\\`)
   } finally {
     await closeApp(app)
   }

@@ -209,7 +209,11 @@ export async function insertImages(
   const line = Math.min(dropped.lineNumber, model.getLineCount())
   const layout = placeImageReferences(
     model.getLineContent(line),
-    references.map((r) => r.text)
+    references.map((r) => r.text),
+    {
+      previous: line > 1 ? model.getLineContent(line - 1) : null,
+      next: line < model.getLineCount() ? model.getLineContent(line + 1) : null
+    }
   )
   // On a line that already has text the images go underneath it, never into the middle of it.
   const start = layout.atLineEnd ? new monaco.Position(line, model.getLineMaxColumn(line)) : dropped
@@ -231,7 +235,7 @@ export async function insertImages(
       const altEnd = model.getPositionAt(startOffset + ref.altOffset + ref.altLength)
       editor.setSelection(monaco.Selection.fromPositions(altStart, altEnd))
     } else {
-      editor.setPosition(model.getPositionAt(model.getOffsetAt(start) + text.length))
+      editor.setPosition(model.getPositionAt(model.getOffsetAt(start) + layout.endOffset))
     }
     editor.focus()
   }

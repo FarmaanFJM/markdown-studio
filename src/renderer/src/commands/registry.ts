@@ -372,6 +372,14 @@ export const APP_COMMANDS: AppCommand[] = [
     keywords: 'reformat align prettify tidy'
   },
   {
+    id: 'table.formatFit',
+    title: 'Fit Table to Editor Width',
+    category: 'Table',
+    run: tableCommands.formatToEditorWidth,
+    needsDocument: doc,
+    keywords: 'reformat narrow viewport preview fit wide'
+  },
+  {
     id: 'table.repair',
     title: 'Repair Table (add missing columns)',
     category: 'Table',
