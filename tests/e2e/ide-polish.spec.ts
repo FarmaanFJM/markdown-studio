@@ -219,10 +219,11 @@ test('Format Markdown Block tidies headings and lists, and Repair Table complete
 
     await goToLine(page, 6)
     await runPaletteCommand(page, 'Repair Table')
-    const text = await editorText(page)
-    const table = text.split('\n').slice(5)
+    await expect
+      .poll(async () => (await editorText(page)).split('\n')[5])
+      .toMatch(/^\| a +\| b +\| +\|$/)
+    const table = (await editorText(page)).split('\n').slice(5)
     expect(table).toHaveLength(3)
-    expect(table[0]).toMatch(/^\| a +\| b +\| +\|$/)
     expect(table[2]).toMatch(/^\| 1 +\| 2 +\| 3 +\|$/)
   } finally {
     await closeApp(app)
