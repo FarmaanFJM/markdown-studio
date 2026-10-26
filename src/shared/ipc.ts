@@ -11,6 +11,8 @@ import type { ExportRequest, ExportResult } from './export/job'
 import type { PdfOptions } from './export/pdf'
 import type { PresetScope, StoredPreset } from './export/presets'
 import type { WorkspacePresentation } from './presentation/settings'
+import type { PublicationConfig } from './publishing/project'
+import type { Source } from './publishing/sources'
 
 export interface DirEntry {
   name: string
@@ -67,6 +69,29 @@ export interface CssFile {
   path: string
   text: string
   mtimeMs: number
+}
+
+export interface ProjectState {
+  /** False when no folder is open. */
+  available: boolean
+  publication: PublicationConfig | null
+  /** The project's source library (CSL JSON). */
+  sources: Source[]
+  /** Problems found while reading the stored files (damaged entries, unreadable files). */
+  problems: string[]
+}
+
+export interface RecoverySnapshot {
+  /** Identifies the open document within a session. */
+  id: string
+  /** The file the text belongs to, or null for a document that was never saved. */
+  path: string | null
+  name: string
+  content: string
+  hasBom: boolean
+  /** Modification time of the file when the document was opened or last saved. */
+  mtimeMs: number | null
+  savedAt: number
 }
 
 export interface AppInfo {
@@ -145,7 +170,14 @@ export const IPC = {
   fsDeletePermanently: 'fs:delete-permanently',
   dialogOpenMarkdown: 'dialog:open-markdown',
   dialogSaveMarkdown: 'dialog:save-markdown',
+  dialogOpenImage: 'dialog:open-image',
+  dialogOpenSources: 'dialog:open-sources',
   assetsImportImage: 'assets:import-image',
+  assetsSaveClipboardImage: 'assets:save-clipboard-image',
+  recoveryWrite: 'recovery:write',
+  recoveryRemove: 'recovery:remove',
+  recoveryList: 'recovery:list',
+  recoveryClear: 'recovery:clear',
   templatesList: 'templates:list',
   templatesSave: 'templates:save',
   templatesDelete: 'templates:delete',
@@ -158,6 +190,9 @@ export const IPC = {
   presetsRestore: 'presets:restore',
   presentationGetWorkspace: 'presentation:get-workspace',
   presentationSetWorkspace: 'presentation:set-workspace',
+  projectGet: 'project:get',
+  projectSetPublication: 'project:set-publication',
+  projectSetSources: 'project:set-sources',
   cssPick: 'css:pick',
   cssRead: 'css:read',
   diagramRender: 'diagram:render',
@@ -215,11 +250,29 @@ export interface MarkdownStudioApi {
   dialogs: {
     openMarkdown(): Promise<string[]>
     saveMarkdown(defaultPath: string): Promise<string | null>
+    /** Lets the user choose an image; the file is granted for importing. */
+    openImage(): Promise<string | null>
+    /** Lets the user choose a bibliography file (CSL JSON or BibTeX); it is granted for reading. */
+    openSources(): Promise<string | null>
   }
   assets: {
     /** Absolute path of a file dropped from the operating system, or '' if unavailable. */
     pathForFile(file: File): string
     importImage(sourcePath: string, targetDirectory: string): Promise<ImportedImage>
+    /** Stores an image from the clipboard as a new file; never overwrites an existing one. */
+    saveClipboardImage(
+      bytes: Uint8Array,
+      mime: string,
+      targetDirectory: string,
+      baseName: string
+    ): Promise<ImportedImage>
+  }
+  recovery: {
+    write(snapshot: RecoverySnapshot): Promise<void>
+    remove(id: string): Promise<void>
+    list(): Promise<RecoverySnapshot[]>
+    /** Forgets every snapshot (after a clean close). */
+    clear(): Promise<void>
   }
   templates: {
     list(): Promise<TemplateListing>
@@ -254,6 +307,13 @@ export interface MarkdownStudioApi {
     setWorkspace(overrides: WorkspacePresentation | null): Promise<WorkspacePresentationState>
     pickCss(scope: 'global' | 'workspace'): Promise<CssFile | null>
     readCss(path: string): Promise<CssFile>
+  }
+  project: {
+    get(): Promise<ProjectState>
+    /** Stores the publication of the open folder, or removes it with `null`. */
+    setPublication(publication: PublicationConfig | null): Promise<ProjectState>
+    /** Replaces the project's source library. */
+    setSources(sources: Source[]): Promise<ProjectState>
   }
   diagram: {
     render(request: DiagramRenderRequest): Promise<DiagramRenderResult>

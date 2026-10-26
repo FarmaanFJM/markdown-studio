@@ -4,6 +4,7 @@ import { DEFAULT_SETTINGS, LIMITS } from '@shared/settings'
 import { api } from './bridge'
 import { runMenuCommand } from './commands/commands'
 import './commands/phase2'
+import './commands/publishing'
 import { handleGlobalKeydown } from './commands/keybindings'
 import { ContextMenu, Toasts } from './dialogs/Overlays'
 import { DialogHost } from './dialogs/DialogHost'
@@ -16,10 +17,19 @@ import { Splitter } from './layout/Splitter'
 import { StatusBar } from './layout/StatusBar'
 import { Welcome } from './layout/Welcome'
 import { PreviewPanel } from './preview/PreviewPanel'
+import { PublicationPanel } from './publishing/PublicationPanel'
 import { SettingsPanel } from './settings/SettingsPanel'
-import { confirmCloseAll, documentName, useDocuments } from './state/documents'
+import {
+  checkForExternalChanges,
+  confirmCloseAll,
+  documentName,
+  useDocuments
+} from './state/documents'
 import { useExportSetup } from './state/exportSetup'
 import { startPresentationStore } from './state/presentation'
+import { startProjectStore } from './state/project'
+import { clearSnapshots } from './state/recovery'
+import { offerRecovery, restoreSession, startSessionTracking } from './state/session'
 import { flushSettings, useSettings } from './state/settings'
 import { useWorkspace } from './state/workspace'
 
@@ -34,6 +44,7 @@ function useApplicationEvents(): void {
       closing = true
       try {
         if (await confirmCloseAll()) {
+          await clearSnapshots()
           await flushSettings()
           await api.app.confirmClose()
         }
@@ -52,6 +63,9 @@ function useApplicationEvents(): void {
         if (event.dataTransfer) event.dataTransfer.dropEffect = 'none'
       }
     }
+    // Files edited by another program are noticed when the window gets focus again.
+    const onFocus = () => void checkForExternalChanges()
+    window.addEventListener('focus', onFocus)
     window.addEventListener('keydown', handleGlobalKeydown, true)
     window.addEventListener('dragover', block)
     window.addEventListener('drop', block)
@@ -59,6 +73,7 @@ function useApplicationEvents(): void {
       offMenu()
       offClose()
       offChanged()
+      window.removeEventListener('focus', onFocus)
       window.removeEventListener('keydown', handleGlobalKeydown, true)
       window.removeEventListener('dragover', block)
       window.removeEventListener('drop', block)
@@ -98,8 +113,13 @@ export function App() {
         if (loaded.workspace.lastWorkspace)
           useWorkspace.getState().setRoot(loaded.workspace.lastWorkspace)
         startPresentationStore()
+        startProjectStore()
         void useExportSetup.getState().loadPresets()
         setReady(true)
+        void restoreSession().then(async () => {
+          await offerRecovery()
+          startSessionTracking()
+        })
       })
   }, [])
 
@@ -122,7 +142,13 @@ export function App() {
         {layout.sidebarVisible && (
           <>
             <aside className="sidebar" style={{ width: layout.sidebarWidth }} data-testid="sidebar">
-              {layout.sidebarView === 'settings' ? <SettingsPanel /> : <Explorer />}
+              {layout.sidebarView === 'settings' ? (
+                <SettingsPanel />
+              ) : layout.sidebarView === 'publication' ? (
+                <PublicationPanel />
+              ) : (
+                <Explorer />
+              )}
             </aside>
             <Splitter
               label="Resize sidebar"

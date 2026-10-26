@@ -42,7 +42,9 @@ const api: MarkdownStudioApi = {
   },
   dialogs: {
     openMarkdown: () => ipcRenderer.invoke(IPC.dialogOpenMarkdown),
-    saveMarkdown: (defaultPath) => ipcRenderer.invoke(IPC.dialogSaveMarkdown, defaultPath)
+    saveMarkdown: (defaultPath) => ipcRenderer.invoke(IPC.dialogSaveMarkdown, defaultPath),
+    openImage: () => ipcRenderer.invoke(IPC.dialogOpenImage),
+    openSources: () => ipcRenderer.invoke(IPC.dialogOpenSources)
   },
   assets: {
     pathForFile: (file) => {
@@ -53,7 +55,15 @@ const api: MarkdownStudioApi = {
       }
     },
     importImage: (sourcePath, targetDirectory) =>
-      ipcRenderer.invoke(IPC.assetsImportImage, sourcePath, targetDirectory)
+      ipcRenderer.invoke(IPC.assetsImportImage, sourcePath, targetDirectory),
+    saveClipboardImage: (bytes, mime, targetDirectory, baseName) =>
+      ipcRenderer.invoke(IPC.assetsSaveClipboardImage, bytes, mime, targetDirectory, baseName)
+  },
+  recovery: {
+    write: (snapshot) => ipcRenderer.invoke(IPC.recoveryWrite, snapshot),
+    remove: (id) => ipcRenderer.invoke(IPC.recoveryRemove, id),
+    list: () => ipcRenderer.invoke(IPC.recoveryList),
+    clear: () => ipcRenderer.invoke(IPC.recoveryClear)
   },
   templates: {
     list: () => ipcRenderer.invoke(IPC.templatesList),
@@ -78,6 +88,11 @@ const api: MarkdownStudioApi = {
     setWorkspace: (overrides) => ipcRenderer.invoke(IPC.presentationSetWorkspace, overrides),
     pickCss: (scope) => ipcRenderer.invoke(IPC.cssPick, scope),
     readCss: (path) => ipcRenderer.invoke(IPC.cssRead, path)
+  },
+  project: {
+    get: () => ipcRenderer.invoke(IPC.projectGet),
+    setPublication: (publication) => ipcRenderer.invoke(IPC.projectSetPublication, publication),
+    setSources: (sources) => ipcRenderer.invoke(IPC.projectSetSources, sources)
   },
   diagram: {
     render: (request) => ipcRenderer.invoke(IPC.diagramRender, request),

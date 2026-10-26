@@ -1,13 +1,14 @@
 import type { MarkdownIt } from 'markdown-it'
 import hljs from 'highlight.js/lib/common'
 import { createApplicationMarkdownIt } from '@shared/markdown/plugins'
+import type { PublishingEnv, PublishingOptions, PublishingResult } from '@shared/publishing/types'
 import { renderMath } from './math'
 
 /** Unforgeable per-session marker: documents cannot reference math slots themselves. */
 const SLOT_NONCE = crypto.randomUUID().replace(/-/g, '')
 const SLOT_PATTERN = new RegExp(`<span data-ms-math="${SLOT_NONCE}:(\\d+)"></span>`, 'g')
 
-type RenderEnv = { mathSlots: string[] }
+type RenderEnv = { mathSlots: string[] } & PublishingEnv
 
 export { slugify } from '@shared/markdown/slug'
 
@@ -56,12 +57,15 @@ export interface RenderedMarkdown {
   /** HTML with equations replaced by slots. Sanitise it, then call `fillMathSlots`. */
   html: string
   slots: string[]
+  /** Labels, headings, citations and problems found while rendering. */
+  publishing: PublishingResult | undefined
 }
 
 /** Converts Markdown to HTML whose equations are slots for already-sanitised markup. */
 export function renderMarkdownSlots(
   source: string,
-  features: RenderFeatures = ALL_FEATURES
+  features: RenderFeatures = ALL_FEATURES,
+  publishing: PublishingOptions = {}
 ): RenderedMarkdown {
   const key = `${features.math}|${features.diagrams}`
   let renderer = instances.get(key)
@@ -69,8 +73,9 @@ export function renderMarkdownSlots(
     renderer = createMarkdownRenderer(features)
     instances.set(key, renderer)
   }
-  const env: RenderEnv = { mathSlots: [] }
-  return { html: renderer.render(source, env as never), slots: env.mathSlots }
+  const env: RenderEnv = { mathSlots: [], ms: { ...publishing } }
+  const html = renderer.render(source, env as never)
+  return { html, slots: env.mathSlots, publishing: env.ms?.result }
 }
 
 /** Puts the (separately sanitised) equation markup back into sanitised document HTML. */

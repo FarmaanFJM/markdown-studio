@@ -2,6 +2,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { DirEntry, EntryState, FileListing, TextFile } from '@shared/ipc'
 import type { AccessControl } from './accessControl'
+import { writeFileAtomic } from './atomicWrite'
 
 /** Entries hidden from the Explorer. They are still untouched on disk. */
 const HIDDEN_ENTRIES = new Set([
@@ -139,7 +140,18 @@ export class FileService {
       }
     }
     const body = Buffer.from(content, 'utf8')
-    await fs.writeFile(target, hasBom === true ? Buffer.concat([UTF8_BOM, body]) : body)
+    const data = hasBom === true ? Buffer.concat([UTF8_BOM, body]) : body
+    try {
+      // Write beside the file and rename, so a crash or a full disk cannot leave a truncated
+      // document behind.
+      await writeFileAtomic(await fs.realpath(target).catch(() => target), data)
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      // Some setups (another program holding the file open, certain network or sync folders)
+      // refuse the rename; the plain write still works there.
+      if (code !== 'EPERM' && code !== 'EBUSY' && code !== 'EXDEV' && code !== 'EACCES') throw error
+      await fs.writeFile(target, data)
+    }
     const stat = await fs.stat(target)
     return { mtimeMs: stat.mtimeMs }
   }

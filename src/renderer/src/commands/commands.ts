@@ -45,7 +45,7 @@ async function openFolder(path?: string): Promise<void> {
   }
 }
 
-function showSidebar(view: 'explorer' | 'settings'): void {
+function showSidebar(view: 'explorer' | 'publication' | 'settings'): void {
   useSettings.getState().update({ layout: { sidebarVisible: true, sidebarView: view } })
 }
 
@@ -119,6 +119,7 @@ export const commands = {
   },
   showExplorer: () => showSidebar('explorer'),
   showSettings: () => showSidebar('settings'),
+  showPublication: () => showSidebar('publication'),
 
   setPreview,
   togglePreview() {

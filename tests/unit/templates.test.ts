@@ -122,7 +122,11 @@ describe('built-in templates', () => {
       'Technical documentation',
       'Project notes',
       'Meeting notes',
-      'Report'
+      'Report',
+      'Research report',
+      'Onderzoeksverslag (Nederlands)',
+      'Health UI research (Playful Tech)',
+      'Two-column article'
     ])
   })
 

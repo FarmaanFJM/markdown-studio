@@ -1,4 +1,4 @@
-import { Columns2, FileText, X } from 'lucide-react'
+import { AlertTriangle, Columns2, FileText, X } from 'lucide-react'
 import type { PreviewMode } from '@shared/settings'
 import { commands } from '../commands/commands'
 import { FileIcon } from '../explorer/FileIcon'
@@ -28,7 +28,13 @@ export function EditorTabs() {
               role="tab"
               aria-selected={active}
               className={`tab${active ? ' active' : ''}${doc.dirty ? ' dirty' : ''}`}
-              title={doc.path ?? `${name} (not saved yet)`}
+              title={
+                doc.saveError
+                  ? `${name}: could not be saved — ${doc.saveError}`
+                  : doc.conflict
+                    ? `${name}: changed on disk while you have unsaved edits`
+                    : (doc.path ?? `${name} (not saved yet)`)
+              }
               data-testid="tab"
               data-name={name}
               onMouseDown={(e) => {
@@ -41,6 +47,14 @@ export function EditorTabs() {
             >
               <FileIcon name={doc.path ?? `${name}.md`} size={14} />
               <span className="tab-label">{name}</span>
+              {(doc.conflict || doc.saveError) && (
+                <AlertTriangle
+                  size={13}
+                  className="tab-warning"
+                  data-testid="tab-warning"
+                  aria-label={doc.saveError ? 'Could not be saved' : 'Changed on disk'}
+                />
+              )}
               <button
                 type="button"
                 className="tab-close"

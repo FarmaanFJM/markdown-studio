@@ -269,3 +269,15 @@ Break**). Themes, custom CSS, page setup, headers, footers and export presets ar
 [Publishing guide](PUBLISHING.md).
 
 Slash commands now include `/equation`, `/mermaid` and `/page`.
+
+## Captions, references, citations and chapters (Levels 1 and 2)
+
+Figures and tables with automatic numbers, cross-references, citations with an APA reference
+list, document settings (page, columns, contents), templates for research reports and Health UI
+research, and publications that combine several chapters are described in
+[Writing publications](PUBLICATIONS.md). New commands there: **Insert → Figure with Caption…**
+(Ctrl+Shift+F), **Cross-reference…** (Ctrl+Shift+R), **Citation…** (Ctrl+Shift+C), **Publish →
+Document Settings…** (Ctrl+Shift+D), **Manage Sources…**, and the **Publication** panel
+(Ctrl+Shift+J). Typing `@` suggests labels and source keys. The heading, list and quote buttons
+insert their marker on an empty line, **Insert Table** asks for rows and columns, and pasting an
+image saves it in the project.

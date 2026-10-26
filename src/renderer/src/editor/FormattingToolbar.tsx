@@ -1,10 +1,14 @@
 import {
   Bold,
+  BookMarked,
+  Captions,
   Code,
   FileCode,
   Image,
+  ImagePlus,
   Italic,
   Link,
+  Link2,
   List,
   ListChecks,
   ListOrdered,
@@ -12,6 +16,7 @@ import {
   Minus,
   Quote,
   Sigma,
+  SlidersHorizontal,
   Strikethrough,
   Table,
   Workflow,
@@ -53,6 +58,17 @@ const GROUPS: ToolbarButton[][] = [
   [
     { command: 'insert.mathInline', label: 'Insert inline math', Icon: Sigma },
     { command: 'insert.mermaid', label: 'Insert Mermaid diagram', Icon: Workflow }
+  ],
+  [
+    { command: 'insert.figure', label: 'Insert figure with caption', Icon: ImagePlus },
+    { command: 'insert.captionTable', label: 'Add caption to table', Icon: Captions },
+    { command: 'insert.crossReference', label: 'Insert cross-reference', Icon: Link2 },
+    { command: 'insert.citation', label: 'Insert citation', Icon: BookMarked },
+    {
+      command: 'document.settings',
+      label: 'Document settings (page, columns, contents)',
+      Icon: SlidersHorizontal
+    }
   ]
 ]
 

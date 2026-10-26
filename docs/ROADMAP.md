@@ -5,8 +5,10 @@ documentation into a professional writing and publishing environment.
 
 **Product principle:** Simple by default, powerful when needed.
 
-**Status:** Long-term proposal. Everything described under a future milestone is **not
-implemented** and is not a commitment. What is implemented today is described in the
+**Status:** Long-term proposal. Level 1 (core) and Level 2 (professional publishing
+foundations: two columns, captions and cross-references, contents, citations and APA, chapters,
+templates) are implemented, see [LEVEL_1_2_STATUS.md](LEVEL_1_2_STATUS.md). Everything else
+described under a future milestone is **not implemented** and is not a commitment. What is implemented today is described in the
 [README](../README.md); the detailed plan for equation numbering, references and books is in the
 [academic publishing roadmap](ACADEMIC_PUBLISHING_ROADMAP.md), which this document builds on.
 

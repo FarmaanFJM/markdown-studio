@@ -86,6 +86,10 @@ function toOutcome(result: DiagramRenderResult): DiagramOutcome {
     : { ok: false, message: 'The diagram produced no displayable output.', line: null }
 }
 
+function isCancelled(outcome: DiagramOutcome): boolean {
+  return !outcome.ok && outcome.message === 'Cancelled.'
+}
+
 /** Draws one diagram (or returns the cached drawing). Concurrent equal requests share a call. */
 export function renderDiagram(
   source: string,
@@ -117,7 +121,8 @@ export function renderDiagram(
       line: null
     }))
     .then((outcome) => {
-      remember(key, outcome)
+      // A drawing dropped from the queue says nothing about the diagram; never keep it.
+      if (!isCancelled(outcome)) remember(key, outcome)
       return outcome
     })
     .finally(() => inFlight.delete(key))
@@ -264,7 +269,15 @@ export function hydrateDiagrams(
           if (cancelled) return resolve()
           const id = { value: '' }
           requested.push(id)
-          void renderDiagram(source, style, id).then((outcome) => {
+          const draw = async (): Promise<DiagramOutcome> => {
+            let outcome = await renderDiagram(source, style, id)
+            // The call may have been shared with an earlier hydration that cancelled it.
+            for (let retry = 0; retry < 3 && !cancelled && isCancelled(outcome); retry++) {
+              outcome = await renderDiagram(source, style, id)
+            }
+            return outcome
+          }
+          void draw().then((outcome) => {
             // Text that was replaced while this drew is not touched.
             if (!cancelled && (root as Node).contains(figure)) {
               const problem = applyOutcome(figure, source, baseId, occurrence, outcome)

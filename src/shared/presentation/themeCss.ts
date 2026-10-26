@@ -147,6 +147,56 @@ blockquote > :last-child { margin-bottom: 0; }
 .ms-page-break { height: 0; break-after: page; page-break-after: always; }
 @media screen { .ms-page-break { margin: 2.2em 0; border-top: 1px dashed var(--ms-border); } }
 
+/* ---------- publishing: captions, references, contents, bibliography ---------- */
+figure.ms-figure { margin: 1.2em 0; text-align: center; }
+figure.ms-figure img { display: block; margin: 0 auto; }
+figcaption, caption { color: var(--ms-muted); font-size: 0.9em; line-height: 1.4; }
+figcaption { margin-top: 0.5em; text-align: center; }
+caption { caption-side: top; padding: 0 0 0.5em; text-align: left; }
+table.ms-table { min-width: min(100%, 26em); }
+.ms-caption-label { color: var(--ms-text); font-weight: 650; }
+.ms-secnum { margin-right: 0.15em; color: var(--ms-muted); font-variant-numeric: tabular-nums; }
+.ms-xref { color: var(--ms-link); }
+.ms-xref-missing, .ms-cite-missing { color: #b42318; background: color-mix(in srgb, #b42318 9%, transparent); border-bottom: 1px dotted #b42318; border-radius: 3px; padding: 0 0.15em; font-size: 0.95em; }
+[data-page='dark'] .ms-xref-missing, [data-page='dark'] .ms-cite-missing { color: #ff8a80; border-bottom-color: #ff8a80; }
+.ms-cite-unresolved { color: var(--ms-muted); }
+nav.ms-toc, nav.ms-list { margin: 0 0 1.8em; padding: 0.9em 1.2em; background: var(--ms-subtle); border: 1px solid var(--ms-border); border-radius: 6px; font-size: 0.95em; break-inside: avoid-column; }
+.ms-toc-title { margin: 0 0 0.5em; font-family: var(--ms-font-heading); font-size: 1.05em; font-weight: 650; color: var(--ms-heading); }
+nav.ms-toc ul, nav.ms-list ul { margin: 0; padding-left: 1.2em; list-style: none; }
+nav.ms-toc > ul { padding-left: 0; }
+nav.ms-toc li, nav.ms-list li { margin: 0.15em 0; }
+nav.ms-toc a, nav.ms-list a { color: var(--ms-text); }
+nav.ms-toc a:hover, nav.ms-list a:hover { color: var(--ms-link); }
+section.ms-chapter[data-newpage='true'] { break-before: page; page-break-before: always; }
+section.ms-chapter > h1:first-child { margin-top: 0; }
+section.ms-bibliography { margin-top: 2.2em; }
+.ms-bibliography-title { margin-top: 0; }
+.csl-entry { margin: 0 0 0.6em; padding-left: 2em; text-indent: -2em; }
+.csl-entry a { overflow-wrap: anywhere; }
+.ms-publication-title { margin: 0 0 0.3em; }
+.ms-publication-meta { margin: 0 0 2em; color: var(--ms-muted); }
+
+img.ms-img-missing { display: inline-block; box-sizing: border-box; max-width: 100%; min-height: 2.6em; padding: 0.5em 0.8em; color: #b42318; background: color-mix(in srgb, #b42318 8%, transparent); border: 1px dashed #b42318; border-radius: 4px; font-size: 0.9em; font-style: normal; }
+img.ms-img-missing::after { content: ' \2014  ' attr(title); }
+
+/* ---------- publishing: columns (whole document) ---------- */
+@media screen and (min-width: 900px) {
+  .markdown-body[data-columns='2'] { max-width: calc(var(--ms-width) * 1.5 + 2 * 48px); }
+  .markdown-body[data-columns='2'] > * { max-width: none; }
+}
+.markdown-body[data-columns='2'] { column-count: 2; column-gap: var(--ms-col-gap, 8mm); column-fill: balance; }
+.markdown-body[data-columns='2'] > h1:first-child, .markdown-body[data-columns='2'] > nav.ms-toc, .markdown-body[data-columns='2'] .ms-full-width, .markdown-body[data-columns='2'] .ms-publication-title, .markdown-body[data-columns='2'] .ms-publication-meta, .markdown-body[data-columns='2'] .ms-chapter > h1:first-child { column-span: all; }
+.markdown-body[data-columns='2'] .ms-full-width { margin-left: 0; margin-right: 0; }
+/* A table with five or more columns is too wide for one column: it spans both. */
+.markdown-body[data-columns='2'] table:has(> thead th:nth-child(5)) { column-span: all; table-layout: auto; font-size: 0.9em; }
+.markdown-body[data-columns='2'] table { display: table; width: 100%; table-layout: fixed; font-size: 0.85em; overflow: visible; }
+.markdown-body[data-columns='2'] th, .markdown-body[data-columns='2'] td { overflow-wrap: anywhere; padding: 0.3em 0.5em; }
+.markdown-body[data-columns='2'] .ms-full-width table { table-layout: auto; font-size: 0.9em; }
+.markdown-body[data-columns='2'] pre { overflow: auto; }
+.markdown-body[data-columns='2'] p { orphans: 2; widows: 2; }
+.markdown-body[data-columns='2'] figure, .markdown-body[data-columns='2'] .ms-diagram { break-inside: avoid; }
+.markdown-body[data-numbered='true'] h2::before, .markdown-body[data-numbered='true'] h3::before { content: none; }
+
 /* ---------- narrow panes ---------- */
 @media (max-width: 640px) {
   .markdown-body { padding: 24px 18px 48px; }
@@ -163,6 +213,12 @@ blockquote > :last-child { margin-bottom: 0; }
   pre { overflow: visible; }
   blockquote, img, tr, figure, .ms-diagram, .ms-math-block, .ms-diagram-error { break-inside: avoid; page-break-inside: avoid; }
   table { display: table; width: auto; max-width: 100%; overflow: visible; }
+  th, td { overflow-wrap: anywhere; }
+  /* Many columns: smaller text keeps words whole instead of breaking them. */
+  table:has(> thead th:nth-child(7)) { font-size: 0.82em; }
+  table:has(> thead th:nth-child(7)) th, table:has(> thead th:nth-child(7)) td { padding-left: 0.3em; padding-right: 0.3em; }
+  table:has(> thead th:nth-child(10)) { font-size: 0.7em; }
+  table.ms-table-short { break-inside: avoid; page-break-inside: avoid; }
   thead { display: table-header-group; }
   tfoot { display: table-footer-group; }
   img, .ms-diagram svg { max-height: var(--ms-page-height); object-fit: contain; }

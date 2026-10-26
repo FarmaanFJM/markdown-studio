@@ -7,6 +7,10 @@ settings, in the workspace's `.markdown-studio` folder, or in preset files — n
 
 ![The Export dialog](screenshots/export-dialog.png)
 
+> **Level 2 update.** A document can now carry its own page, column, theme and numbering
+> settings in its front matter (**Publish → Document Settings…**). They sit on top of the layers
+> below for that document; see [Writing publications](PUBLICATIONS.md#document-settings-front-matter).
+
 ## Three layers of appearance
 
 | Layer                         | Where you set it                                         | Applies to                                                  |

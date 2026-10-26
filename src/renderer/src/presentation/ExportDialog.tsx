@@ -23,6 +23,7 @@ import { useSettings } from '../state/settings'
 import { dialogs, notify } from '../state/ui'
 import { AppearanceEditor } from './AppearanceEditor'
 import { Field, SelectInput, Switch } from './fields'
+import { documentPageFields } from '@shared/publishing/documentSettings'
 import { PageSetup } from './PageSetup'
 
 /** Shows what an HTML export would contain, built by the same code that writes the file. */
@@ -39,7 +40,7 @@ function HtmlExportPreview({ source, setup }: { source: ExportSource; setup: Exp
     const timer = setTimeout(() => {
       void (async () => {
         try {
-          const presentation = await renderPresentationFor(setup.overrides)
+          const presentation = await renderPresentationFor(setup.overrides, undefined, source)
           const built = await buildStandaloneHtml(source, presentation, setup.html)
           if (!cancelled) setState({ html: built.html, error: null, busy: false })
         } catch (error) {
@@ -453,7 +454,16 @@ export function ExportDialog({
           </fieldset>
 
           {draft.format === 'pdf' ? (
-            <PageSetup value={draft.pdf} idPrefix="export" onChange={(pdf) => update({ pdf })} />
+            <>
+              {documentPageFields(source.settings ?? {}).length > 0 && (
+                <p className="field-note" data-testid="document-page-note">
+                  This document sets its own {documentPageFields(source.settings ?? {}).join(', ')}{' '}
+                  in its front matter. Those values win over this preset; change them with{' '}
+                  <strong>Document Settings</strong> (Ctrl+Shift+D).
+                </p>
+              )}
+              <PageSetup value={draft.pdf} idPrefix="export" onChange={(pdf) => update({ pdf })} />
+            </>
           ) : (
             <fieldset>
               <legend>HTML file</legend>

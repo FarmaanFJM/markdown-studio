@@ -359,8 +359,15 @@ export function setHeading(
     if (text.trim() !== '' && !isProtected(line) && headingLevelOf(text) !== level) allSame = false
   }
   const target = allSame ? 0 : level
+  // On a single empty line the heading marker is inserted, so the user can type the title.
+  const startsHeading =
+    isCollapsed(selection) && lines.get(selection.start.line).trim() === '' && level > 0
   return rewriteLines(lines, selection, isProtected, (text) =>
-    text.trim() === '' ? text : withHeading(text, target)
+    text.trim() === ''
+      ? startsHeading
+        ? `${'#'.repeat(level)} `
+        : text
+      : withHeading(text, target)
   )
 }
 
@@ -427,12 +434,15 @@ export function toggleList(
     if (hasListKind(text, kind)) matching++
   }
   const removing = candidates > 0 && matching === candidates
+  // On a single empty line the list marker is inserted, so the user can type the first item.
+  const startsList = isCollapsed(selection) && lines.get(first).trim() === ''
 
   const counters = new Map<number, number>()
   return rewriteLines(lines, selection, isProtected, (text) => {
     if (text.trim() === '') {
       counters.clear()
-      return text
+      if (!startsList) return text
+      return kind === 'ordered' ? '1. ' : kind === 'task' ? '- [ ] ' : '- '
     }
     const { prefix, indent, content } = stripListMarker(text)
     if (removing) return prefix + indent + content
@@ -476,10 +486,12 @@ export function toggleQuote(
     if (/^[ \t]{0,3}>/.test(text)) quoted++
   }
   const removing = content > 0 && quoted === content
+  const startsQuote = isCollapsed(selection) && lines.get(first).trim() === ''
 
   return rewriteLines(lines, selection, isProtected, (text, index) => {
     if (removing) return text.replace(/^([ \t]{0,3})>[ \t]?/, '$1')
     if (text.trim() === '') {
+      if (startsQuote) return '> '
       // Blank lines between quoted lines keep the quote in one piece.
       const inside = index > first && index < last
       return inside ? '>' : text

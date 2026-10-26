@@ -5,6 +5,8 @@ import {
   themeAttributes,
   type ResolvedTheme
 } from '@shared/presentation/theme'
+import type { DocumentColumns } from '@shared/publishing/documentSettings'
+import type { PublishingOptions, PublishingResult } from '@shared/publishing/types'
 import { katexStylesheet } from './katexCss'
 import { ALL_FEATURES, fillMathSlots, renderMarkdownSlots } from './render'
 import { resolveImageSource, type DocumentContext } from './resolve'
@@ -27,6 +29,10 @@ export interface RenderPresentation {
   pageContentHeightPx?: number
   /** PDF page colour override. */
   pageBackground?: string | null
+  /** Two-column layout of the whole document, or null for one column. */
+  columns?: DocumentColumns | null
+  /** Headings carry generated numbers, so the theme's own heading counters step aside. */
+  numberedSections?: boolean
 }
 
 export const DEFAULT_PRESENTATION: RenderPresentation = {
@@ -48,11 +54,24 @@ function escapeHtml(text: string): string {
 export function renderDocumentBody(
   source: string,
   context: DocumentContext,
-  presentation: Pick<RenderPresentation, 'math' | 'diagrams'> = ALL_FEATURES
+  presentation: Pick<RenderPresentation, 'math' | 'diagrams'> = ALL_FEATURES,
+  publishing?: PublishingOptions
 ): string {
-  const { html, slots } = renderMarkdownSlots(source, presentation)
-  const clean = sanitizeHtml(html, { resolveImage: (src) => resolveImageSource(src, context) })
-  return fillMathSlots(clean, slots)
+  return renderDocumentBodyDetailed(source, context, presentation, publishing).html
+}
+
+/** Like `renderDocumentBody`, and also returns what the publishing layer found. */
+export function renderDocumentBodyDetailed(
+  source: string,
+  context: DocumentContext,
+  presentation: Pick<RenderPresentation, 'math' | 'diagrams'> = ALL_FEATURES,
+  publishing?: PublishingOptions
+): { html: string; publishing: PublishingResult | undefined } {
+  const rendered = renderMarkdownSlots(source, presentation, publishing)
+  const clean = sanitizeHtml(rendered.html, {
+    resolveImage: (src) => resolveImageSource(src, context)
+  })
+  return { html: fillMathSlots(clean, rendered.slots), publishing: rendered.publishing }
 }
 
 export interface DocumentShell {
@@ -71,8 +90,18 @@ export function themeStyleText(presentation: RenderPresentation): string {
   })
 }
 
+export function mainAttributeMap(presentation: RenderPresentation): Record<string, string> {
+  const attributes: Record<string, string> = { ...themeAttributes(presentation.theme) }
+  if (presentation.columns && presentation.columns.count === 2) {
+    attributes['data-columns'] = '2'
+    attributes.style = `--ms-col-gap: ${presentation.columns.gapMm}mm`
+  }
+  if (presentation.numberedSections) attributes['data-numbered'] = 'true'
+  return attributes
+}
+
 export function mainAttributes(presentation: RenderPresentation): string {
-  return Object.entries(themeAttributes(presentation.theme))
+  return Object.entries(mainAttributeMap(presentation))
     .map(([name, value]) => `${name}="${escapeHtml(value)}"`)
     .join(' ')
 }

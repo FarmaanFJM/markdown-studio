@@ -1,13 +1,18 @@
 import { findTableProblems } from '@shared/markdown/tables'
 import { findLinkProblems, type LinkProblem } from '@shared/markdown/linkProblems'
 import { buildLintConfig, fixAllText, fixToEdit, lintSeverity, type LintIssue } from '@shared/lint'
-import { basename } from '@shared/paths'
+import { basename, relativePath } from '@shared/paths'
+import { analyzePublishing } from '@shared/publishing/analyze'
 import { api } from '../bridge'
 import { documentContext } from '../editor/markdown/context'
 import { analysisFor } from '../editor/markdown/model'
 import { getActiveEditor } from '../editor/models'
 import { monaco } from '../editor/monaco'
-import { useDocuments } from '../state/documents'
+import { activeDocument, useDocuments } from '../state/documents'
+import { useProject } from '../state/project'
+import { useWorkspace } from '../state/workspace'
+import { documentPublishing } from '../publishing/documentPublishing'
+import { loadPublicationBuild } from '../publishing/publicationSource'
 import { renderDiagram } from '../markdown/diagrams'
 import { diagramStyleFor } from '../markdown/diagramStyle'
 import { checkMath } from '../markdown/math'
@@ -24,6 +29,7 @@ export const LINK_OWNER = 'markdown-studio-links'
 export const TABLE_OWNER = 'markdown-studio-tables'
 export const LINT_OWNER = 'markdown-studio-lint'
 export const RENDER_OWNER = 'markdown-studio-render'
+export const PUBLISHING_OWNER = 'markdown-studio-publishing'
 
 /** Documents larger than this are not linted: the interface stays responsive on huge files. */
 const MAX_LINT_CHARACTERS = 400_000
@@ -248,6 +254,70 @@ async function diagramMarkers(model: monaco.editor.ITextModel) {
   return entries
 }
 
+// --- Publishing (identifiers, references, sources) ---------------------------------------------
+
+/** Problems with labels, cross-references, citations and front matter of the document. */
+async function publishingMarkers(model: monaco.editor.ITextModel) {
+  const text = model.getValue()
+  const publishing = documentPublishing(text)
+  const entries: { marker: monaco.editor.IMarkerData }[] = []
+  const add = (line: number, message: string, severity: monaco.MarkerSeverity, id?: string) => {
+    const number = Math.min(Math.max(line + 1, 1), model.getLineCount())
+    const content = model.getLineContent(number)
+    const at = id ? content.indexOf(`@${id}`) : -1
+    entries.push({
+      marker: {
+        startLineNumber: number,
+        startColumn: at >= 0 ? at + 1 : 1,
+        endLineNumber: number,
+        endColumn: at >= 0 ? at + 2 + (id?.length ?? 0) : model.getLineMaxColumn(number),
+        severity,
+        message,
+        code: 'publishing',
+        source: 'Markdown Studio'
+      }
+    })
+  }
+
+  if (publishing.frontMatterError) {
+    add(0, `Front matter: ${publishing.frontMatterError}`, monaco.MarkerSeverity.Warning)
+  }
+  for (const message of [...publishing.settingProblems, ...publishing.referenceProblems]) {
+    add(0, `Front matter: ${message}`, monaco.MarkerSeverity.Warning)
+  }
+
+  const document = activeDocument()
+  const publication = useProject.getState().publication
+  const root = useWorkspace.getState().root
+  const relative = document?.path && root && publication ? relativePath(root, document.path) : null
+  if (publication && relative && publication.chapters.includes(relative.replace(/\\/g, '/'))) {
+    // A chapter is checked against the whole publication, so references to other chapters work.
+    const loaded = await loadPublicationBuild()
+    for (const problem of loaded?.build.problems ?? []) {
+      if (problem.file !== relative.replace(/\\/g, '/')) continue
+      add(problem.line, problem.message, monaco.MarkerSeverity.Warning, problem.id)
+    }
+    return entries
+  }
+  const result = analyzePublishing(text, { ...publishing.options, cite: undefined })
+  for (const problem of result.problems) {
+    add(problem.line, problem.message, monaco.MarkerSeverity.Warning, problem.id)
+  }
+  const known = new Set(publishing.sources.map((s) => s.id))
+  for (const cluster of result.clusters) {
+    for (const item of cluster.items) {
+      if (known.has(item.id)) continue
+      add(
+        cluster.line,
+        `No source with the key "${item.id}". Add it under Manage Sources.`,
+        monaco.MarkerSeverity.Warning,
+        item.id
+      )
+    }
+  }
+  return entries
+}
+
 // --- Orchestration ---------------------------------------------------------------------------------
 
 async function validate(editor: Editor): Promise<void> {
@@ -272,6 +342,19 @@ async function validate(editor: Editor): Promise<void> {
     )
   } else {
     clear(model, LINK_OWNER)
+  }
+
+  if (diagnostics.links) {
+    jobs.push(
+      publishingMarkers(model).then(
+        (entries) => {
+          if (current()) setMarkers(model, PUBLISHING_OWNER, entries)
+        },
+        () => undefined
+      )
+    )
+  } else {
+    clear(model, PUBLISHING_OWNER)
   }
 
   const { math, diagrams } = usePresentation.getState().effective

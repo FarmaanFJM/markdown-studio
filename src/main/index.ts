@@ -22,6 +22,8 @@ import { ExportService } from './services/exportService'
 import { FileService } from './services/fileService'
 import { PdfService } from './services/pdfService'
 import { PresentationService } from './services/presentationService'
+import { ProjectService } from './services/projectService'
+import { RecoveryService } from './services/recoveryService'
 import { PresetService } from './services/presetService'
 import { MsFileProtocol, registerSchemePrivileges } from './services/protocol'
 import { SettingsService } from './services/settingsService'
@@ -46,6 +48,8 @@ const msfile = new MsFileProtocol(access)
 const pdf = new PdfService(msfile)
 const presets = new PresetService(access, path.join(app.getPath('userData'), 'export-presets'))
 const presentation = new PresentationService(access, () => mainWindow)
+const project = new ProjectService(access)
+const recovery = new RecoveryService(path.join(app.getPath('userData'), 'recovery'))
 const exportService = new ExportService({
   pdf,
   chooseTarget: async (format, defaultPath) => {
@@ -183,6 +187,12 @@ function registerIpc(): void {
           restoreLastWorkspace: workspace.restoreLastWorkspace,
           ...(Array.isArray(workspace.recent) && workspace.recent.length === 0
             ? { recent: [] }
+            : {}),
+          // Which documents were open is the renderer's to report; opening them again still goes
+          // through the access checks of the file API.
+          ...(Array.isArray(workspace.openFiles) ? { openFiles: workspace.openFiles } : {}),
+          ...(workspace.activeFile === null || typeof workspace.activeFile === 'string'
+            ? { activeFile: workspace.activeFile }
             : {})
         }
       : undefined
@@ -240,6 +250,31 @@ function registerIpc(): void {
   handle(IPC.templatesSave, (scope: unknown, template: unknown) => templates.save(scope, template))
   handle(IPC.templatesDelete, (scope: unknown, id: unknown) => templates.delete(scope, id))
 
+  const pickOne = async (title: string, filters: Electron.FileFilter[]): Promise<string | null> => {
+    if (!mainWindow) return null
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title,
+      defaultPath: access.getWorkspace() ?? undefined,
+      properties: ['openFile'],
+      filters
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    access.grantFile(result.filePaths[0])
+    return result.filePaths[0]
+  }
+  handle(IPC.dialogOpenImage, () =>
+    pickOne('Choose Image', [
+      { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'] },
+      { name: 'All Files', extensions: ['*'] }
+    ])
+  )
+  handle(IPC.dialogOpenSources, () =>
+    pickOne('Import Sources', [
+      { name: 'Bibliography', extensions: ['json', 'bib', 'bibtex'] },
+      { name: 'All Files', extensions: ['*'] }
+    ])
+  )
+
   handle(IPC.dialogOpenMarkdown, async () => {
     if (!mainWindow) return []
     const result = await dialog.showOpenDialog(mainWindow, {
@@ -292,6 +327,18 @@ function registerIpc(): void {
 
   handle(IPC.presentationGetWorkspace, () => presentation.getWorkspace())
   handle(IPC.presentationSetWorkspace, (overrides: unknown) => presentation.setWorkspace(overrides))
+  handle(
+    IPC.assetsSaveClipboardImage,
+    (bytes: unknown, mime: unknown, target: unknown, name: unknown) =>
+      assets.saveClipboardImage(bytes, mime, target, name)
+  )
+  handle(IPC.recoveryWrite, (snapshot: unknown) => recovery.write(snapshot))
+  handle(IPC.recoveryRemove, (id: unknown) => recovery.remove(id))
+  handle(IPC.recoveryList, () => recovery.list())
+  handle(IPC.recoveryClear, () => recovery.clear())
+  handle(IPC.projectGet, () => project.get())
+  handle(IPC.projectSetPublication, (publication: unknown) => project.setPublication(publication))
+  handle(IPC.projectSetSources, (sources: unknown) => project.setSources(sources))
   handle(IPC.cssPick, (scope: unknown) => presentation.pickCss(scope))
   handle(IPC.cssRead, (file: unknown) => presentation.readCss(file))
 

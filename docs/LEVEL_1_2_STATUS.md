@@ -1,0 +1,113 @@
+# Level 1 and Level 2: completeness status
+
+This document records, requirement by requirement, what worked before this work, what was added,
+how it was verified and what is still limited. "Verified" always names the kind of test; nothing
+here claims a human test that did not happen.
+
+**Kinds of verification**
+
+| Label            | Meaning                                                                                                 |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| Unit             | Vitest (Node/jsdom), run locally on Linux and by CI on Linux and Windows                                |
+| E2E (Linux)      | Playwright driving the real Electron app, run locally on Linux under Xvfb                               |
+| E2E (Windows CI) | The same suite, run by the CI workflow on `windows-latest` against the unpacked app (see _CI evidence_) |
+| Visual           | Exported PDF pages rasterised and inspected by eye (images in `docs/screenshots/`)                      |
+| Human            | A person using the application on a real PC. **None has been done on Windows or macOS.**                |
+
+## Audit before the work
+
+The repository was audited by reading the code and running the existing suites (484 unit tests and
+the E2E suite were green). Findings that shaped the work:
+
+- Level 1 largely existed from Phases 1–3 (Explorer, tabs, unsaved prompts, image drops, the table
+  commands and grid editor, formatting toolbar and shortcuts, preview and export), but: there was
+  no clipboard image paste; saving never checked whether the file had changed on disk; documents
+  were written non-atomically; unsaved work was lost on a crash; open tabs were not restored; _Save
+  As_ into another folder broke relative images; missing images produced a blank box and a
+  successful export; the table dialog could not choose its size; the heading, list and quote
+  buttons did nothing on an empty line; wide tables were cut off in the PDF (found by the stress
+  test below).
+- Level 2 existed only as themes, export presets, page setup with header/footer/page numbers, and a
+  static table of contents written into the text. There was no front matter, two-column layout,
+  captions, numbering, cross-references, citations, bibliography, chapter projects or the requested
+  templates. The roadmap documents correctly described these as not implemented.
+
+## Level 1 — Markdown Studio Core
+
+| Requirement                                                                               | Before                           | Now                                                                                                                                                                             | Verification                                                                                                    | Remaining                                                         |
+| ----------------------------------------------------------------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Write, organise in folders, save, reopen                                                  | Worked                           | Unchanged workflow; folders and files created in the app (school workflow step 1)                                                                                               | E2E (Linux), school workflow                                                                                    | –                                                                 |
+| Save, Save As, switch, close, restart                                                     | Partial                          | Restart restores open documents; Save As relinks relative paths                                                                                                                 | E2E: `data-safety.spec.ts` (restart, relink), editing specs                                                     | Files outside the opened folder are not restored                  |
+| No silent data loss, clear feedback                                                       | Partial (failed save toast only) | Conflict check with Save As / Overwrite / Reload; unmodified documents follow the file; atomic writes; crash recovery of unsaved text; failed save keeps text and marks the tab | Unit: `safetyServices.test.ts`; E2E: conflict, overwrite, reload, kill-and-recover tests                        | Recovery copies are per session; no history of earlier versions   |
+| Documents stay ordinary Markdown                                                          | Yes                              | Settings in front matter (optional, Pandoc/Quarto compatible); sources and publications in `.markdown-studio`; front matter never printed                                       | Unit: front matter, plugin; E2E                                                                                 | –                                                                 |
+| Images: paste                                                                             | Missing                          | Clipboard images (screenshots, copied pictures, copied image files) saved to the asset folder with a relative reference; text paste unaffected                                  | Unit: signature check, no overwrite, reuse; E2E: paste, text-wins                                               | Only real clipboard events are simulated (see _Not tested_)       |
+| Images: drag from the file explorer                                                       | Worked                           | Unchanged; shared import code                                                                                                                                                   | Existing E2E + school workflow                                                                                  | –                                                                 |
+| Relative references, name conflicts                                                       | Worked                           | Collisions never overwrite; identical files are reused                                                                                                                          | Unit, E2E                                                                                                       | –                                                                 |
+| Images survive save, restart, move, Save As                                               | Partial                          | Verified for restart, a copied (moved) project folder, and Save As with relink; document moves in the Explorer already updated references                                       | E2E: `data-safety.spec.ts`; references.spec                                                                     | –                                                                 |
+| Images in preview, PDF preview, exports                                                   | Worked                           | Unchanged; missing files are reported ("image not found" in all outputs, an info notice on export)                                                                              | E2E: missing image; updated PDF/HTML/security specs                                                             | –                                                                 |
+| Tables: insert with chosen rows and columns                                               | Partial (fixed 3 × 2 grid)       | Rows and columns fields in the Insert Table dialog                                                                                                                              | E2E (workflow step 4)                                                                                           | –                                                                 |
+| Tables: add/delete rows and columns, cells, alignment, edit existing, reformat, undo/redo | Worked (Phase 2)                 | Unchanged; re-verified through the UI with links, inline formatting, empty cells, Unicode and escaped pipes preserved                                                           | Unit: `tables.test.ts` (+ caption interplay); E2E: `tables.spec.ts`, workflow steps 4–5                         | Merged cells are not Markdown tables (unchanged, reported)        |
+| Formatting buttons, shortcuts, tooltips, shortcut overview                                | Worked                           | Heading, list and quote buttons now insert their marker on an empty line; new commands in toolbar, menus, palette and shortcuts                                                 | Unit: `formatting.test.ts`; E2E: workflow step 2; integration specs                                             | –                                                                 |
+| Suggestions at the cursor, not in the way                                                 | Worked                           | `@` suggests labels and source keys only after whitespace or `(`/`[`, never inside words (e-mail addresses) or code                                                             | Unit: citation parsing; E2E: workflow step 6                                                                    | Popup appears when the document has labels or sources             |
+| Selection, cursor, undo/redo on actions                                                   | Worked                           | New actions are single undoable edits                                                                                                                                           | E2E: table undo/redo, insertions                                                                                | –                                                                 |
+| Live preview and PDF export (images, tables, code, math, Mermaid)                         | Worked                           | Shared pipeline kept; the publishing plugin is part of it                                                                                                                       | Existing suites; unit: `pipeline.test.ts`; E2E                                                                  | –                                                                 |
+| Long tables, wide content, large images, page transitions                                 | Partial (wide tables cut off)    | Print rules: header repeats, wide tables fit (smaller text, breaking of long words), small tables stay whole, images and code fit                                               | E2E: `layout-stress.spec.ts` (140 rows, 12 columns, 2400 px image, long code line; one and two columns), Visual | A 12-column table with 20-character words is cramped but complete |
+
+## Level 2 — Professional Publishing Foundations
+
+| Requirement                                                              | Before                            | Now                                                                                                                                                                                                                                              | Verification                                                                                                   | Remaining                                                                                |
+| ------------------------------------------------------------------------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Themes, presets, settings consistent                                     | Themes, presets, settings existed | Document settings dialog; document theme/page fields layered on presets and announced in the Export dialog; the preview's theme chip shows the document's own theme                                                                              | Unit: `publishingModel.test.ts`; E2E: workflow steps 7, 9, 10, 11; existing theme/preset specs                 | –                                                                                        |
+| Reusable templates: research report, Health UI                           | Missing                           | Research report (EN, NL), Health UI research (Playful Tech) with game analyses, screenshots, comparison table, conclusions, sources, Figma links; two-column article; no invented content                                                        | Unit: `publishingTemplates.test.ts`, lint of every template; E2E: template creation in the workflow            | –                                                                                        |
+| Page size, margins, header, footer, page numbers                         | Export dialog only                | Also per document (front matter) and per publication, with a dialog                                                                                                                                                                              | Unit; E2E: workflow steps 9–11 (footer text read back from the PDF)                                            | –                                                                                        |
+| Two-column documents                                                     | Missing                           | Real CSS multi-column pagination; title, contents, `.full-width` items and tables with ≥ 5 columns span both; setting is for the **whole document** (documented)                                                                                 | E2E: workflow step 10, stress (two columns), Visual                                                            | No sections with different column counts; headings above spanning items may end a column |
+| Automatic table of contents                                              | Static list written to the text   | Generated at render time (setting or `[TOC]`), linked, numbered, depth setting; updates as structure changes; `[LOF]`/`[LOT]`                                                                                                                    | Unit: plugin; E2E: workflow step 7 (restructure and re-read), publication contents                             | No page numbers in the contents                                                          |
+| Stable references to sections, figures, tables                           | Missing                           | `@sec-/@fig-/@tbl-` with automatic renumbering, per-chapter numbering in publications, duplicate / missing / wrong-prefix diagnostics (preview, exports, editor markers, panel)                                                                  | Unit: plugin, build; E2E: workflow steps 6, 7, 11                                                              | Equations are not numbered automatically                                                 |
+| Captions and automatic numbering (UI to insert and refer)                | Missing                           | Insert Figure with Caption, Table Caption, Cross-reference pickers; captions in all outputs                                                                                                                                                      | E2E: workflow step 6                                                                                           | –                                                                                        |
+| Sources, citations, bibliography, APA                                    | Missing                           | Source manager (add, edit, delete, import BibTeX/CSL JSON), project or document storage, citation picker, citeproc-js, **APA Style 7th edition**, missing data stays visible and unfilled                                                        | Unit: sources, import, citations, build; E2E: workflow steps 6, 8, 9, 11                                       | APA only; `bibliography:` files are not loaded (reported)                                |
+| Citations and list intact after reopen and export                        | –                                 | Verified after a full restart and in the exported PDF text                                                                                                                                                                                       | E2E: workflow steps 8, 9                                                                                       | –                                                                                        |
+| Publications from several chapters                                       | Missing                           | Publication panel: add, reorder (drag or buttons), remove, open chapters, title/author/language/structure/layout, preview, export; per-chapter image paths; shared contents, numbering, references, bibliography; chapters remain separate files | Unit: `publicationBuild.test.ts`, services; E2E: workflow step 11 (preview DOM, exported PDF text, unique ids) | No per-chapter caching; many large chapters were not benchmarked                         |
+| Preserve identity, KaTeX, Mermaid, custom CSS, HTML/PDF export, security | –                                 | Emerald identity and all Phase 3 features untouched; no change to sandboxing, context isolation or IPC sender checks; new IPC validated                                                                                                          | Existing suites (full E2E run), security spec, unit: service validation                                        | –                                                                                        |
+| Performance                                                              | Phase 3 figures                   | Measured against `main`; first-citation cost reduced by warming and engine reuse                                                                                                                                                                 | `docs/PERFORMANCE.md`                                                                                          | Open/refresh of 400 KB+ documents ~20% slower; see the report                            |
+
+## The school workflow
+
+`tests/e2e/school-workflow.spec.ts` drives the real application through the twelve steps of the
+assignment (steps 8 and 9, saving/restarting and checking everything, are one test). Results of the
+latest local run on Linux (11 tests, 11 passed):
+
+| #   | Step                                                                                                                              | Result |
+| --- | --------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1   | Playful Tech project with folders and several documents (Explorer actions, template)                                              | Passed |
+| 2   | Game analysis with heading menu, bold/italic buttons, list button, link, from the controls                                        | Passed |
+| 3   | Images by clipboard paste and by dragging a file                                                                                  | Passed |
+| 4   | Comparison table: size chosen, cells, rows, columns, delete, alignment, undo/redo                                                 | Passed |
+| 5   | Reformat a messy existing table; links, inline formatting, Unicode, empty cells, escaped pipes kept; preview shows the same cells | Passed |
+| 6   | Figure and table captions, cross-references, two sources, citations, bibliography                                                 | Passed |
+| 7   | Contents and numbering; restructure; contents, numbers and table numbers update                                                   | Passed |
+| 8   | Save, close the application, reopen: content, images, settings, sources, references                                               | Passed |
+| 9   | Multi-page PDF: text, figure, citation, bibliography, margins checked on the raster                                               | Passed |
+| 10  | Two-column document: both columns used, footer from the front matter                                                              | Passed |
+| 11  | Three chapters combined: contents, numbering (Figure 1.1), references, assets, PDF                                                | Passed |
+
+Screenshots and PDF pages from this run: `docs/screenshots/workflow-*.png`, `stress-*.png`.
+
+## CI evidence
+
+See the pull request for the CI results of the pushed branch (Linux, Windows, macOS jobs). What each
+job verifies is described in the README (_Release status_). The new specs were added to the
+`test:e2e:core` and `test:e2e:export` groups, and the Windows job runs the complete E2E suite
+against the unpacked application.
+
+## Not tested / limits
+
+- **No human test on Windows or macOS.** The Windows run is automated (CI). Real clipboard paste of
+  a screenshot, drag-and-drop from Windows File Explorer, file-manager integration, high-DPI
+  screens and the installer's first-run experience still need a person.
+- Clipboard paste is tested by dispatching a paste event with image data; the operating system's
+  clipboard was not driven.
+- The unsigned Windows installer will trigger SmartScreen.
+- Publications were not benchmarked with many large chapters (see Performance).
+- citeproc-js is used under its CPAL licence (attribution in the About dialog and
+  `THIRD_PARTY_NOTICES.md`); decide before commercial distribution.
+- Specialist chess extensions and a full Overleaf replacement were out of scope.

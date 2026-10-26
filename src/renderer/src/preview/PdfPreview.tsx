@@ -13,8 +13,11 @@ import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import type { ExportSetup } from '@shared/export/setup'
 import { api, errorMessage } from '../bridge'
-import { exportSourceFor } from '../export/source'
-import { buildPdfSourceHtml, titleFor } from '../markdown/exporters'
+import { exportSourceFor, setupForSource } from '../export/source'
+import { buildPdfSourceHtml, titleFor, type ExportSource } from '../markdown/exporters'
+import { loadPublicationBuild, publicationExportSource } from '../publishing/publicationSource'
+import { usePublicationView } from '../state/publicationView'
+import { useProject } from '../state/project'
 import { activeDocument, useDocuments } from '../state/documents'
 import { useActiveSetup } from '../state/exportSetup'
 import { renderPresentationFor, usePresentation } from '../state/presentation'
@@ -131,12 +134,23 @@ export function PdfPreview({
   const activePath = useDocuments((s) => s.documents.find((d) => d.id === s.activeId)?.path ?? null)
   const revision = useDocuments((s) => s.revision)
   const root = useWorkspace((s) => s.root)
+  const showPublication = usePublicationView((s) => s.previewing)
+  const publicationConfig = useProject((s) => s.publication)
+  const librarySources = useProject((s) => s.sources)
   const autoRefresh = useSettings((s) => s.settings.preview.pdfAutoRefresh)
 
   const generate = useCallback(async () => {
-    const doc = activeDocument()
-    const source = doc && exportSourceFor(doc)
     const id = ++generation.current
+    const loaded = usePublicationView.getState().previewing ? await loadPublicationBuild() : null
+    const doc = activeDocument()
+    const source: ExportSource | null = usePublicationView.getState().previewing
+      ? loaded
+        ? publicationExportSource(loaded)
+        : null
+      : doc
+        ? exportSourceFor(doc)
+        : null
+    if (id !== generation.current) return
     if (!source) {
       setPdf(null)
       setSizes([])
@@ -145,8 +159,8 @@ export function PdfPreview({
     }
     setStatus('generating')
     try {
-      const current = setupRef.current
-      const presentation = await renderPresentationFor(current.overrides, current.pdf)
+      const current = setupForSource(setupRef.current, source)
+      const presentation = await renderPresentationFor(current.overrides, current.pdf, source)
       const { html } = await buildPdfSourceHtml(source, presentation, current.pdf)
       const bytes = await api.render.pdf(html, current.pdf, {
         title: titleFor(source),
@@ -196,7 +210,17 @@ export function PdfPreview({
     }
     const timer = setTimeout(() => void generate(), AUTO_REFRESH_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [activeId, activePath, revision, root, autoRefresh, generate])
+  }, [
+    activeId,
+    activePath,
+    revision,
+    root,
+    autoRefresh,
+    generate,
+    showPublication,
+    publicationConfig,
+    librarySources
+  ])
 
   // A different theme, page setup or export preset regenerates at once, whatever the auto refresh.
   const setupKey = JSON.stringify(setup)

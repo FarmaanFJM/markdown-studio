@@ -2,7 +2,12 @@ import { useEffect, useRef } from 'react'
 import { useDocuments } from '../state/documents'
 import { useSettings } from '../state/settings'
 import { notify } from '../state/ui'
-import { dataTransferHasDroppable, insertImages, sourcesFromDataTransfer } from './imageDrop'
+import {
+  dataTransferHasDroppable,
+  insertImages,
+  pasteImages,
+  sourcesFromDataTransfer
+} from './imageDrop'
 import { documentModels, setActiveEditor } from './models'
 import { installDiagnostics, registerQuickFixes } from '../diagnostics/manager'
 import { registerCompletions } from './markdown/completions'
@@ -131,11 +136,20 @@ export function MarkdownEditor() {
       }
       void insertImages(editor, sources, position)
     }
+    // Pasting an image (screenshot, copied picture, copied image files) saves it in the project.
+    const onPaste = (event: ClipboardEvent) => {
+      if (pasteImages(editor, event.clipboardData)) {
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    }
+    container.addEventListener('paste', onPaste, true)
     container.addEventListener('dragover', onDragOver, true)
     container.addEventListener('dragleave', onDragLeave, true)
     container.addEventListener('drop', onDrop, true)
 
     return () => {
+      container.removeEventListener('paste', onPaste, true)
       container.removeEventListener('dragover', onDragOver, true)
       container.removeEventListener('dragleave', onDragLeave, true)
       container.removeEventListener('drop', onDrop, true)

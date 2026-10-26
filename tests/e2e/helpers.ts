@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process'
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
@@ -50,7 +51,7 @@ export async function launch(
     writeFileSync(path.join(sandbox.userData, 'settings.json'), JSON.stringify(settings))
   // MARKDOWN_STUDIO_EXECUTABLE runs the suite against a packaged build instead of `out/`.
   const executablePath = process.env.MARKDOWN_STUDIO_EXECUTABLE
-  const app = await electron.launch({
+  const launchOptions = {
     executablePath,
     // Chromium's sandbox cannot start as root inside CI containers; it is not disabled elsewhere.
     args: [
@@ -64,7 +65,18 @@ export async function launch(
       MARKDOWN_STUDIO_USER_DATA: sandbox.userData,
       NODE_ENV: 'production'
     }
-  })
+  }
+  // A process that was just killed can still hold the user-data folder on Windows, which makes
+  // the next start fail while attaching; trying again a moment later is what a user would do.
+  let app: ElectronApplication | undefined
+  for (let attempt = 1; !app; attempt++) {
+    try {
+      app = await electron.launch(launchOptions)
+    } catch (error) {
+      if (attempt >= 3 || !/ECONNRESET|WebSocket/.test(String(error))) throw error
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    }
+  }
   const page = await app.firstWindow()
   await page.locator('.app:not(.loading)').waitFor()
   return { app, page }
@@ -500,4 +512,20 @@ export async function saveLastIpcResult(
   mkdirSync(path.dirname(file), { recursive: true })
   writeFileSync(file, Buffer.from(base64, 'base64'))
   return true
+}
+
+/**
+ * Ends the application abruptly, as a crash or power loss would. On Windows the child
+ * processes (renderer, GPU) must go too, or they keep the user-data folder locked.
+ */
+export async function killApp(app: ElectronApplication): Promise<void> {
+  const child = app.process()
+  const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()))
+  if (process.platform === 'win32' && child.pid) {
+    spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'])
+  } else {
+    child.kill('SIGKILL')
+  }
+  await exited
+  await new Promise((resolve) => setTimeout(resolve, 1000))
 }

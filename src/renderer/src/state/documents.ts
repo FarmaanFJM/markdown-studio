@@ -1,7 +1,9 @@
 import { create } from 'zustand'
+import { planReferenceUpdates } from '@shared/markdown/moves'
 import { basename, dirname, isPathInside, joinPath, pathsEqual } from '@shared/paths'
 import { api, errorMessage } from '../bridge'
 import { documentModels } from '../editor/models'
+import { configureRecovery, dropSnapshot, scheduleSnapshot } from './recovery'
 import { dialogs, notify } from './ui'
 import { useWorkspace } from './workspace'
 
@@ -14,6 +16,12 @@ export interface EditorDocument {
   dirty: boolean
   /** Monaco alternative version id at the last save; undoing back to it clears `dirty`. */
   savedVersion: number
+  /** Modification time of the file when it was read or last written; null for a new document. */
+  mtimeMs: number | null
+  /** The file changed on disk while this document had unsaved edits. */
+  conflict: boolean
+  /** Why the last attempt to save failed; cleared by the next successful save. */
+  saveError: string | null
 }
 
 export interface CursorInfo {
@@ -39,6 +47,58 @@ export const useDocuments = create<DocumentsState>(() => ({
 
 let nextId = 1
 
+// Text that is only in memory is mirrored to disk shortly after each edit (see recovery.ts).
+configureRecovery((id) => {
+  const doc = getDocument(id)
+  const model = documentModels.get(id)
+  if (!doc || !model || !doc.dirty) return null
+  return {
+    path: doc.path,
+    name: documentName(doc),
+    content: model.getValue(),
+    hasBom: doc.hasBom,
+    mtimeMs: doc.mtimeMs
+  }
+})
+
+/** Re-opens text recovered after an unclean exit as an unsaved document. */
+export function restoreDraft(draft: {
+  path: string | null
+  name: string
+  content: string
+  hasBom: boolean
+  mtimeMs: number | null
+}): string {
+  const open = draft.path
+    ? useDocuments.getState().documents.find((d) => d.path && pathsEqual(d.path, draft.path!))
+    : undefined
+  const openModel = open ? documentModels.get(open.id) : null
+  if (open && openModel) {
+    // The file is already open (restored session): the draft's text goes into that tab, so the
+    // work is not lost and no second tab for the same file appears.
+    openModel.pushEditOperations(
+      [],
+      [{ range: openModel.getFullModelRange(), text: draft.content }],
+      () => null
+    )
+    patchDocument(open.id, { mtimeMs: draft.mtimeMs ?? open.mtimeMs })
+    scheduleSnapshot(open.id, 0)
+    return open.id
+  }
+  const id = addDocument(
+    {
+      path: draft.path,
+      untitledName: draft.path ? null : draft.name.replace(/\.[^.]+$/, ''),
+      hasBom: draft.hasBom,
+      mtimeMs: draft.mtimeMs,
+      dirty: true
+    },
+    draft.content
+  )
+  scheduleSnapshot(id, 0)
+  return id
+}
+
 export function documentName(doc: EditorDocument): string {
   return doc.path ? basename(doc.path) : (doc.untitledName ?? 'Untitled')
 }
@@ -58,7 +118,9 @@ function patchDocument(id: string, patch: Partial<EditorDocument>): void {
 }
 
 function addDocument(
-  doc: Omit<EditorDocument, 'id' | 'dirty' | 'savedVersion'>,
+  doc: Omit<EditorDocument, 'id' | 'dirty' | 'savedVersion' | 'conflict' | 'saveError'> & {
+    dirty?: boolean
+  },
   content: string
 ): string {
   const id = String(nextId++)
@@ -69,12 +131,25 @@ function addDocument(
     if (!current) return
     const dirty = model.getAlternativeVersionId() !== current.savedVersion
     if (dirty !== current.dirty) patchDocument(id, { dirty })
+    if (dirty) scheduleSnapshot(id)
+    else dropSnapshot(id)
     if (useDocuments.getState().activeId === id) {
       useDocuments.setState((s) => ({ revision: s.revision + 1 }))
     }
   })
   useDocuments.setState((s) => ({
-    documents: [...s.documents, { ...doc, id, dirty: false, savedVersion }],
+    documents: [
+      ...s.documents,
+      {
+        ...doc,
+        id,
+        // A restored draft starts dirty: its version never matches a saved state.
+        dirty: doc.dirty ?? false,
+        savedVersion: doc.dirty ? -1 : savedVersion,
+        conflict: false,
+        saveError: null
+      }
+    ],
     activeId: id,
     revision: s.revision + 1
   }))
@@ -90,7 +165,10 @@ export function newDocument(): string {
   const used = new Set(useDocuments.getState().documents.map((d) => d.untitledName))
   let n = 1
   while (used.has(`Untitled-${n}`)) n++
-  return addDocument({ path: null, untitledName: `Untitled-${n}`, hasBom: false }, '')
+  return addDocument(
+    { path: null, untitledName: `Untitled-${n}`, hasBom: false, mtimeMs: null },
+    ''
+  )
 }
 
 export async function openDocument(path: string): Promise<string | null> {
@@ -107,21 +185,71 @@ export async function openDocument(path: string): Promise<string | null> {
       activateDocument(raced.id)
       return raced.id
     }
-    return addDocument({ path: file.path, untitledName: null, hasBom: file.hasBom }, file.content)
+    return addDocument(
+      { path: file.path, untitledName: null, hasBom: file.hasBom, mtimeMs: file.mtimeMs },
+      file.content
+    )
   } catch (error) {
     notify('error', `Could not open ${basename(path)}: ${errorMessage(error)}`)
     return null
   }
 }
 
-async function writeDocument(doc: EditorDocument, path: string): Promise<boolean> {
+/** The save failed because the file was changed by someone else after it was opened. */
+function isConflict(error: unknown): boolean {
+  return /was changed on disk after it was opened/i.test(errorMessage(error))
+}
+
+type ConflictChoice = 'overwrite' | 'saveAs' | 'reload' | null
+
+async function askAboutConflict(doc: EditorDocument): Promise<ConflictChoice> {
+  const choice = await dialogs.choice({
+    title: `${documentName(doc)} changed on disk`,
+    message: `Another program changed ${documentName(doc)} after you opened it. Saving now would replace those changes.`,
+    detail:
+      'Choose Save As to keep both versions, or Reload to take the version on disk and discard your edits.',
+    options: [
+      { value: 'saveAs', label: 'Save As…', primary: true },
+      { value: 'overwrite', label: 'Overwrite', danger: true },
+      { value: 'reload', label: 'Reload from Disk' }
+    ]
+  })
+  return choice as ConflictChoice
+}
+
+async function writeDocument(
+  doc: EditorDocument,
+  path: string,
+  options: { guard?: boolean } = {}
+): Promise<boolean> {
   const model = documentModels.get(doc.id)
   if (!model) return false
   const version = model.getAlternativeVersionId()
+  let written: { mtimeMs: number }
   try {
-    await api.fs.writeText(path, model.getValue(), doc.hasBom)
+    const guard = options.guard !== false && doc.path && pathsEqual(doc.path, path)
+    written = await api.fs.writeText(
+      path,
+      model.getValue(),
+      doc.hasBom,
+      guard && doc.mtimeMs !== null ? doc.mtimeMs : undefined
+    )
   } catch (error) {
-    notify('error', `Could not save ${basename(path)}: ${errorMessage(error)}`)
+    if (isConflict(error)) {
+      const choice = await askAboutConflict(doc)
+      if (choice === 'overwrite') return writeDocument(doc, path, { guard: false })
+      if (choice === 'saveAs') return saveDocumentAs(doc.id)
+      if (choice === 'reload') {
+        await reloadFromDisk(doc.id)
+      }
+      return false
+    }
+    const message = errorMessage(error)
+    patchDocument(doc.id, { saveError: message })
+    notify(
+      'error',
+      `Could not save ${basename(path)}: ${message}. Your text is still open and unsaved.`
+    )
     return false
   }
   // Edits made while the write was in flight keep the document dirty.
@@ -129,11 +257,78 @@ async function writeDocument(doc: EditorDocument, path: string): Promise<boolean
     path,
     untitledName: null,
     savedVersion: version,
-    dirty: model.getAlternativeVersionId() !== version
+    dirty: model.getAlternativeVersionId() !== version,
+    mtimeMs: written.mtimeMs,
+    conflict: false,
+    saveError: null
   })
+  if (model.getAlternativeVersionId() === version) dropSnapshot(doc.id)
   const root = useWorkspace.getState().root
   if (root && isPathInside(root, path)) void useWorkspace.getState().refresh([dirname(path)])
   return true
+}
+
+/**
+ * Replaces the text of a document with the file's current content, as one undoable edit, and
+ * marks it as saved. Used when the file changed on disk.
+ */
+export async function reloadFromDisk(id: string): Promise<boolean> {
+  const doc = getDocument(id)
+  const model = documentModels.get(id)
+  if (!doc?.path || !model) return false
+  try {
+    const file = await api.fs.readText(doc.path)
+    model.pushStackElement()
+    model.pushEditOperations(
+      [],
+      [{ range: model.getFullModelRange(), text: file.content }],
+      () => null
+    )
+    model.pushStackElement()
+    patchDocument(id, {
+      hasBom: file.hasBom,
+      mtimeMs: file.mtimeMs,
+      savedVersion: model.getAlternativeVersionId(),
+      dirty: false,
+      conflict: false
+    })
+    return true
+  } catch (error) {
+    notify('error', `Could not reload ${basename(doc.path)}: ${errorMessage(error)}`)
+    return false
+  }
+}
+
+/**
+ * Looks at the files of the open documents when the window gets focus again. Documents without
+ * unsaved edits follow the file; documents with edits are flagged, and saving asks first.
+ */
+export async function checkForExternalChanges(): Promise<void> {
+  for (const doc of useDocuments.getState().documents) {
+    if (!doc.path || doc.mtimeMs === null) continue
+    try {
+      const file = await api.fs.readText(doc.path)
+      if (Math.abs(file.mtimeMs - doc.mtimeMs) <= 1) continue
+      const model = documentModels.get(doc.id)
+      if (model && model.getValue() === file.content) {
+        patchDocument(doc.id, { mtimeMs: file.mtimeMs, conflict: false })
+        continue
+      }
+      if (!getDocument(doc.id)?.dirty) {
+        if (await reloadFromDisk(doc.id)) {
+          notify('info', `${basename(doc.path)} changed on disk and was reloaded.`)
+        }
+      } else if (!getDocument(doc.id)?.conflict) {
+        patchDocument(doc.id, { conflict: true })
+        notify(
+          'error',
+          `${basename(doc.path)} changed on disk while you have unsaved edits. Saving will ask what to do.`
+        )
+      }
+    } catch {
+      // A file that disappeared is reported when it is saved; nothing to do here.
+    }
+  }
 }
 
 export async function saveDocument(id = useDocuments.getState().activeId): Promise<boolean> {
@@ -141,6 +336,55 @@ export async function saveDocument(id = useDocuments.getState().activeId): Promi
   if (!doc) return false
   if (!doc.path) return saveDocumentAs(doc.id)
   return writeDocument(doc, doc.path)
+}
+
+/**
+ * Relative links and images keep working when a document is saved somewhere else: the
+ * references are rewritten (as one undoable edit) so they still point at the same files.
+ */
+async function relinkForNewLocation(doc: EditorDocument, target: string): Promise<boolean> {
+  const model = documentModels.get(doc.id)
+  const root = useWorkspace.getState().root
+  const from = doc.path ?? (root ? joinPath(root, 'Untitled.md') : null)
+  if (!model || !from || !root || dirname(from) === dirname(target)) return true
+  const plan = planReferenceUpdates(
+    [{ path: from, content: model.getValue() }],
+    { from, to: target },
+    root
+  )
+  const update = plan.updates[0]
+  if (!update || update.replacements.length === 0) return true
+  const choice = await dialogs.choice({
+    title: 'Update links for the new location?',
+    message: `${update.replacements.length} link${update.replacements.length === 1 ? '' : 's'} and image${update.replacements.length === 1 ? '' : 's'} in this document use paths relative to its current folder.`,
+    detail: update.changes
+      .slice(0, 5)
+      .map((c) => `${c.before.slice(0, 60)}  →  ${c.after}`)
+      .join('\n'),
+    options: [
+      { value: 'update', label: 'Update References', primary: true },
+      { value: 'keep', label: 'Keep as Written' }
+    ]
+  })
+  if (choice === null) return false
+  if (choice === 'update') {
+    model.pushStackElement()
+    model.pushEditOperations(
+      [],
+      update.replacements.map((r) => ({
+        range: {
+          startLineNumber: r.line + 1,
+          startColumn: r.column + 1,
+          endLineNumber: r.endLine + 1,
+          endColumn: r.endColumn + 1
+        },
+        text: r.text
+      })),
+      () => null
+    )
+    model.pushStackElement()
+  }
+  return true
 }
 
 export async function saveDocumentAs(id = useDocuments.getState().activeId): Promise<boolean> {
@@ -157,7 +401,8 @@ export async function saveDocumentAs(id = useDocuments.getState().activeId): Pro
     notify('error', `${basename(target)} is open in another tab. Close it before saving over it.`)
     return false
   }
-  return writeDocument(doc, target)
+  if (!(await relinkForNewLocation(doc, target))) return false
+  return writeDocument(getDocument(doc.id) ?? doc, target, { guard: false })
 }
 
 export async function saveAllDocuments(): Promise<boolean> {
@@ -179,6 +424,7 @@ function removeDocument(id: string): void {
     activeId: nextActive,
     revision: s.revision + 1
   }))
+  dropSnapshot(id)
   documentModels.dispose(id)
 }
 

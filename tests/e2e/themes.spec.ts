@@ -326,14 +326,24 @@ test('a CSS file is read, reloaded when it changes on disk, and never modified',
     await panel.getByTestId('settings-css-choose').click()
     await expect(panel.getByTestId('settings-css-path')).toHaveText(cssFile)
     await expect
-      .poll(() => inPreview(page, (doc) => css(doc, doc.querySelector('h1')!).color))
+      .poll(() =>
+        inPreview(page, (doc) => {
+          const h1 = doc.querySelector('h1')
+          return h1 ? css(doc, h1).color : ''
+        })
+      )
       .toBe('rgb(10, 20, 30)')
 
     // Changed in another program: picked up when the window is focused again.
     writeFileSync(cssFile, 'h1 { color: rgb(40, 50, 60) }\n')
     await page.evaluate(() => window.dispatchEvent(new Event('focus')))
     await expect
-      .poll(() => inPreview(page, (doc) => css(doc, doc.querySelector('h1')!).color))
+      .poll(() =>
+        inPreview(page, (doc) => {
+          const h1 = doc.querySelector('h1')
+          return h1 ? css(doc, h1).color : ''
+        })
+      )
       .toBe('rgb(40, 50, 60)')
     await expect(page.getByTestId('toast-info')).toContainText('changed on disk')
 
@@ -344,7 +354,12 @@ test('a CSS file is read, reloaded when it changes on disk, and never modified',
     await expect(panel.getByTestId('css-status')).toContainText('rejected')
     expect(readFileSync(cssFile, 'utf8')).toBe(unsafe)
     await expect
-      .poll(() => inPreview(page, (doc) => css(doc, doc.querySelector('h1')!).color))
+      .poll(() =>
+        inPreview(page, (doc) => {
+          const h1 = doc.querySelector('h1')
+          return h1 ? css(doc, h1).color : ''
+        })
+      )
       .not.toBe('rgb(40, 50, 60)')
   } finally {
     await closeApp(app)

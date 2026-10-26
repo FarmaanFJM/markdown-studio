@@ -225,6 +225,10 @@ function AboutDialog({ request }: { request: Extract<DialogRequest, { kind: 'abo
         </dl>
       )}
       <p className="muted">Released under the MIT License. © 2026 FarmaanFJM.</p>
+      <p className="muted" data-testid="about-citeproc">
+        Citations: APA Style 7th edition, formatted by citeproc-js (CPAL 1.0) with the Citation
+        Style Language styles and locales (CC BY-SA 3.0). See THIRD_PARTY_NOTICES.md.
+      </p>
     </Modal>
   )
 }

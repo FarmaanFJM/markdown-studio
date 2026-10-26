@@ -17,7 +17,7 @@ export type ThemeName = 'dark' | 'light'
 export type ExplorerMode = 'tree' | 'thumbnails'
 export type PreviewKind = 'html' | 'pdf'
 export type PreviewMode = 'none' | PreviewKind
-export type SidebarView = 'explorer' | 'settings'
+export type SidebarView = 'explorer' | 'publication' | 'settings'
 
 export interface WindowBounds {
   x: number
@@ -81,6 +81,9 @@ export interface AppSettings {
     restoreLastWorkspace: boolean
     lastWorkspace: string | null
     recent: string[]
+    /** Documents that were open when the application last closed, re-opened at the next start. */
+    openFiles: string[]
+    activeFile: string | null
   }
   layout: {
     sidebarVisible: boolean
@@ -116,7 +119,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   templates: { author: '' },
   document: DEFAULT_DOCUMENT_SETTINGS,
-  workspace: { restoreLastWorkspace: true, lastWorkspace: null, recent: [] },
+  workspace: {
+    restoreLastWorkspace: true,
+    lastWorkspace: null,
+    recent: [],
+    openFiles: [],
+    activeFile: null
+  },
   layout: {
     sidebarVisible: true,
     sidebarWidth: 260,
@@ -135,6 +144,7 @@ export const LIMITS = {
   sidebarWidth: { min: 170, max: 640 },
   previewRatio: { min: 0.15, max: 0.85 },
   recentWorkspaces: 10,
+  openFiles: 30,
   tocDepth: { min: 1, max: 6 },
   authorLength: 120,
   disabledRules: 100
@@ -289,7 +299,13 @@ export function sanitizeSettings(input: unknown): AppSettings {
     workspace: {
       restoreLastWorkspace: bool(workspace.restoreLastWorkspace, d.workspace.restoreLastWorkspace),
       lastWorkspace: str(workspace.lastWorkspace),
-      recent
+      recent,
+      openFiles: Array.isArray(workspace.openFiles)
+        ? workspace.openFiles
+            .filter((p): p is string => typeof p === 'string' && p.length > 0 && p.length <= 1024)
+            .slice(0, LIMITS.openFiles)
+        : [],
+      activeFile: str(workspace.activeFile)
     },
     layout: {
       sidebarVisible: bool(layout.sidebarVisible, d.layout.sidebarVisible),
@@ -301,7 +317,7 @@ export function sanitizeSettings(input: unknown): AppSettings {
       ),
       sidebarView: pick(
         layout.sidebarView,
-        ['explorer', 'settings'] as const,
+        ['explorer', 'publication', 'settings'] as const,
         d.layout.sidebarView
       ),
       previewMode: pick(layout.previewMode, ['none', 'html', 'pdf'] as const, d.layout.previewMode),

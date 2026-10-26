@@ -1,0 +1,55 @@
+{
+  "environment": {
+    "date": "2026-10-25T21:54:20.711Z",
+    "os": "linux 6.18.44-fc-v153",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz × 4",
+    "memoryGb": 16,
+    "node": "v22.22.0",
+    "appDir": "/home/user/markdown-studio",
+    "quick": false,
+    "electron": "44.9.3 (Chromium 152.0.7977.167)"
+  },
+  "documents": {
+    "publishing report (captions, citations, numbering)": {
+      "openMs": 1055,
+      "renderTime": {
+        "count": 4,
+        "lastMs": 132,
+        "maxMs": 533.9
+      },
+      "keyToFrameP50": 26.4,
+      "keyToFrameP95": 95.8,
+      "keyToFrameMax": 120.8,
+      "longTasks": 1,
+      "longTaskTotalMs": 107,
+      "previewLatencyAfterLastKeyMs": 224,
+      "typedMs": 630,
+      "renderAfterTyping": {
+        "count": 5,
+        "lastMs": 107.5,
+        "maxMs": 533.9
+      },
+      "pdfPreviewMs": 1539
+    }
+  },
+  "memoryGrowth": {
+    "cycles": 60,
+    "rendererHeapBeforeMb": 98.2,
+    "rendererHeapAfterMb": 98.2,
+    "rendererHeapGrowthMb": 0,
+    "allProcessesGrowthMb": 0
+  },
+  "tabSwitching": {
+    "switches": 60,
+    "totalMs": 12693,
+    "perSwitchMs": 211.6,
+    "activeDocument": "mixed.md",
+    "previewMatchesActiveDocument": true
+  },
+  "repeatedExports": {
+    "runs": 10,
+    "medianMs": 2204,
+    "maxMs": 2996,
+    "allProcessesGrowthMb": 0.2
+  }
+}
