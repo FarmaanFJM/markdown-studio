@@ -127,6 +127,14 @@ jobs:
             export CSC_LINK="$WINDOWS_CERTIFICATE_BASE64" CSC_KEY_PASSWORD="$WINDOWS_CERTIFICATE_PASSWORD"
           fi
           npx electron-builder --win --publish never
+      # Uploaded before the installer tests so the file is available even if a later test fails;
+      # the job (and the release job that depends on it) still fails in that case.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: markdown-studio-windows-installer
+          path: release/*/Markdown-Studio-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 30
       - name: Report the signing status of the installer
         shell: pwsh
         run: |
@@ -161,12 +169,6 @@ jobs:
           "MARKDOWN_STUDIO_INSTALLED=$exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - name: Test the installed application
         run: MARKDOWN_STUDIO_EXECUTABLE="$MARKDOWN_STUDIO_INSTALLED" npm run test:e2e:packaged
-      - uses: actions/upload-artifact@v4
-        with:
-          name: markdown-studio-windows-installer
-          path: release/*/Markdown-Studio-Setup-*.exe
-          if-no-files-found: error
-          retention-days: 30
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
