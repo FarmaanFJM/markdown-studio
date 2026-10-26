@@ -227,7 +227,7 @@ test('a wide comparison table is formatted on request, stays valid and exports c
     await runPaletteCommand(page, 'Format Table')
     await expect.poll(async () => (await lines())[2]).toMatch(/^\| Game +\|/)
     const formatted = await editorText(page)
-    expect(await cells()).toEqual(before)
+    await expect.poll(cells).toEqual(before)
     // The table is wider than the editor next to the preview: the user is told what to do.
     await expect(page.getByTestId('toast-info').last()).toContainText('wider than the editor')
 
@@ -244,7 +244,7 @@ test('a wide comparison table is formatted on request, stays valid and exports c
     await goToLine(page, 5)
     await runPaletteCommand(page, 'Fit Table to Editor Width')
     await expect.poll(async () => (await lines())[2]).toMatch(/^\| Game +\|/)
-    expect(await cells()).toEqual(before)
+    await expect.poll(cells).toEqual(before)
     const fitted = await lines()
     expect(Math.max(...fitted.slice(2).map((l) => l.length))).toBeLessThan(
       Math.max(
