@@ -14,6 +14,7 @@
  */
 import type { MarkdownIt, Token } from 'markdown-it'
 import { escapeHtml } from '../markdown/blocks'
+import { startsWithNumber } from '../markdown/headingNumbers'
 import {
   captionNames,
   LABEL_ID,
@@ -671,8 +672,10 @@ function collect(
           message: `"${attrs.id}" is a ${attrs.id.startsWith('fig') ? 'figure' : 'table'} identifier but it is on a heading. Use "sec-…" for sections.`
         })
       }
-      if (number) metaOf(token).numberText = number
-      headings.push({ level, id, text, number, line: lineOf(token) })
+      // A heading the author numbered by hand with the same number is not numbered twice.
+      const written = number !== '' && startsWithNumber(text, number)
+      if (number && !written) metaOf(token).numberText = number
+      headings.push({ level, id, text, number: written ? '' : number, line: lineOf(token) })
     } else if (token.type === 'paragraph_open' && meta.figure) {
       counters.figures++
       const number = prefixed(counters.figures)

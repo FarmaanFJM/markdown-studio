@@ -12,8 +12,11 @@ import {
   type Alignment,
   type ParsedTable,
   type TableCursor,
+  type TableFormatOptions,
   type TableModel
 } from '@shared/markdown/tables'
+import { useSettings } from '../../state/settings'
+import { repairTableAt } from '@shared/markdown/quickFixes'
 import { notify } from '../../state/ui'
 import { monaco } from '../monaco'
 import { analysisFor } from './model'
@@ -22,6 +25,11 @@ import { requireEditor } from './commands'
 type Editor = monaco.editor.IStandaloneCodeEditor
 
 const SOURCE = 'markdown-studio'
+
+/** The width Format Table aims for, from Settings. */
+export function tableFormatOptions(): TableFormatOptions {
+  return { maxWidth: useSettings.getState().settings.markdown.tableMaxWidth }
+}
 
 export interface TableAtCursor {
   parsed: ParsedTable
@@ -112,7 +120,7 @@ function formatBlocks(editor: Editor, from: number, to: number, scope: string): 
       skipped.push(`line ${block.start + 1}: ${result.reason}`)
       continue
     }
-    const formatted = formatTable(result.table)
+    const formatted = formatTable(result.table, tableFormatOptions())
     if (sameLines(formatted, currentLines(editor, result))) {
       alreadyTidy++
       continue
@@ -145,14 +153,52 @@ function formatBlocks(editor: Editor, from: number, to: number, scope: string): 
   editor.focus()
 }
 
+function repairAtCursor(editor: Editor, found: ReturnType<typeof tableAtCursor>): void {
+  const model = editor.getModel()
+  const position = editor.getPosition()
+  const repair =
+    model && position
+      ? repairTableAt(analysisFor(model), position.lineNumber - 1, tableFormatOptions())
+      : null
+  if (!model || !repair) {
+    if (found && 'error' in found) return notify('error', found.error)
+    return notify(
+      'info',
+      found
+        ? 'The table has no problems to repair.'
+        : 'Place the cursor inside a Markdown table first.'
+    )
+  }
+  const last = repair.endLine
+  editor.pushUndoStop()
+  editor.executeEdits(SOURCE, [
+    {
+      range: new monaco.Range(repair.startLine + 1, 1, last, model.getLineMaxColumn(last)),
+      text: repair.lines.join(model.getEOL())
+    }
+  ])
+  editor.pushUndoStop()
+  notify('success', 'Table repaired: missing columns were added so no cell is lost.')
+  editor.focus()
+}
+
 export const tableCommands = {
   formatAtCursor() {
     const editor = requireEditor()
     if (!editor) return
     const found = tableAtCursor(editor)
-    if (found === null) return notify('info', 'Place the cursor inside a Markdown table first.')
-    if ('error' in found) return notify('error', found.error)
+    // A header and delimiter row of different widths are not a table to the renderer; completing
+    // the missing columns (never dropping a cell) is what "format" means for such a block.
+    if (found === null) return repairAtCursor(editor, found)
+    if ('error' in found) {
+      return notify('error', `${found.error} Use Repair Table to add the missing columns instead.`)
+    }
     formatBlocks(editor, found.parsed.start, found.parsed.start, 'cursor')
+  },
+
+  repair() {
+    const editor = requireEditor()
+    if (editor) repairAtCursor(editor, tableAtCursor(editor))
   },
 
   formatInSelection() {
@@ -190,7 +236,7 @@ function apply(
   table: TableModel,
   cursor: { row: 'header' | number; column: number }
 ): void {
-  const formatted = formatTable(table)
+  const formatted = formatTable(table, tableFormatOptions())
   const caret = cellPosition(formatted, found.parsed.start, cursor.row, cursor.column)
   replaceTable(editor, found.parsed, formatted, caret)
   editor.focus()

@@ -1,5 +1,7 @@
+import { aiCommands } from '../ai/commands'
 import { markdownCommands } from '../editor/markdown/commands'
 import { registerRunner } from '../editor/markdown/runners'
+import { quickFixCommands } from '../editor/markdown/quickFixActions'
 import { tableCommands } from '../editor/markdown/tableCommands'
 import { activeDocument } from '../state/documents'
 import { commands } from './commands'
@@ -107,10 +109,60 @@ export const APP_COMMANDS: AppCommand[] = [
     run: commands.toggleSidebar
   },
   { id: 'view.explorer', title: 'Show Explorer', category: 'View', run: commands.showExplorer },
-  { id: 'view.settings', title: 'Open Settings', category: 'View', run: commands.showSettings },
+  {
+    id: 'view.settings',
+    title: 'Open Settings',
+    category: 'View',
+    run: () => commands.showSettings()
+  },
+  {
+    id: 'view.ai',
+    title: 'Show AI Assistant',
+    category: 'View',
+    run: commands.showAi,
+    keywords: 'copilot'
+  },
+  {
+    id: 'ai.continue',
+    title: 'AI: Continue Writing',
+    category: 'Edit',
+    run: aiCommands.continueWriting,
+    needsDocument: doc,
+    keywords: 'ai suggest complete'
+  },
+  {
+    id: 'ai.rewrite',
+    title: 'AI: Rewrite Selection…',
+    category: 'Edit',
+    run: aiCommands.rewriteSelection,
+    needsDocument: doc,
+    keywords: 'ai improve grammar shorten formal'
+  },
+  {
+    id: 'ai.toggleDocument',
+    title: 'AI: Turn Off/On for This Document',
+    category: 'Edit',
+    run: aiCommands.toggleForDocument,
+    needsDocument: doc,
+    keywords: 'ai disable enable'
+  },
+  {
+    id: 'ai.toggleWorkspace',
+    title: 'AI: Turn Off/On for This Workspace',
+    category: 'Edit',
+    run: aiCommands.toggleForWorkspace,
+    keywords: 'ai disable enable folder'
+  },
+  {
+    id: 'ai.settings',
+    title: 'AI: Open Settings',
+    category: 'View',
+    run: aiCommands.openSettings,
+    keywords: 'ai provider model key'
+  },
   {
     id: 'view.previewNone',
-    title: 'Source Only (hide preview)',
+    title: 'Close Preview',
     category: 'View',
     run: () => commands.setPreview('none'),
     keywords: 'preview hide'
@@ -317,7 +369,39 @@ export const APP_COMMANDS: AppCommand[] = [
     category: 'Table',
     run: tableCommands.formatAtCursor,
     needsDocument: doc,
-    keywords: 'align prettify'
+    keywords: 'reformat align prettify tidy'
+  },
+  {
+    id: 'table.repair',
+    title: 'Repair Table (add missing columns)',
+    category: 'Table',
+    run: tableCommands.repair,
+    needsDocument: doc,
+    keywords: 'fix broken mismatch columns delimiter'
+  },
+  {
+    id: 'markdown.formatBlock',
+    title: 'Format Markdown Block',
+    category: 'Format',
+    run: quickFixCommands.formatBlock,
+    needsDocument: doc,
+    keywords: 'reformat tidy table heading list paragraph spaces'
+  },
+  {
+    id: 'markdown.removeExtraSpaces',
+    title: 'Remove Extra Spaces',
+    category: 'Format',
+    run: quickFixCommands.removeExtraSpaces,
+    needsDocument: doc,
+    keywords: 'whitespace double spaces collapse'
+  },
+  {
+    id: 'markdown.quickFix',
+    title: 'Quick Fix…',
+    category: 'Format',
+    run: quickFixCommands.showQuickFixes,
+    needsDocument: doc,
+    keywords: 'lightbulb problem fix suggestion'
   },
   {
     id: 'table.formatSelection',

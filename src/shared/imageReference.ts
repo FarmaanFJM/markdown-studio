@@ -68,3 +68,35 @@ export function imageReferenceForFile(
   if (relative === null) return null
   return buildImageReference(altTextFromFileName(imagePath), relative)
 }
+
+export interface ImagePlacement {
+  /** Insert at the end of the line instead of at the drop position. */
+  atLineEnd: boolean
+  /** Text to insert: every reference on its own line, with a leading line break when needed. */
+  text: string
+  /** Offset within `text` at which the first reference starts. */
+  firstOffset: number
+}
+
+/**
+ * Decides where image references go when they are dropped, pasted or inserted at `line`.
+ *
+ * On a blank line they are inserted where they were dropped. On a line that already has content
+ * (a paragraph, heading, list item, quote or another image) they go on a new line underneath,
+ * never into the middle of the text. A new line below a list item is indented to the item's
+ * text and one below a quote keeps the quote marker, so the image stays inside the item or quote.
+ */
+export function placeImageReferences(line: string, references: readonly string[]): ImagePlacement {
+  if (line.trim() === '') {
+    return { atLineEnd: false, text: references.join('\n'), firstOffset: 0 }
+  }
+  const quote = /^\s*(?:>[ \t]?)+/.exec(line)?.[0]
+  const list = quote ? null : /^(\s*)(?:[-*+]|\d{1,9}[.)])([ \t]+)/.exec(line)
+  const prefix = quote ?? (list ? ' '.repeat(list[0].length) : '')
+  const lead = `\n${prefix}`
+  return {
+    atLineEnd: true,
+    text: lead + references.join(lead),
+    firstOffset: lead.length
+  }
+}

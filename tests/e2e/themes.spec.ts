@@ -166,8 +166,6 @@ test('the chosen document theme and its customisation persist across restarts', 
     await expect.poll(() => themeFacts(page).then((f) => f?.bodySize)).toBe('20px')
     await closeApp(app)
     ;({ app, page } = await launch(sandbox))
-    // The Settings view is restored too; go back to the Explorer.
-    await page.getByTestId('activity-explorer').click()
     await openFromTree(page, 'sample.md')
     await expect.poll(() => themeFacts(page).then((f) => f?.theme)).toBe('editorial')
     expect((await themeFacts(page))?.bodySize).toBe('20px')
@@ -205,7 +203,10 @@ test('workspace appearance overrides are shown, persisted, and independent of th
     await panel.getByTestId('theme-card-technical').click()
     await expect.poll(() => themeFacts(page).then((f) => f?.theme)).toBe('technical')
     await expect(panel.getByTestId('workspace-override-banner')).toContainText('theme Technical')
+    // The Settings page replaces the editor area; the badge is in the preview behind it.
+    await page.keyboard.press('Escape')
     await expect(page.getByTestId('workspace-override-badge')).toBeVisible()
+    await openSettings(page)
 
     const file = path.join(sandbox.workspace, '.markdown-studio', 'presentation.json')
     await expect.poll(() => existsSync(file)).toBe(true)
@@ -225,8 +226,6 @@ test('workspace appearance overrides are shown, persisted, and independent of th
     // The override survives a restart; the Markdown is untouched.
     await closeApp(app)
     ;({ app, page } = await launch(sandbox))
-    // The Settings view is restored too; go back to the Explorer.
-    await page.getByTestId('activity-explorer').click()
     await openFromTree(page, 'sample.md')
     await expect.poll(() => themeFacts(page).then((f) => f?.theme)).toBe('technical')
     expect(readFileSync(path.join(sandbox.workspace, 'sample.md'), 'utf8')).toBe(SAMPLE)

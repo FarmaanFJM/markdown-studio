@@ -38,7 +38,8 @@ files. Previews and exports are generated from the text; they are never edited d
 
 **Offline and private.** No accounts, cloud storage, telemetry, external rendering services or
 CDNs. Diagrams, equations, fonts and styles are bundled with the application and embedded in
-exports.
+exports. The one optional exception is AI writing help, which is **off by default**: nothing
+is sent anywhere until you turn it on and choose a provider (see [docs/AI.md](docs/AI.md)).
 
 > **Status:** Phases 1–3 are merged. The roadmap's **Level 1 (Markdown Studio Core)** and
 > **Level 2 (Professional Publishing Foundations)** are implemented on top of them (version
@@ -333,8 +334,17 @@ A full description with examples is in the [Authoring guide](docs/AUTHORING.md).
 
 **Application**
 
-- Resizable, collapsible Explorer and preview panes; source-only, source + HTML and
-  source + PDF layouts. Sizes, visibility and preview mode are remembered.
+- Resizable, collapsible Explorer and preview panes; source and source + HTML or PDF layouts
+  (the preview panel's ✕ closes the preview, the HTML and PDF buttons next to the tabs open it).
+  Sizes, visibility and preview mode are remembered.
+- An integrated title bar with the application menu (Windows and Linux; the system's own
+  minimise, maximise and close buttons are kept, so Snap layouts and double-click maximise work),
+  and a full Settings page (<kbd>Ctrl</kbd>+<kbd>,</kbd>) with categories and search.
+- Quick Fixes (<kbd>Ctrl</kbd>+<kbd>.</kbd> or the lightbulb) for style problems, repeated spaces,
+  skipped heading levels and mismatched tables; _Format Markdown Block_, _Format Table_ and
+  _Repair Table_ in the right-click menu and the command palette.
+- Optional AI assistant (off by default) with an OpenAI-compatible provider; see
+  [docs/AI.md](docs/AI.md).
 - Dark theme by default, optional light theme, settings panel, status bar (save state, cursor
   position, word count, line endings, encoding), native menus, About dialog and a keyboard
   shortcut reference (_Help → Keyboard Shortcuts_).
@@ -540,8 +550,9 @@ extension points prepared for later phases.
 
 ### Settings
 
-Settings are stored as JSON on your computer only — no account, telemetry or network
-connection is involved — in the application data folder:
+Settings are stored as JSON on your computer only — no account or telemetry is involved, and
+the application makes no network connection unless you enable AI help — in the application data
+folder:
 
 - Windows: `%APPDATA%\Markdown Studio\settings.json`
 - macOS: `~/Library/Application Support/Markdown Studio/settings.json`
@@ -551,7 +562,8 @@ Settings contain preferences, pane sizes and folder paths, never document conten
 Phase 2 options (smart lists, table navigation, automatic suggestions, toolbar, problem checks
 and disabled style rules, table-of-contents depth, the author name offered to templates) are
 in _Settings_ (<kbd>Ctrl</kbd>+<kbd>,</kbd>). Global templates are stored beside the settings,
-in a `templates` folder.
+in a `templates` folder. The API key of an AI provider is never stored in the settings file; it
+is encrypted by the operating system and kept in a separate file.
 
 ## Roadmap
 

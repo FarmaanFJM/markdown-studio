@@ -275,6 +275,8 @@ h2 { counter-increment: report-h2; counter-reset: report-h3; margin-top: 1.8em; 
 h2::before { content: counter(report-h2) '.\00a0\00a0'; }
 h3 { counter-increment: report-h3; }
 h3::before { content: counter(report-h2) '.' counter(report-h3) '\00a0\00a0'; color: var(--ms-muted); }
+h2.manual-number, h3.manual-number { counter-increment: none; }
+h2.manual-number::before, h3.manual-number::before { content: none; }
 h4 { font-style: italic; font-weight: 600; }
 p { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
 li > p { text-align: left; }

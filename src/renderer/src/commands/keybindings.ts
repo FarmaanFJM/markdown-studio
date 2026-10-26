@@ -46,7 +46,7 @@ export const KEYBINDINGS: KeyBinding[] = [
   { key: 'h', mod: true, label: 'Replace', run: commands.replace, editorHandles: true },
   { key: 'b', mod: true, label: 'Toggle sidebar', run: commands.toggleSidebar },
   { key: 'e', mod: true, shift: true, label: 'Show Explorer', run: commands.showExplorer },
-  { key: ',', mod: true, label: 'Settings', run: commands.showSettings },
+  { key: ',', mod: true, label: 'Settings', run: () => commands.showSettings() },
   { key: 'v', mod: true, shift: true, label: 'Toggle preview', run: commands.togglePreview },
   { key: 'u', mod: true, shift: true, label: 'Export…', run: commands.exportDialog },
   { key: 'z', alt: true, label: 'Toggle word wrap', run: commands.toggleWordWrap },

@@ -1,15 +1,9 @@
-import { AlertTriangle, Columns2, FileText, X } from 'lucide-react'
-import type { PreviewMode } from '@shared/settings'
+import { AlertTriangle, Columns2, X } from 'lucide-react'
+import { PREVIEW_LAYOUTS } from '../layout/previewLayouts'
 import { commands } from '../commands/commands'
 import { FileIcon } from '../explorer/FileIcon'
 import { activateDocument, closeDocument, documentName, useDocuments } from '../state/documents'
 import { useSettings } from '../state/settings'
-
-const LAYOUTS: { mode: PreviewMode; label: string; icon: typeof FileText }[] = [
-  { mode: 'none', label: 'Source only', icon: FileText },
-  { mode: 'html', label: 'Source and HTML preview', icon: Columns2 },
-  { mode: 'pdf', label: 'Source and PDF preview', icon: Columns2 }
-]
 
 export function EditorTabs() {
   const documents = useDocuments((s) => s.documents)
@@ -72,8 +66,8 @@ export function EditorTabs() {
           )
         })}
       </div>
-      <div className="layout-switch" role="radiogroup" aria-label="Preview layout">
-        {LAYOUTS.map(({ mode, label, icon: Icon }) => (
+      <div className="layout-switch" role="radiogroup" aria-label="Open preview">
+        {PREVIEW_LAYOUTS.map(({ mode, label }) => (
           <button
             key={mode}
             type="button"
@@ -85,8 +79,8 @@ export function EditorTabs() {
             data-testid={`layout-${mode}`}
             onClick={() => commands.setPreview(mode)}
           >
-            <Icon size={14} />
-            {mode !== 'none' && <span className="layout-tag">{mode.toUpperCase()}</span>}
+            <Columns2 size={14} />
+            <span className="layout-tag">{mode.toUpperCase()}</span>
           </button>
         ))}
       </div>

@@ -2,6 +2,7 @@ import { LIMITS, DEFAULT_SETTINGS, type ExplorerMode, type PreviewMode } from '@
 import type { MenuCommandMessage } from '@shared/ipc'
 import { api, errorMessage } from '../bridge'
 import { getActiveEditor, runEditorAction } from '../editor/models'
+import { setExplorerMode } from '../explorer/mode'
 import { exportSourceFor } from '../export/source'
 import { runExport } from '../export/runExport'
 import { openExportDialog } from '../presentation/openExportDialog'
@@ -19,7 +20,7 @@ import {
   useDocuments
 } from '../state/documents'
 import { refreshSettings, useSettings } from '../state/settings'
-import { dialogs, notify } from '../state/ui'
+import { dialogs, notify, openSettings, type SettingsCategoryId } from '../state/ui'
 import { useWorkspace } from '../state/workspace'
 import { runRegisteredCommand } from './dispatch'
 
@@ -45,7 +46,7 @@ async function openFolder(path?: string): Promise<void> {
   }
 }
 
-function showSidebar(view: 'explorer' | 'publication' | 'settings'): void {
+function showSidebar(view: 'explorer' | 'publication' | 'ai'): void {
   useSettings.getState().update({ layout: { sidebarVisible: true, sidebarView: view } })
 }
 
@@ -118,7 +119,8 @@ export const commands = {
     useSettings.getState().update({ layout: { sidebarVisible: !settings().layout.sidebarVisible } })
   },
   showExplorer: () => showSidebar('explorer'),
-  showSettings: () => showSidebar('settings'),
+  showSettings: (category?: SettingsCategoryId) => openSettings(category),
+  showAi: () => showSidebar('ai'),
   showPublication: () => showSidebar('publication'),
 
   setPreview,
@@ -128,7 +130,7 @@ export const commands = {
   },
 
   setExplorerMode(mode: ExplorerMode) {
-    useSettings.getState().update({ explorer: { mode } })
+    setExplorerMode(mode)
     showSidebar('explorer')
   },
 
@@ -171,7 +173,7 @@ export function runMenuCommand({ command, argument }: MenuCommandMessage): void 
     'edit.selectAll': commands.selectAll,
     'view.toggleSidebar': commands.toggleSidebar,
     'view.explorer': commands.showExplorer,
-    'view.settings': commands.showSettings,
+    'view.settings': () => commands.showSettings(),
     'view.previewNone': () => commands.setPreview('none'),
     'view.previewHtml': () => commands.setPreview('html'),
     'view.previewPdf': () => commands.setPreview('pdf'),

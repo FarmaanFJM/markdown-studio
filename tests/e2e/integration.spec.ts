@@ -214,11 +214,18 @@ test('Markdown settings change the editor immediately and persist', async () => 
   const sandbox = createSandbox()
   let { app, page } = await launchEditing(sandbox)
   try {
-    await page.getByTestId('activity-settings').click()
+    // Settings is a page in place of the editor: change a setting, go back, and see its effect.
     const panel = page.getByTestId('settings-panel')
+    const changeSettings = async (change: () => Promise<void>) => {
+      await page.getByTestId('activity-settings').click()
+      await expect(panel).toBeVisible()
+      await change()
+      await page.keyboard.press('Escape')
+      await expect(panel).toBeHidden()
+    }
 
     // Smart lists off: Enter no longer continues a list.
-    await panel.getByLabel('Smart lists and quotes').uncheck()
+    await changeSettings(() => panel.getByLabel('Smart lists and quotes').uncheck())
     await newDocumentWith(page, '- one')
     await page.keyboard.press('Enter')
     await page.keyboard.type('plain')
@@ -228,22 +235,27 @@ test('Markdown settings change the editor immediately and persist', async () => 
     await page.keyboard.press(`${mod}+A`)
     await page.keyboard.insertText('[x](missing.md)')
     await expect(page.getByTestId('problem-warnings')).toHaveText('1')
-    await panel.getByLabel('Check links and images').uncheck()
+    await changeSettings(() => panel.getByLabel('Check links and images').uncheck())
     await expect(page.getByTestId('problem-warnings')).toHaveText('0')
 
     // A single style rule can be switched off.
+    await focusEditor(page)
     await page.keyboard.press(`${mod}+A`)
     await page.keyboard.insertText('# T\n\n\ntext\n')
     await expect(page.getByTestId('problem-notes')).not.toHaveText('0 notes')
-    await panel.getByText(/Style rules/).click()
-    await panel.getByLabel(/MD012/).uncheck()
-    await panel.getByLabel(/MD047/).uncheck()
+    await changeSettings(async () => {
+      await panel.getByText(/Style rules/).click()
+      await panel.getByLabel(/MD012/).uncheck()
+      await panel.getByLabel(/MD047/).uncheck()
+    })
     await expect(page.getByTestId('problem-notes')).toHaveText('0 notes')
 
-    await panel.getByLabel('Author name').fill('Ana Silva')
-    await panel.getByLabel('Author name').press('Enter')
-    await panel.getByLabel('Include the document title').check()
-    await panel.getByLabel('Formatting toolbar').uncheck()
+    await changeSettings(async () => {
+      await panel.getByLabel('Author name').fill('Ana Silva')
+      await panel.getByLabel('Author name').press('Enter')
+      await panel.getByLabel('Include the document title').check()
+      await panel.getByLabel('Formatting toolbar').uncheck()
+    })
     await expect(page.getByTestId('format-toolbar')).toBeHidden()
     await page.keyboard.press(`${mod}+B`) // flushes nothing; settings are saved shortly after changes
     await page.keyboard.press(`${mod}+B`)
@@ -263,7 +275,7 @@ test('Markdown settings change the editor immediately and persist', async () => 
   // Relaunch without seeding settings: the saved file (which also remembers the folder) is used.
   ;({ app, page } = await launch(sandbox))
   try {
-    // The Settings view was left open, so the layout restores it.
+    await page.getByTestId('activity-settings').click()
     await expect(page.getByTestId('settings-panel')).toBeVisible()
     await expect(page.getByLabel('Smart lists and quotes')).not.toBeChecked()
     await expect(page.getByLabel('Author name')).toHaveValue('Ana Silva')

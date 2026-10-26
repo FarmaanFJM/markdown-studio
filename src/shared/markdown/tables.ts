@@ -234,20 +234,77 @@ function delimiterCell(width: number, alignment: Alignment): string {
   }
 }
 
-/** Renders the table as aligned, consistently spaced source lines. */
-export function formatTable(table: TableModel): string[] {
-  const columns = table.header.length
-  const widths = Array.from({ length: columns }, (_, c) =>
+/** Longest source line the formatter aims for when it aligns a table (including its prefix). */
+export const DEFAULT_TABLE_MAX_WIDTH = 100
+
+/** Columns are never shrunk below this when a wide table is balanced. */
+const MIN_BALANCED_WIDTH = 12
+
+export interface TableFormatOptions {
+  /**
+   * Target line width. A table whose aligned form would be wider is balanced instead: the widest
+   * columns are narrowed to a common cap and longer cells simply run past it, so one long cell
+   * no longer pushes every row out of view. `0` or `Infinity` always aligns completely.
+   */
+  maxWidth?: number
+}
+
+function lineWidth(prefix: string, widths: number[]): number {
+  return displayWidth(prefix) + 1 + widths.reduce((sum, w) => sum + w + 3, 0)
+}
+
+/**
+ * Column widths for `table`: the natural (widest cell) width of each column while that fits in
+ * `maxWidth`; otherwise the widest columns are capped at a shared width (water-filling) so the
+ * short columns keep their natural width. `compact` is true when even that cannot fit, in which
+ * case cells are not padded at all.
+ */
+export function columnWidths(
+  table: TableModel,
+  maxWidth: number
+): { widths: number[]; compact: boolean } {
+  const natural = Array.from({ length: table.header.length }, (_, c) =>
     Math.max(
       3,
       displayWidth(table.header[c]),
       ...table.rows.map((row) => displayWidth(row[c] ?? ''))
     )
   )
+  if (!Number.isFinite(maxWidth) || maxWidth <= 0 || lineWidth(table.prefix, natural) <= maxWidth) {
+    return { widths: natural, compact: false }
+  }
+  const floor = natural.map((w) => Math.min(w, MIN_BALANCED_WIDTH))
+  if (lineWidth(table.prefix, floor) > maxWidth) {
+    return { widths: natural.map(() => 3), compact: true }
+  }
+  // Largest cap whose resulting line still fits.
+  let low = MIN_BALANCED_WIDTH
+  let high = Math.max(...natural)
+  while (low < high) {
+    const cap = Math.ceil((low + high) / 2)
+    const widths = natural.map((w) => Math.min(w, cap))
+    if (lineWidth(table.prefix, widths) <= maxWidth) low = cap
+    else high = cap - 1
+  }
+  return { widths: natural.map((w) => Math.min(w, low)), compact: false }
+}
+
+/**
+ * Renders the table as consistently spaced source lines. Narrow tables are aligned column by
+ * column; wide ones are balanced (see `TableFormatOptions`) or, when there are too many columns
+ * for that, written compactly. Only whitespace and the delimiter dashes change: the cells'
+ * text is untouched, so the rendered table is identical either way.
+ */
+export function formatTable(table: TableModel, options: TableFormatOptions = {}): string[] {
+  const { widths, compact } = columnWidths(table, options.maxWidth ?? DEFAULT_TABLE_MAX_WIDTH)
   const row = (cells: string[]) =>
     table.prefix +
     '|' +
-    widths.map((w, c) => ` ${pad(cells[c] ?? '', w, table.alignments[c])} |`).join('')
+    widths
+      .map(
+        (w, c) => ` ${compact ? (cells[c] ?? '') : pad(cells[c] ?? '', w, table.alignments[c])} |`
+      )
+      .join('')
   const delimiter =
     table.prefix + '|' + widths.map((w, c) => delimiterCell(w, table.alignments[c]) + '|').join('')
   return [row(table.header), delimiter, ...table.rows.map(row)]

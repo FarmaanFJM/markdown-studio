@@ -25,7 +25,8 @@ descriptions are in [AUTHORING.md](AUTHORING.md), [MATHEMATICS.md](MATHEMATICS.m
 | Style checks      | markdownlint, run in a Web Worker                                                                                          |
 | Tests             | Vitest (unit, jsdom for DOM code) and Playwright's Electron driver (E2E)                                                   |
 
-There is no server and no network dependency; documents stay on the local file system.
+There is no server and no network dependency; documents stay on the local file system. The one
+optional exception is AI writing help (`AiService`, off by default; see [AI.md](AI.md)).
 
 ## Processes and boundaries
 
@@ -395,6 +396,28 @@ src/renderer/src/publishing/          dialogs, panel, build.ts (chapters → one
 - DOMPurify's DOM-clobbering protection is off (`SANITIZE_DOM: false`) so heading ids such as
   `#title` keep working; output is only placed in script-free documents, which the application
   reads with methods, never with `document[name]`.
+
+## Mature-IDE pass
+
+- **Window chrome** (`shared/windowChrome.ts`, `layout/TitleBar.tsx`): `titleBarStyle: 'hidden'`
+  plus `titleBarOverlay` keeps the system's caption buttons (Snap layouts, double-click maximise,
+  accessibility). The title bar is a drag region; menu headings are `no-drag`. On Windows and Linux
+  the native menu bar is hidden and its headings are drawn in the title bar; clicking one pops up
+  the native submenu (`window:popup-menu`), so shortcuts and roles keep working. macOS keeps its
+  global menu and traffic lights.
+- **Editor menus**: Monaco's context menu is rendered in the page (`useShadowDOM: false`) because
+  the shadow-root variant cannot see the `--vscode-*` theme variables. Menu colours are part of the
+  Monaco themes (`editor/editorThemes.ts`).
+- **Quick Fixes** (`shared/markdown/quickFixes.ts`, `diagnostics/manager.ts`): pure functions find
+  repeated spaces and table problems and compute whole-line edits; markdownlint fixes, the
+  heading-level fix and these share one code-action provider. _Format Markdown Block_ is offered
+  only when the block has something to tidy.
+- **Table formatting** (`shared/markdown/tables.ts`): aligned up to a target width, balanced
+  (water-filling cap) when wider, compact when there are too many columns. Cell text is never
+  changed, so rendering is identical.
+- **Settings page** (`settings/SettingsPage.tsx`): entries (title, keywords, node) grouped by
+  category; the search filters entries, the category list scrolls to sections.
+- **AI** (`shared/ai`, `main/services/aiService.ts`, `renderer/src/ai`): see [AI.md](AI.md).
 
 ## Extension points for later work
 

@@ -2,7 +2,8 @@ import { isImagePath } from '@shared/fileTypes'
 import {
   altTextFromFileName,
   buildImageReference,
-  imagePathForDocument
+  imagePathForDocument,
+  placeImageReferences
 } from '@shared/imageReference'
 import { basename, dirname, isPathInside, joinPath, relativePath } from '@shared/paths'
 import { api, errorMessage } from '../bridge'
@@ -204,8 +205,15 @@ export async function insertImages(
   }
   if (references.length === 0 || model.isDisposed()) return false
 
-  const start = range ? range.getStartPosition() : new monaco.Position(at.lineNumber, at.column)
-  const text = references.map((r) => r.text).join('\n')
+  const dropped = range ? range.getStartPosition() : new monaco.Position(at.lineNumber, at.column)
+  const line = Math.min(dropped.lineNumber, model.getLineCount())
+  const layout = placeImageReferences(
+    model.getLineContent(line),
+    references.map((r) => r.text)
+  )
+  // On a line that already has text the images go underneath it, never into the middle of it.
+  const start = layout.atLineEnd ? new monaco.Position(line, model.getLineMaxColumn(line)) : dropped
+  const text = layout.text
   // Edit the model directly: the user may have switched tabs while files were being copied.
   model.pushStackElement()
   model.pushEditOperations(
@@ -216,14 +224,14 @@ export async function insertImages(
   model.pushStackElement()
 
   if (editor.getModel() === model) {
-    const startOffset = model.getOffsetAt(start)
+    const startOffset = model.getOffsetAt(start) + layout.firstOffset
     if (references.length === 1) {
       const ref = references[0]
       const altStart = model.getPositionAt(startOffset + ref.altOffset)
       const altEnd = model.getPositionAt(startOffset + ref.altOffset + ref.altLength)
       editor.setSelection(monaco.Selection.fromPositions(altStart, altEnd))
     } else {
-      editor.setPosition(model.getPositionAt(startOffset + text.length))
+      editor.setPosition(model.getPositionAt(model.getOffsetAt(start) + text.length))
     }
     editor.focus()
   }
