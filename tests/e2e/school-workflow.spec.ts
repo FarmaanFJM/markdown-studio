@@ -696,7 +696,7 @@ test('11. combines several chapters into one publication with shared contents, n
     JSON.parse(readFileSync(path.join(project, '.markdown-studio', 'publication.json'), 'utf8'))
   // The panel saves in the background, so the file is polled rather than read once.
   await expect.poll(() => storedPublication().chapters[0]).toBe('01-Research/Health UI in games.md')
-  expect(storedPublication().title).toBe('Health UI research')
+  await expect.poll(() => storedPublication().title).toBe('Health UI research')
 
   await page.getByTestId('publication-preview').click()
   await expect

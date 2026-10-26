@@ -109,12 +109,8 @@ jobs:
       - run: npm ci
       - run: npm run test:unit
       - run: npm run build
-      - name: Security regression tests (unit and Electron)
-        run: npm run test:security
-      - name: Export rendering tests
-        run: npm run test:e2e:export
-      - name: Core editor E2E tests
-        run: npm run test:e2e:core
+      # The installer is built and uploaded first so it exists even when a later (timing-sensitive)
+      # E2E test fails; the job, and the release job that depends on it, still fail in that case.
       - name: Build the Windows installer
         shell: bash
         env:
@@ -127,6 +123,12 @@ jobs:
             export CSC_LINK="$WINDOWS_CERTIFICATE_BASE64" CSC_KEY_PASSWORD="$WINDOWS_CERTIFICATE_PASSWORD"
           fi
           npx electron-builder --win --publish never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: markdown-studio-windows-installer
+          path: release/*/Markdown-Studio-Setup-*.exe
+          if-no-files-found: error
+          retention-days: 30
       - name: Report the signing status of the installer
         shell: pwsh
         run: |
@@ -139,6 +141,12 @@ jobs:
           } else {
             "The installer is UNSIGNED (no signing certificate is configured). Windows SmartScreen will warn." | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
           }
+      - name: Security regression tests (unit and Electron)
+        run: npm run test:security
+      - name: Export rendering tests
+        run: npm run test:e2e:export
+      - name: Core editor E2E tests
+        run: npm run test:e2e:core
       - name: Run the E2E suite against the unpacked application
         run: |
           export MARKDOWN_STUDIO_EXECUTABLE="$(ls -d "$PWD"/release/*/win-unpacked)/MarkdownStudio.exe"
@@ -161,12 +169,6 @@ jobs:
           "MARKDOWN_STUDIO_INSTALLED=$exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - name: Test the installed application
         run: MARKDOWN_STUDIO_EXECUTABLE="$MARKDOWN_STUDIO_INSTALLED" npm run test:e2e:packaged
-      - uses: actions/upload-artifact@v4
-        with:
-          name: markdown-studio-windows-installer
-          path: release/*/Markdown-Studio-Setup-*.exe
-          if-no-files-found: error
-          retention-days: 30
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

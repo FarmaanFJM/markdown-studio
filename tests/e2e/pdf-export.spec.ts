@@ -62,8 +62,13 @@ test('the PDF preview shows real paginated output with working controls', async 
     await expect.poll(() => canvasHasContent(page)).toBe(true)
 
     // A4 proportions.
-    const box = (await page.locator('.pdf-page').first().boundingBox())!
-    expect(box.height / box.width).toBeCloseTo(297 / 210, 2)
+    // The pages are redrawn once after the first paint, so wait for a measurable page.
+    await expect
+      .poll(async () => {
+        const box = await page.locator('.pdf-page').first().boundingBox()
+        return box ? box.height / box.width : 0
+      })
+      .toBeCloseTo(297 / 210, 2)
 
     // Zoom and fit controls.
     await page.getByRole('button', { name: 'Fit whole page' }).click()
