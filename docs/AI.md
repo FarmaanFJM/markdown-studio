@@ -166,13 +166,21 @@ are in `package.json`; upgrade deliberately, re-run the tests and check the chan
 MIT (included in `THIRD_PARTY_NOTICES.md`); use of the Copilot service itself is governed by GitHub's terms and
 subscription, not by that licence.
 
-| Platform                   | Status                                                                                                                                                                                                         |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Linux x64, development     | Verified: the real server starts from `node_modules` and reports "not signed in" (E2E, `packaged.spec.ts`).                                                                                                    |
-| Linux x64, unpacked build  | Verified: `electron-builder --linux --dir` bundles `resources/copilot/copilot-language-server`; the packaged application starts it (E2E with `MARKDOWN_STUDIO_EXECUTABLE`).                                    |
-| Windows x64                | Configured (`resources/copilot/copilot-language-server.exe`). **Not verified**: not built or run in this environment. CI runs the same packaged smoke test on `main` and tags.                                 |
-| macOS arm64 / x64          | Configured per architecture (`${arch}`). **Not verified.** A build needs the matching optional package, so build each architecture on a matching host. Hardened-runtime signing of the executable is untested. |
-| Linux arm64, Windows arm64 | The packages are in the lockfile, but no such build target is configured.                                                                                                                                      |
+| Platform                   | Status                                                                                                                                                                                                                                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linux x64, development     | Verified: the real server starts from `node_modules` and reports "not signed in" (E2E, `packaged.spec.ts`).                                                                                                                                                                                                                                                                                             |
+| Linux x64, unpacked build  | Verified: `electron-builder --linux --dir` bundles `resources/copilot/copilot-language-server`; the packaged application starts it (E2E with `MARKDOWN_STUDIO_EXECUTABLE`).                                                                                                                                                                                                                             |
+| Windows x64                | Verified in CI (manual full run, `workflow_dispatch`): the NSIS installer was built, installed silently, and the installed application started the bundled `resources\\copilot\\copilot-language-server.exe` (140 MB, version 1.562.0, GitHub's own valid Authenticode signature) and reported "not signed in" (`packaged.spec.ts`). The installer itself is **unsigned**. Not hand-tested by a person. |
+| macOS arm64                | Verified in CI on `macos-latest` (arm64): the packaged `.app` contains an arm64 Mach-O `copilot-language-server` 1.562.0 that the packaged application started. **macOS x64 is configured but not built or run** (it needs an x64 build host). The application is built **unsigned** in CI; see _macOS signing_ below.                                                                                  |
+| Linux arm64, Windows arm64 | The packages are in the lockfile, but no such build target is configured.                                                                                                                                                                                                                                                                                                                               |
+
+**macOS signing.** GitHub signs its macOS executable (Developer ID Application: GitHub, hardened runtime). The CI build of
+Markdown Studio is unsigned, so Gatekeeper warns about the application, and `codesign --verify` on the `.app` fails as
+expected. With a Developer ID certificate configured (see `docs/RELEASING.md`), electron-builder re-signs every
+executable in the bundle, including the language server, with Markdown Studio's identity and the hardened runtime; the
+server is a bundled runtime that may need the JIT / unsigned-executable-memory entitlements. That combination **has not
+been tested** (no certificate is available to CI), so before a signed macOS release run the packaged, signed `.app`
+and check that Copilot reports "not signed in" and, with an account, returns a suggestion.
 
 ### Acceptance with a real Copilot account
 
@@ -180,19 +188,36 @@ Automated tests use a deterministic **mock** language server, so they prove Mark
 GitHub's service answers. Do this once per release candidate, **by hand, on your own machine, with your own account**.
 Never put Copilot credentials in CI or share them with a shared runner.
 
-1. Start the packaged application (or `npm run dev`). In Settings → AI enable AI, choose **GitHub Copilot**, press
-   **Sign in with GitHub**, enter the code on GitHub and authorise. Expect _Connected_ and your login.
-2. Enable _Automatic inline suggestions_. Open a Markdown file, type a sentence of 6–8 words such as
-   `The health interface in Dead Space is effective because`, and pause. Expect grey ghost text.
-3. <kbd>Tab</kbd> accepts; <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>Z</kbd> undoes it in one step. Trigger another,
-   press <kbd>Esc</kbd>: the text is unchanged.
-4. In a list, press <kbd>Tab</kbd> with no ghost text: the item indents. Check Ctrl/Cmd+B, I and K still work.
-5. Switch to another tab: no suggestion from the first document shows. Switch AI off for the document in the AI panel:
-   no more suggestions appear.
-6. Turn off the network and type: no suggestion, no error dialog, and the document is unharmed.
-7. **Sign out** and check suggestions stop. Sign in again.
-8. Also try: an account without Copilot (expect _Signed in, but no Copilot access_) and revoking the authorisation on
-   github.com/settings/applications (expect a prompt to sign in again).
+**Windows installer under test.** Download the artifact `markdown-studio-windows-installer` from the manual CI run on
+this branch (Actions → CI → the latest `workflow_dispatch` run → Artifacts; a GitHub login with access to the
+repository is required; artifacts expire after 30 days). It contains `Markdown-Studio-Setup-0.4.0.exe`. The installer is
+unsigned, so Windows SmartScreen shows a warning ("More info" → "Run anyway").
+
+1. **Install** the `.exe` (per user, no administrator rights needed) and start Markdown Studio from the Start menu.
+2. Open **Settings** (<kbd>Ctrl</kbd>+<kbd>,</kbd>) → **AI** and switch on **Enable AI assistance**.
+3. Choose **Provider: GitHub Copilot**. The status reads **Not signed in** and shows the language server version.
+4. Press **Sign in with GitHub**. A code appears and your browser opens `github.com/login/device`. Enter the code and
+   authorise. Never paste a password or token into Markdown Studio; it does not ask for one.
+5. **Confirm the account:** the status reads **Connected** and shows _your_ GitHub login.
+6. Switch on **Automatic inline suggestions**. Create a document and type
+   `The health interface in Dead Space is effective because`, then pause. Expect grey ghost text from Copilot.
+7. Press <kbd>Tab</kbd> to accept, then <kbd>Ctrl</kbd>+<kbd>Z</kbd> to undo it (one step). Trigger another suggestion and
+   press <kbd>Esc</kbd>: the text is unchanged. In a list with a previous item, <kbd>Tab</kbd> with no ghost text still
+   indents; <kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>K</kbd> still work.
+8. **Disable AI** (switch off _Enable AI assistance_, or use the AI panel's switch for the document or folder) and type:
+   no suggestions appear. Switching back on restores them.
+9. **Restart** Markdown Studio completely. Open Settings → AI: the provider is still GitHub Copilot and the status
+   returns to **Connected** with the same account, without signing in again. Type: suggestions work.
+10. **Sign out** in Settings → AI. The status reads **Not signed in** and suggestions stop. Check that the folder
+    `%APPDATA%\Markdown Studio\copilot\config\github-copilot` no longer exists. Restart again: it must still say
+    **Not signed in**. Optionally revoke the authorisation on github.com/settings/applications.
+11. Also try, if you can: turn off the network and type (no suggestion, no error dialog, document unharmed); an account
+    without Copilot (expect **Signed in, but no Copilot access**).
+
+Do not copy tokens, the one-time code, or files from the `copilot` folder into issues, logs or screenshots. Report
+results as pass/fail per step with the application version (Help → About) and Windows version.
+
+Developers on other platforms can run the same steps from `npm run dev` or a packaged build.
 
 Until that has been done, the Copilot integration is reported as **passing mock and integration tests, awaiting
 real-provider acceptance**.

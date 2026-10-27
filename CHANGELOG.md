@@ -24,6 +24,8 @@ through Phases 1 and 2; Phase 3 is the first release to be versioned and package
 - **Added:** the platform's language-server executable is packaged into `resources/copilot/` (lockfile-pinned
   optional npm packages; no download at run time). Linux x64 development and unpacked builds verified; Windows and
   macOS packaging configured but not verified in this environment.
+- **Fixed/verified:** the provider choice is persisted reliably (a test read the debounced settings file too early; store and restart tests added); sign-out now also deletes the server's stored session folder; the account folders are created mode 0700.
+- **Verified in CI (manual full run):** Windows installer builds, installs, and the installed application starts the bundled server; the packaged macOS arm64 app starts its arm64 server. Windows/macOS not hand-tested.
 - **Added:** tests with a deterministic mock language server (unit and Electron E2E with real Monaco), and a start-up
   test of the real bundled server. **Not done:** acceptance with a real Copilot account (manual procedure in
   [docs/AI.md](docs/AI.md#acceptance-with-a-real-copilot-account)); Copilot Chat / SDK integration (evaluated, not
