@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
-import { accessSync, constants, mkdirSync } from 'node:fs'
+import { accessSync, chmodSync, constants, mkdirSync } from 'node:fs'
+import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { CopilotProcess } from './copilotService'
 
@@ -125,9 +126,7 @@ export function spawnCopilot(
   stateDir: string,
   source: NodeJS.ProcessEnv
 ): CopilotProcess {
-  for (const sub of ['config', 'cache', 'data', 'state']) {
-    mkdirSync(path.join(stateDir, sub), { recursive: true, mode: 0o700 })
-  }
+  ensurePrivateDirectories(stateDir)
   const child = spawn(plan.command, plan.args, {
     env: copilotEnvironment(source, stateDir, plan.runAsNode),
     stdio: ['pipe', 'pipe', 'ignore'],
@@ -144,4 +143,23 @@ export function spawnCopilot(
       child.once('error', () => listener(null))
     }
   }
+}
+
+const SUBDIRECTORIES = ['config', 'cache', 'data', 'state']
+
+/**
+ * Creates the language server's folders readable by this user only (mode 0700, also corrected
+ * if they already exist). Windows ignores POSIX modes; there the folder inherits the ACL of the
+ * user's own application-data directory.
+ */
+export function ensurePrivateDirectories(stateDir: string): void {
+  for (const dir of [stateDir, ...SUBDIRECTORIES.map((sub) => path.join(stateDir, sub))]) {
+    mkdirSync(dir, { recursive: true, mode: 0o700 })
+    if (process.platform !== 'win32') chmodSync(dir, 0o700)
+  }
+}
+
+/** Deletes everything the language server stored about the signed-in account. */
+export async function clearCopilotSession(stateDir: string): Promise<void> {
+  await fs.rm(path.join(stateDir, 'config', 'github-copilot'), { recursive: true, force: true })
 }

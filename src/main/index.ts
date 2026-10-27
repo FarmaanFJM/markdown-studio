@@ -21,7 +21,12 @@ import { parseMenuLabel, windowChromeOptions, chromeColors } from '@shared/windo
 import { buildApplicationMenu } from './menu'
 import { AiService } from './services/aiService'
 import { CopilotService } from './services/copilotService'
-import { fileExists, locateCopilotServer, spawnCopilot } from './services/copilotLauncher'
+import {
+  clearCopilotSession,
+  fileExists,
+  locateCopilotServer,
+  spawnCopilot
+} from './services/copilotLauncher'
 import { AccessControl } from './services/accessControl'
 import { AssetService } from './services/assetService'
 import { DiagramService } from './services/diagramService'
@@ -85,6 +90,7 @@ const copilot = new CopilotService({
       : null
   },
   openExternal: (url) => shell.openExternal(url),
+  clearSession: () => clearCopilotSession(path.join(app.getPath('userData'), 'copilot')),
   onStatus: (status) => {
     if (mainWindow && !mainWindow.isDestroyed())
       mainWindow.webContents.send(IPC.copilotChanged, status)

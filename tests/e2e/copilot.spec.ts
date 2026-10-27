@@ -5,6 +5,7 @@ import {
   closeApp,
   createSandbox,
   focusEditor,
+  launch,
   launchEditing,
   mod,
   newDocumentWith,
@@ -286,14 +287,60 @@ test.describe('GitHub Copilot', () => {
       await expect(page.getByTestId('toast-info')).toContainText(
         'not available with GitHub Copilot'
       )
-      const stored = JSON.parse(readFileSync(path.join(sandbox.userData, 'settings.json'), 'utf8'))
-      expect(stored.ai).toMatchObject({
-        provider: 'github-copilot',
-        model: 'my-model',
-        endpoint: 'http://127.0.0.1:9/v1'
-      })
+      // Settings are written shortly after a change (renderer and main both debounce), so wait for
+      // the file itself to show the choice instead of reading it at once.
+      const file = path.join(sandbox.userData, 'settings.json')
+      await expect
+        .poll(() => JSON.parse(readFileSync(file, 'utf8')).ai)
+        .toMatchObject({
+          provider: 'github-copilot',
+          model: 'my-model',
+          endpoint: 'http://127.0.0.1:9/v1'
+        })
     } finally {
       await closeApp(app)
+    }
+  })
+
+  test('the chosen provider survives closing at once and restarting, with both providers configured', async () => {
+    const sandbox = createSandbox()
+    const first = await launchEditing(sandbox, {
+      ai: {
+        enabled: true,
+        provider: 'openai-compatible',
+        endpoint: 'http://127.0.0.1:9/v1',
+        model: 'my-model'
+      }
+    })
+    try {
+      const settings = await openAiSettings(first.page)
+      // Several quick changes: the last choice must win and nothing older may overwrite it.
+      await settings.getByTestId('ai-provider').selectOption('github-copilot')
+      await settings.getByTestId('ai-provider').selectOption('openai-compatible')
+      await settings.getByTestId('ai-provider').selectOption('github-copilot')
+      await first.page.getByTestId('settings-close').click()
+    } finally {
+      // Closed immediately: the pending change must be flushed by the shutdown, not lost.
+      await closeApp(first.app)
+    }
+    const file = path.join(sandbox.userData, 'settings.json')
+    expect(JSON.parse(readFileSync(file, 'utf8')).ai).toMatchObject({
+      enabled: true,
+      provider: 'github-copilot',
+      model: 'my-model',
+      endpoint: 'http://127.0.0.1:9/v1'
+    })
+
+    // Restart without seeding any settings: what was saved is what comes back.
+    const second = await launch(sandbox)
+    try {
+      const settings = await openAiSettings(second.page)
+      await expect(settings.getByTestId('ai-provider')).toHaveValue('github-copilot')
+      await settings.getByTestId('ai-provider').selectOption('openai-compatible')
+      await expect(settings.getByTestId('ai-model')).toHaveValue('my-model')
+      await expect(settings.getByTestId('ai-endpoint')).toHaveValue('http://127.0.0.1:9/v1')
+    } finally {
+      await closeApp(second.app)
     }
   })
 })

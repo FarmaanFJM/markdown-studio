@@ -64,8 +64,10 @@ _Unavailable_ (the language server was not found), _Error_ (with the reason), an
 previous sign-in expired or was revoked. A failed sign-in, a network problem or an expired code shows a message and
 leaves the document untouched.
 
-**Sign out** in the same place. Signing out asks the server to forget the session and starts a fresh server process, so
-nothing of the previous account stays in memory. Switching AI off, or choosing another provider, stops the server.
+**Sign out** in the same place. Signing out asks the server to forget the session, stops the process, **deletes the
+server's stored account folder (`copilot/config/github-copilot`) itself** whatever the server did, and starts a fresh
+process, so neither the disk nor memory keeps anything of the previous account. This does not revoke the authorisation
+on GitHub's side; to revoke it, remove the app under github.com/settings/applications. Switching AI off, or choosing another provider, stops the server.
 
 ### Using suggestions
 
@@ -112,7 +114,11 @@ OpenAI-compatible API key, **it is not encrypted by Electron's `safeStorage`**, 
 supported way to hand the server a token from there and would have to extract and re-inject it, which this
 integration deliberately never does. Tokens are not passed through environment variables (`GITHUB_COPILOT_TOKEN`,
 `GH_COPILOT_TOKEN` and similar are not forwarded), are not in the settings file, never reach the page, and are not
-logged. Deleting the `copilot/` folder (or **Sign out**) removes the session. The child process gets an allow-listed
+logged. The folders Markdown Studio creates (`copilot/` and its `config`, `cache`, `data`, `state` subfolders) are mode `0700`
+on Linux and macOS, so the files the server writes inside them (its session database is created `0644`) are not
+readable by other users; on Windows POSIX modes do not apply and the folder inherits the access rules of your own
+application-data folder. The file is not protected against other programs running as you. Deleting the `copilot/`
+folder (or **Sign out**) removes the session. The child process gets an allow-listed
 environment (`PATH`, proxy and certificate variables and a few system variables), never the whole environment.
 
 ### How it works

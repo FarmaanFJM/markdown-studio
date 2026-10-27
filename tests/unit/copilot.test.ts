@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { PassThrough } from 'node:stream'
@@ -13,6 +13,7 @@ import {
 } from '@shared/ai/copilot'
 import { DEFAULT_SETTINGS, sanitizeSettings, type AppSettings } from '@shared/settings'
 import {
+  clearCopilotSession,
   copilotEnvironment,
   copilotPackageFor,
   locateCopilotServer,
@@ -374,6 +375,7 @@ describe('Copilot service against the mock language server', () => {
       clientVersion: '0.0.0',
       restartDelayMs: 20,
       openExternal: async (url) => void opened.push(url),
+      clearSession: () => clearCopilotSession(dir),
       onStatus: (s) => statuses.push(s),
       launch: () => {
         launches++
@@ -622,6 +624,30 @@ describe('Copilot service against the mock language server', () => {
     ).toEqual({ ok: false, code: 'not-signed-in' })
     expect(await open()).toBe(false)
   })
+
+  it('deletes the stored session on sign-out even if the server leaves it behind', async () => {
+    await signedIn()
+    const session = path.join(dir, 'config', 'github-copilot', 'mock-session.json')
+    expect(existsSync(session)).toBe(true)
+    behavior({ signOutNoop: true })
+    await service.signOut()
+    await until(() => state() === 'signed-out')
+    expect(existsSync(session)).toBe(false)
+    expect(service.getStatus().user).toBeNull()
+    // A new sign-in is needed: the fresh process found no session.
+    expect(await open()).toBe(false)
+  })
+
+  it.skipIf(process.platform === 'win32')(
+    'keeps the account folders private to this user (files inside are protected by them)',
+    async () => {
+      await signedIn()
+      for (const sub of ['', 'config', 'cache', 'data', 'state']) {
+        const mode = statSync(path.join(dir, sub)).mode & 0o777
+        expect(mode & 0o077, `${sub || '.'} is ${mode.toString(8)}`).toBe(0)
+      }
+    }
+  )
 
   it('shows an expired sign-in as a request to sign in again', async () => {
     behavior({ expired: true })

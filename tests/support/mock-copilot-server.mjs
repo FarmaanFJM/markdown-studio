@@ -7,7 +7,7 @@ import { appendFileSync, mkdirSync, readFileSync, rmSync, writeFileSync } from '
 import path from 'node:path'
 
 const stateRoot = path.resolve(process.env.XDG_CONFIG_HOME ?? '.', '..')
-const sessionFile = path.join(stateRoot, 'config', 'mock-session.json')
+const sessionFile = path.join(stateRoot, 'config', 'github-copilot', 'mock-session.json')
 const logFile = path.join(stateRoot, 'mock-log.jsonl')
 const behaviorFile = path.join(stateRoot, 'mock-behavior.json')
 mkdirSync(path.dirname(sessionFile), { recursive: true })
@@ -121,7 +121,7 @@ function handleRequest(id, method, params) {
       })
     }
     case 'signOut':
-      rmSync(sessionFile, { force: true })
+      if (!behavior().signOutNoop) rmSync(sessionFile, { force: true })
       announce()
       return reply(id, { status: 'NotSignedIn' })
     case 'workspace/executeCommand': {

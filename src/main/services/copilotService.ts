@@ -37,6 +37,8 @@ export interface CopilotDeps {
   /** Starts the language server; null when it cannot be found on this computer. */
   launch(): CopilotProcess | null
   openExternal(url: string): Promise<void>
+  /** Removes the stored account session from disk (the process is stopped when this runs). */
+  clearSession?(): Promise<void>
   onStatus(status: CopilotStatus): void
   clientVersion: string
   /** Milliseconds to wait before restarting after a crash; tests shorten it. */
@@ -460,8 +462,17 @@ export class CopilotService {
         /* a fresh process below drops any remaining session in memory */
       }
     }
-    // A new process guarantees that no in-memory session of the previous account is reused.
+    // Stop the process, delete the stored session whatever the server did, then start a fresh
+    // process, so neither disk nor memory keeps anything of the previous account.
     this.set({ needsReauth: false, message: '' })
+    await this.stop()
+    try {
+      await this.deps.clearSession?.()
+    } catch {
+      this.set({
+        message: 'The stored sign-in could not be deleted. Remove the copilot folder manually.'
+      })
+    }
     await this.restart()
     return this.status
   }
