@@ -33,8 +33,8 @@ The NSIS installer is written to `release/<version>/Markdown-Studio-Setup-<versi
 (unpacked app: `release/<version>/win-unpacked/MarkdownStudio.exe`). Building the Windows
 installer on Linux or macOS requires Wine, so use a Windows host or CI.
 
-The CI workflow builds the installer on GitHub Actions (`windows-latest`) for every push and
-attaches it to the workflow run as the
+The CI workflow builds the installer on GitHub Actions (`windows-latest`) for `main`, release tags and manual
+runs (not ordinary development pushes; see [CI policy](CI.md)) and attaches it to the workflow run as the
 **markdown-studio-windows-installer** artifact. Pushing a `v*` tag also creates a draft
 GitHub Release with the installer. The installer is not code-signed yet, so Windows
 SmartScreen will warn on first launch.
