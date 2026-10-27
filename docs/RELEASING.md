@@ -10,7 +10,8 @@ same commit.
 
 ## What CI verifies
 
-Every push runs `.github/workflows/ci.yml`:
+`.github/workflows/ci.yml` runs on every push (Linux, on the self-hosted runner), and on `main`, manual runs and `v*`
+tags for every platform; see [CI policy](CI.md) for what runs when:
 
 | Job             | Gates                                                                                                                                                                                                               |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -81,8 +81,9 @@ npm run test:unit                       # Vitest
 npm run build && npm run test:e2e       # Playwright drives the real Electron app (xvfb-run on Linux)
 ```
 
-CI (`.github/workflows/ci.yml`) runs on every push: lint, formatting, typecheck, unit tests and the E2E suites on
-Linux, the E2E suite plus the installer on Windows, and a packaged-app smoke test on Linux and macOS. See the
+CI (`.github/workflows/ci.yml`) runs lint, formatting, typecheck, unit tests and the E2E suites on Linux (a
+self-hosted runner) for every push; `main`, release tags and manual runs add the Windows installer and E2E suite and
+a packaged-app smoke test on macOS ([CI policy](docs/CI.md)). See the
 Actions tab for the current result of a commit; this README does not state one. Details:
 [development guide](docs/DEVELOPMENT.md).
 

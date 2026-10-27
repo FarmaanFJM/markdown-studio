@@ -1,5 +1,11 @@
 name: CI
 
+# Runner and trigger policy: docs/CI.md. In short:
+#   * Linux jobs run on the dedicated self-hosted runner (labels: self-hosted, linux,
+#     markdown-studio-linux). There is no hosted fallback: if that runner is offline the job queues.
+#   * Pull requests from forks never touch the self-hosted runner; they run the Linux gates on a
+#     GitHub-hosted runner (the only hosted Linux use).
+#   * Windows and macOS (hosted, native) run only for main, release tags and manual runs.
 on:
   push:
     branches: ['**']
@@ -7,13 +13,20 @@ on:
   # Branches of this repository are covered by `push`; this runs CI for pull requests from forks.
   pull_request:
   workflow_dispatch:
+    inputs:
+      benchmark:
+        description: 'Also run the informational performance benchmark'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
 
+# Development runs are cancelled by newer commits. Release tags, main and manual runs are never
+# cancelled by a later push (manual runs also get their own group so they cannot cancel a push run).
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event_name == 'workflow_dispatch' && 'manual-' || '' }}${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' && github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
 
 # Signing is optional. Without the signing secrets the artifacts are produced unsigned and the
 # workflow says so; nothing is ever signed with a substitute certificate (see docs/RELEASING.md).
@@ -22,14 +35,42 @@ jobs:
   linux:
     name: Quality gates and desktop E2E (Linux)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: ubuntu-latest
+    # Fail-closed: only a non-pull_request event (a push by someone with write access, or a manual
+    # run) can select the self-hosted runner. Every pull_request event, i.e. fork code, is hosted.
+    runs-on: ${{ github.event_name == 'pull_request' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","markdown-studio-linux"]') }}
     timeout-minutes: 50
+    outputs:
+      code: ${{ steps.scope.outputs.code }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # Documentation-only pushes keep the cheap gates (lint, formatting, typecheck, unit tests,
+      # which include the docs link test) and skip build, E2E and packaging. Tags, manual runs,
+      # pull requests and anything that cannot be diffed always run everything.
+      - name: Decide whether code changed
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: |
+          code=true
+          if [ "$EVENT" = push ] && [[ "$REF" == refs/heads/* ]] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            files="$(git diff --name-only "$BEFORE" "$SHA")"
+            if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE '^(docs/|README\.md$|CHANGELOG\.md$)'; then
+              code=false
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Code changed (heavy jobs run): $code" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+          # The persistent runner keeps ~/.npm itself; the remote cache only helps hosted runners.
+          cache: ${{ github.event_name == 'pull_request' && 'npm' || '' }}
       - run: npm ci
       - name: Lint
         run: npm run lint
@@ -40,49 +81,62 @@ jobs:
       - name: Unit tests
         run: npm run test:unit
       - name: Application build
+        if: steps.scope.outputs.code == 'true'
         run: npm run build
       # Real Electron windows on a virtual display.
       - name: Security regression tests (unit and Electron)
+        if: steps.scope.outputs.code == 'true'
         run: xvfb-run -a -s "-screen 0 1440x900x24" npm run test:security
       - name: Export rendering tests (math, diagrams, themes, PDF, HTML, presets)
+        if: steps.scope.outputs.code == 'true'
         run: xvfb-run -a -s "-screen 0 1440x900x24" npm run test:e2e:export
       - name: Core editor E2E tests (Phase 1 and 2)
+        if: steps.scope.outputs.code == 'true'
         run: xvfb-run -a -s "-screen 0 1440x900x24" npm run test:e2e:core
       - name: Package the Linux AppImage
+        if: steps.scope.outputs.code == 'true'
         run: npx electron-builder --linux --publish never
       - name: Test the packaged Linux application
+        if: steps.scope.outputs.code == 'true'
         run: |
           APPIMAGE="$(ls release/*/Markdown-Studio-*.AppImage | head -1)"
           chmod +x "$APPIMAGE"
           (cd release && "../$APPIMAGE" --appimage-extract >/dev/null)
           MARKDOWN_STUDIO_EXECUTABLE="$PWD/release/squashfs-root/markdown-studio" \
             xvfb-run -a -s "-screen 0 1440x900x24" npm run test:e2e:packaged
+      # The AppImage is large: keep it only where it is consumed (release) or wanted (main, manual).
       - uses: actions/upload-artifact@v4
+        if: steps.scope.outputs.code == 'true' && (github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         with:
           name: markdown-studio-linux-appimage
           path: release/*/Markdown-Studio-*.AppImage
           if-no-files-found: error
-          retention-days: 14
+          retention-days: ${{ startsWith(github.ref, 'refs/tags/v') && 14 || 3 }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: linux-test-results
           path: test-results/
           retention-days: 7
+      # The runner is persistent: do not leave Electron or Xvfb processes from this workspace behind.
+      - name: Stop leftover processes from this workspace
+        if: always() && github.event_name != 'pull_request'
+        run: pkill -u "$(id -u)" -f "$GITHUB_WORKSPACE" || true
 
   performance:
     name: Performance benchmark (Linux, informational)
     needs: linux
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
-    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.benchmark)
+    runs-on: [self-hosted, linux, markdown-studio-linux]
     timeout-minutes: 40
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
       - run: npm ci
       - run: npm run build
       - run: xvfb-run -a -s "-screen 0 1440x900x24" npm run benchmark -- --quick --out benchmark.json
@@ -91,10 +145,16 @@ jobs:
           name: benchmark-results
           path: benchmark.json
           retention-days: 30
+      - name: Stop leftover processes from this workspace
+        if: always()
+        run: pkill -u "$(id -u)" -f "$GITHUB_WORKSPACE" || true
 
   windows:
     name: Desktop E2E, installer and packaged-app tests (Windows)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    needs: linux
+    # Native platforms: main, release tags and manual runs only (never ordinary development pushes
+    # or fork pull requests), and only after the Linux gates pass and code changed.
+    if: needs.linux.outputs.code == 'true' && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
     runs-on: windows-latest
     timeout-minutes: 80
     defaults:
@@ -102,6 +162,8 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -178,11 +240,16 @@ jobs:
 
   macos:
     name: Package and smoke-test (macOS)
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
+    needs: linux
+    # Native platforms: main, release tags and manual runs only (never ordinary development pushes
+    # or fork pull requests), and only after the Linux gates pass and code changed.
+    if: needs.linux.outputs.code == 'true' && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main')
     runs-on: macos-latest
     timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -228,11 +295,16 @@ jobs:
     name: Draft GitHub release
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [linux, windows, macos]
-    runs-on: ubuntu-latest
+    # Runs on the dedicated runner (no hosted fallback); needs the GitHub CLI installed there.
+    runs-on: [self-hosted, linux, markdown-studio-linux]
     permissions:
       contents: write
     steps:
+      - name: Check the GitHub CLI is available on the runner
+        run: gh --version
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
