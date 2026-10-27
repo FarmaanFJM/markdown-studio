@@ -6,6 +6,7 @@ import {
 } from '@shared/markdown/moves'
 import { basename, dirname, isPathInside, joinPath, pathsEqual, relativePath } from '@shared/paths'
 import type { DirEntry } from '@shared/ipc'
+import { ancestorFolders } from '@shared/explorerContext'
 import { api, errorMessage } from '../bridge'
 import { documentModels } from '../editor/models'
 import { monaco } from '../editor/monaco'
@@ -250,6 +251,10 @@ async function performOperation(
 
   const workspace = useWorkspace.getState()
   await workspace.refresh([dirname(entry.path), dirname(result)])
+  // Show the moved item: its new folder (and parents) may be collapsed.
+  const workspaceRoot = workspace.root
+  if (workspaceRoot)
+    for (const folder of ancestorFolders(workspaceRoot, dirname(result))) workspace.expand(folder)
   workspace.select(result)
   return result
 }

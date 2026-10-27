@@ -7,6 +7,15 @@ through Phases 1 and 2; Phase 3 is the first release to be versioned and package
 
 ## 0.4.0 — Level 1 (core) and Level 2 (professional publishing) (unreleased)
 
+### Student Edition completion
+
+- **Fixed:** after _Move…_ or a drag in the Explorer the destination folder stayed collapsed, so the moved
+  document was selected but invisible; the destination and its parents are now expanded.
+- **Added:** `tests/e2e/student-edition.spec.ts`, the Playful Tech acceptance scenario in the order a student works
+  (folders, move and rename, writing, table insert and restructure, pasted and dropped images including awkward file
+  names, save, restart, reopen, PDF text/table/image/margin checks).
+- **Added:** [Troubleshooting guide](docs/TROUBLESHOOTING.md).
+
 ### GitHub Copilot integration
 
 - **Added:** GitHub Copilot as an AI provider, through GitHub's official Copilot language server
