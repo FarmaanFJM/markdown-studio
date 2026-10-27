@@ -11,7 +11,14 @@ files:
   - out/**
   - package.json
   - '!**/*.map'
+  # The Copilot language server is shipped once, through extraResources, not inside the asar.
+  - '!node_modules/@github/**'
 win:
+  # GitHub Copilot language server (MIT, from the lockfile-verified npm package), kept outside the
+  # asar archive so it can be started as a program. Only the platform's own binary is included.
+  extraResources:
+    - from: node_modules/@github/copilot-language-server-win32-${arch}/copilot-language-server.exe
+      to: copilot/copilot-language-server.exe
   target:
     - target: nsis
       arch: [x64]
@@ -28,6 +35,9 @@ nsis:
   uninstallerIcon: resources/build/icon.ico
   artifactName: Markdown-Studio-Setup-${version}.${ext}
 mac:
+  extraResources:
+    - from: node_modules/@github/copilot-language-server-darwin-${arch}/copilot-language-server
+      to: copilot/copilot-language-server
   # Signing and notarisation happen only when the release workflow provides credentials.
   hardenedRuntime: true
   gatekeeperAssess: false
@@ -36,6 +46,9 @@ mac:
   icon: resources/build/icon.png
   artifactName: Markdown-Studio-${version}-${arch}.${ext}
 linux:
+  extraResources:
+    - from: node_modules/@github/copilot-language-server-linux-${arch}/copilot-language-server
+      to: copilot/copilot-language-server
   target: AppImage
   icon: resources/build/icon.png
   category: Office

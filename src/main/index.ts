@@ -20,6 +20,13 @@ import iconPath from '../../resources/build/icon.png?asset'
 import { parseMenuLabel, windowChromeOptions, chromeColors } from '@shared/windowChrome'
 import { buildApplicationMenu } from './menu'
 import { AiService } from './services/aiService'
+import { CopilotService } from './services/copilotService'
+import {
+  clearCopilotSession,
+  fileExists,
+  locateCopilotServer,
+  spawnCopilot
+} from './services/copilotLauncher'
 import { AccessControl } from './services/accessControl'
 import { AssetService } from './services/assetService'
 import { DiagramService } from './services/diagramService'
@@ -64,6 +71,31 @@ const ai = new AiService(
     decrypt: (data) => safeStorage.decryptString(Buffer.from(data))
   }
 )
+const copilot = new CopilotService({
+  getSettings: () => settings.get().ai,
+  clientVersion: app.getVersion(),
+  launch: () => {
+    const plan = locateCopilotServer({
+      packaged: app.isPackaged,
+      resourcesPath: process.resourcesPath,
+      appPath: app.getAppPath(),
+      platform: process.platform,
+      arch: process.arch,
+      env: process.env,
+      execPath: process.execPath,
+      exists: fileExists
+    })
+    return plan
+      ? spawnCopilot(plan, path.join(app.getPath('userData'), 'copilot'), process.env)
+      : null
+  },
+  openExternal: (url) => shell.openExternal(url),
+  clearSession: () => clearCopilotSession(path.join(app.getPath('userData'), 'copilot')),
+  onStatus: (status) => {
+    if (mainWindow && !mainWindow.isDestroyed())
+      mainWindow.webContents.send(IPC.copilotChanged, status)
+  }
+})
 const exportService = new ExportService({
   pdf,
   chooseTarget: async (format, defaultPath) => {
@@ -182,6 +214,21 @@ function registerIpc(): void {
   handle(IPC.aiClearKey, () => ai.clearKey())
   handle(IPC.aiRun, (id: unknown, task: unknown) => ai.run(id, task))
   handle(IPC.aiCancel, (id: unknown) => ai.cancel(id))
+  handle(IPC.copilotStatus, async () => {
+    await copilot.reconcile()
+    return copilot.getStatus()
+  })
+  handle(IPC.copilotSignIn, () => copilot.signIn())
+  handle(IPC.copilotCancelSignIn, () => copilot.cancelSignIn())
+  handle(IPC.copilotSignOut, () => copilot.signOut())
+  handle(IPC.copilotSync, (event: unknown) => copilot.sync(event))
+  handle(IPC.copilotComplete, (request: unknown) => copilot.complete(request))
+  handle(IPC.copilotCancel, (requestId: unknown) => copilot.cancel(requestId))
+  handle(IPC.copilotShown, (key: unknown) => copilot.shown(key))
+  handle(IPC.copilotPartial, (key: unknown, length: unknown) =>
+    copilot.partiallyAccepted(key, length)
+  )
+  handle(IPC.copilotAccepted, (key: unknown) => copilot.accepted(key))
   handle(IPC.windowMenuHeadings, () =>
     process.platform === 'darwin'
       ? []
@@ -237,6 +284,8 @@ function registerIpc(): void {
         }
       : undefined
     const updated = settings.update({ ...rest, workspace: safeWorkspace })
+    // Start or stop the Copilot language server whenever AI settings may have changed.
+    if (rest.ai) void copilot.reconcile()
     if (safeWorkspace?.recent && mainWindow) buildApplicationMenu(mainWindow, [])
     return updated
   })
@@ -484,6 +533,7 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(async () => {
     settings.load()
+    void copilot.reconcile()
     presentation.grantPersisted(settings.get().document.customCss.path)
     const last = settings.get().workspace
     if (last.restoreLastWorkspace && last.lastWorkspace) {
@@ -509,6 +559,7 @@ if (!app.requestSingleInstanceLock()) {
 
   // Runs after every window has closed (including the final window-bounds update).
   app.on('will-quit', () => {
+    copilot.dispose()
     diagrams?.dispose()
     settings.flushSync()
   })

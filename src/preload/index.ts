@@ -108,6 +108,19 @@ const api: MarkdownStudioApi = {
     run: (id, task) => ipcRenderer.invoke(IPC.aiRun, id, task),
     cancel: (id) => ipcRenderer.invoke(IPC.aiCancel, id)
   },
+  copilot: {
+    status: () => ipcRenderer.invoke(IPC.copilotStatus),
+    signIn: () => ipcRenderer.invoke(IPC.copilotSignIn),
+    cancelSignIn: () => ipcRenderer.invoke(IPC.copilotCancelSignIn),
+    signOut: () => ipcRenderer.invoke(IPC.copilotSignOut),
+    sync: (event) => ipcRenderer.invoke(IPC.copilotSync, event),
+    complete: (request) => ipcRenderer.invoke(IPC.copilotComplete, request),
+    cancel: (requestId) => ipcRenderer.invoke(IPC.copilotCancel, requestId),
+    shown: (key) => ipcRenderer.invoke(IPC.copilotShown, key),
+    partiallyAccepted: (key, length) => ipcRenderer.invoke(IPC.copilotPartial, key, length),
+    accepted: (key) => ipcRenderer.invoke(IPC.copilotAccepted, key),
+    onChanged: (listener) => subscribe(IPC.copilotChanged, listener)
+  },
   shell: {
     openExternal: (url) => ipcRenderer.invoke(IPC.shellOpenExternal, url),
     showItemInFolder: (path) => ipcRenderer.invoke(IPC.shellShowItem, path)

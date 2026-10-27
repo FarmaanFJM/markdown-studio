@@ -13,6 +13,12 @@ const PLAIN_TYPING =
   'editorTextFocus && !editorReadonly && !editorHasSelection && !editorHasMultipleSelections && ' +
   '!suggestWidgetVisible && !inSnippetMode && !editorTabMovesFocus && !findWidgetVisible'
 
+/**
+ * Tab belongs to a visible ghost-text suggestion first (Copilot or Continue Writing accepts it);
+ * only without one does it indent list items, move between table cells or reach snippets.
+ */
+const TAB_WITHOUT_SUGGESTION = `${PLAIN_TYPING} && !inlineSuggestionVisible`
+
 function enabled(): { lists: boolean; tables: boolean } {
   const { smartLists, tableNavigation } = useSettings.getState().settings.markdown
   return { lists: smartLists, tables: tableNavigation }
@@ -105,7 +111,7 @@ export function installSmartEditing(editor: Editor): monaco.IDisposable {
       () => {
         if (!handleTab(editor, 1)) editor.trigger('keyboard', 'tab', null)
       },
-      PLAIN_TYPING
+      TAB_WITHOUT_SUGGESTION
     ),
     editor.addCommand(
       monaco.KeyMod.Shift | monaco.KeyCode.Tab,

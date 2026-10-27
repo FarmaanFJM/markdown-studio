@@ -6,6 +6,12 @@
  */
 import type { AppSettings, SettingsPatch, ThemeName } from './settings'
 import type { AiTaskRequest, AiTaskResult } from './ai/types'
+import type {
+  CopilotCompleteRequest,
+  CopilotCompleteResult,
+  CopilotStatus,
+  CopilotSync
+} from './ai/copilot'
 import type { MenuHeading } from './windowChrome'
 
 /** State of the stored AI key; the key itself never reaches the page. */
@@ -164,6 +170,17 @@ export const IPC = {
   aiClearKey: 'ai:clear-key',
   aiRun: 'ai:run',
   aiCancel: 'ai:cancel',
+  copilotStatus: 'copilot:status',
+  copilotChanged: 'copilot:changed',
+  copilotSignIn: 'copilot:sign-in',
+  copilotCancelSignIn: 'copilot:cancel-sign-in',
+  copilotSignOut: 'copilot:sign-out',
+  copilotSync: 'copilot:sync',
+  copilotComplete: 'copilot:complete',
+  copilotCancel: 'copilot:cancel',
+  copilotShown: 'copilot:shown',
+  copilotPartial: 'copilot:partial',
+  copilotAccepted: 'copilot:accepted',
   windowMenuHeadings: 'window:menu-headings',
   windowPopupMenu: 'window:popup-menu',
   windowSetTheme: 'window:set-theme',
@@ -349,6 +366,25 @@ export interface MarkdownStudioApi {
     /** Runs a writing task with the configured provider; `id` lets it be cancelled. */
     run(id: string, task: AiTaskRequest): Promise<AiTaskResult>
     cancel(id: string): Promise<void>
+  }
+  /**
+   * GitHub Copilot, through the official language server run by the main process. Credentials
+   * stay in the language server's private folder; the page only ever sees `CopilotStatus`.
+   */
+  copilot: {
+    status(): Promise<CopilotStatus>
+    signIn(): Promise<CopilotStatus>
+    cancelSignIn(): Promise<CopilotStatus>
+    signOut(): Promise<CopilotStatus>
+    /** Sends one document event; `false` means the whole document must be sent again. */
+    sync(event: CopilotSync): Promise<boolean>
+    complete(request: CopilotCompleteRequest): Promise<CopilotCompleteResult>
+    cancel(requestId: string): Promise<void>
+    /** The suggestion with this handle was displayed. */
+    shown(key: string): Promise<void>
+    partiallyAccepted(key: string, acceptedLength: number): Promise<void>
+    accepted(key: string): Promise<void>
+    onChanged(listener: (status: CopilotStatus) => void): () => void
   }
   shell: {
     openExternal(url: string): Promise<void>

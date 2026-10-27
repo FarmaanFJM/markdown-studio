@@ -20,6 +20,11 @@ export const aiCommands = {
     const availability = currentAvailability()
     if (!availability.available)
       return void notify('info', BLOCK_MESSAGES[availability.blocked ?? 'off'])
+    // Copilot answers through the editor's own inline-suggestion request (explicit trigger).
+    if (useSettings.getState().settings.ai.provider === 'github-copilot') {
+      editor.focus()
+      return void editor.trigger('markdown-studio-ai', 'editor.action.inlineSuggest.trigger', null)
+    }
     const result = await runTask(editor, 'continue', '', monaco.Range.fromPositions(position))
     if (!result.ok) return
     const current = editor.getPosition()

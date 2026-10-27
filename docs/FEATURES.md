@@ -245,7 +245,12 @@ A full description with examples is in the [Authoring guide](AUTHORING.md).
 - Quick Fixes (<kbd>Ctrl</kbd>+<kbd>.</kbd> or the lightbulb) for style problems, repeated spaces,
   skipped heading levels and mismatched tables; _Format Markdown Block_, _Format Table_ and
   _Repair Table_ in the right-click menu and the command palette.
-- Optional AI assistant (off by default) with an OpenAI-compatible provider; see
+- Optional AI assistant (off by default). **GitHub Copilot**: sign in with GitHub in Settings → AI and get inline
+  ghost-text suggestions in the editor (<kbd>Tab</kbd> accepts, <kbd>Esc</kbd> dismisses, one undo step), through
+  GitHub's official language server; needs your own Copilot plan and an internet connection, and sends document
+  context to GitHub for each suggestion. Verified with a mock server and by starting the real bundled server; **not
+  yet accepted with a real Copilot account**. Rewrite Selection and chat are not available with Copilot. The
+  **OpenAI-compatible** provider offers continue-writing and rewrite-selection (including local models). See
   [docs/AI.md](AI.md).
 - Dark theme by default, optional light theme, a full Settings page, status bar (save state, cursor
   position, word count, line endings, encoding), native menus, About dialog and a keyboard

@@ -418,6 +418,15 @@ src/renderer/src/publishing/          dialogs, panel, build.ts (chapters → one
 - **Settings page** (`settings/SettingsPage.tsx`): entries (title, keywords, node) grouped by
   category; the search filters entries, the category list scrolls to sections.
 - **AI** (`shared/ai`, `main/services/aiService.ts`, `renderer/src/ai`): see [AI.md](AI.md).
+- **GitHub Copilot** (`shared/ai/copilot.ts`, `main/services/copilotService.ts`, `jsonRpc.ts`, `copilotLauncher.ts`,
+  `renderer/src/ai/copilotSync.ts`, `copilotInline.ts`): the main process owns one child process, GitHub's
+  Copilot language server, and speaks LSP over stdio. The renderer sends only validated document events (the one open
+  document, as an untitled Markdown document with an opaque id) and completion requests, and receives a status object
+  and suggestions identified by opaque handles; it never holds a credential, a path or a command. The language
+  server keeps the GitHub session in a private folder; the child gets an allow-listed environment. Monaco shows
+  suggestions through the same inline-completion provider as the OpenAI-compatible path, which branches on the selected
+  provider so a request never goes to the other one. The executable is a lockfile-pinned npm package per platform,
+  copied to `resources/copilot/` by electron-builder.
 - **Keyboard shortcuts** (`shared/shortcuts.ts`): one list of every shortcut (id, key, modifiers, platform
   variants, editor-only flag). The renderer's global key handler (`commands/keybindings.ts`, capture phase)
   generates its bindings from it, the native menu takes its accelerators from it, the Keyboard Shortcuts dialog

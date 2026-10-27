@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { mkdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import {
@@ -77,6 +78,41 @@ test('the application starts and publishes with only its own bundled assets', as
     const pages = await readPdf(pdf)
     expect(pages.map((p) => p.text).join(' ')).toContain('Release Notes')
     expect(pages.map((p) => p.text).join(' ')).toContain('Write')
+  } finally {
+    await closeApp(app)
+  }
+})
+
+/**
+ * The real GitHub Copilot language server that ships with the application starts from its install
+ * location (resources/copilot in a packaged build, node_modules in development) and answers the
+ * LSP handshake. This does not sign in or contact GitHub, so it needs no account and no network.
+ */
+test('the bundled GitHub Copilot language server starts and reports that nobody is signed in', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchWithWorkspace(sandbox, {
+    ai: { enabled: true, provider: 'github-copilot' }
+  })
+  try {
+    if (process.env.MARKDOWN_STUDIO_EXECUTABLE) {
+      // An installed or unpacked build carries the server for its own platform and architecture.
+      const resources = await app.evaluate(() => process.resourcesPath)
+      const exe =
+        process.platform === 'win32' ? 'copilot-language-server.exe' : 'copilot-language-server'
+      const bundled = path.join(resources, 'copilot', exe)
+      expect(statSync(bundled).size).toBeGreaterThan(50_000_000)
+      const version = spawnSync(bundled, ['--version'], { encoding: 'utf8', timeout: 30_000 })
+      expect(version.status).toBe(0)
+      expect(version.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/)
+    }
+    await page.keyboard.press(`${process.platform === 'darwin' ? 'Meta' : 'Control'}+,`)
+    const settings = page.getByTestId('settings-panel')
+    await settings.getByTestId('settings-nav-ai').click()
+    await expect(settings.getByTestId('copilot-state')).toHaveText('Not signed in', {
+      timeout: 30_000
+    })
+    await expect(settings.getByTestId('copilot-server-version')).toContainText(/\d+\.\d+\.\d+/)
+    await expect(settings.getByTestId('copilot-sign-in')).toBeVisible()
   } finally {
     await closeApp(app)
   }

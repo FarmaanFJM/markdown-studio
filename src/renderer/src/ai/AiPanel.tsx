@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
-import { Info, Settings as SettingsIcon } from 'lucide-react'
+import { Settings as SettingsIcon } from 'lucide-react'
 import { aiAvailability, BLOCK_MESSAGES } from '@shared/ai/availability'
 import { pathsEqual } from '@shared/paths'
-import { AI_PROVIDERS, UNAVAILABLE_PROVIDERS } from '@shared/ai/types'
+import { AI_PROVIDERS } from '@shared/ai/types'
 import { activeDocument, useDocuments } from '../state/documents'
 import { useSettings } from '../state/settings'
 import { openSettings } from '../state/ui'
@@ -21,7 +21,8 @@ export function AiPanel() {
   const status = useAi((s) => s.status)
   useEffect(() => void useAi.getState().refreshStatus(), [])
 
-  const availability = aiAvailability(ai, root, docPath)
+  const copilot = useAi((s) => s.copilot)
+  const availability = aiAvailability(ai, root, docPath, copilot.state)
   const provider = AI_PROVIDERS.find((p) => p.id === ai.provider)
   const workspaceOff = root !== null && ai.disabledWorkspaces.some((w) => pathsEqual(w, root))
   const documentOff = docPath !== null && ai.disabledDocuments.some((d) => pathsEqual(d, docPath))
@@ -48,7 +49,9 @@ export function AiPanel() {
           <strong>{availability.available ? 'Ready' : 'Not active'}</strong>
           <span>
             {availability.available
-              ? `${provider?.name ?? 'Provider'} · ${ai.model}`
+              ? ai.provider === 'github-copilot'
+                ? `GitHub Copilot${copilot.user ? ` · ${copilot.user}` : ''}`
+                : `${provider?.name ?? 'Provider'} · ${ai.model}`
               : BLOCK_MESSAGES[availability.blocked ?? 'off']}
           </span>
         </div>
@@ -86,7 +89,13 @@ export function AiPanel() {
               <button
                 type="button"
                 className="button"
-                disabled={!availability.available || !hasDocument || busy !== null}
+                disabled={
+                  !availability.available ||
+                  !hasDocument ||
+                  busy !== null ||
+                  provider?.capabilities.rewrite === false
+                }
+                title={provider?.capabilities.rewrite === false ? provider.limitations : undefined}
                 data-testid="ai-rewrite"
                 onClick={aiCommands.rewriteSelection}
               >
@@ -143,19 +152,12 @@ export function AiPanel() {
         <h3 className="settings-section">Providers</h3>
         <ul className="ai-providers">
           {AI_PROVIDERS.map((p) => (
-            <li key={p.id}>
-              <strong>{p.name}</strong>
-              <span className="setting-hint">{p.description}</span>
-            </li>
-          ))}
-          {UNAVAILABLE_PROVIDERS.map((p) => (
-            <li key={p.name} className="unavailable" data-testid="ai-unavailable-provider">
+            <li key={p.id} data-testid={`ai-provider-${p.id}`}>
               <strong>
-                {p.name} <span className="chip-badge">Not available yet</span>
+                {p.name}
+                {p.id === ai.provider && ai.enabled ? ' (active)' : ''}
               </strong>
-              <span className="setting-hint">
-                <Info size={11} aria-hidden /> {p.reason}
-              </span>
+              <span className="setting-hint">{p.description}</span>
             </li>
           ))}
         </ul>

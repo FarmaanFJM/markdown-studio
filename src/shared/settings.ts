@@ -91,6 +91,8 @@ export interface AppSettings {
     model: string
     /** Offer ghost-text continuations while typing (sends the text around the cursor). */
     inlineSuggestions: boolean
+    /** Pause in typing before GitHub Copilot is asked for a suggestion, in milliseconds. */
+    copilotDelayMs: number
     /** Workspace folders in which AI is switched off. */
     disabledWorkspaces: string[]
     /** Saved documents for which AI is switched off. */
@@ -146,6 +148,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     endpoint: 'https://api.openai.com/v1',
     model: '',
     inlineSuggestions: false,
+    copilotDelayMs: 300,
     disabledWorkspaces: [],
     disabledDocuments: []
   },
@@ -349,10 +352,15 @@ export function sanitizeSettings(input: unknown): AppSettings {
     },
     ai: {
       enabled: bool(ai.enabled, d.ai.enabled),
-      provider: pick(ai.provider, ['none', 'openai-compatible'] as const, d.ai.provider),
+      provider: pick(
+        ai.provider,
+        ['none', 'openai-compatible', 'github-copilot'] as const,
+        d.ai.provider
+      ),
       endpoint: checkAiEndpoint(ai.endpoint).url ?? d.ai.endpoint,
       model: normalizeAiModel(ai.model) ?? d.ai.model,
       inlineSuggestions: bool(ai.inlineSuggestions, d.ai.inlineSuggestions),
+      copilotDelayMs: num(ai.copilotDelayMs, d.ai.copilotDelayMs, 0, 2000),
       disabledWorkspaces: pathList(ai.disabledWorkspaces, LIMITS.aiDisabledWorkspaces),
       disabledDocuments: pathList(ai.disabledDocuments, LIMITS.aiDisabledDocuments)
     },

@@ -231,6 +231,14 @@ jobs:
           "MARKDOWN_STUDIO_INSTALLED=$exe" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
       - name: Test the installed application
         run: MARKDOWN_STUDIO_EXECUTABLE="$MARKDOWN_STUDIO_INSTALLED" npm run test:e2e:packaged
+      - name: Report the Copilot language server in the installed application
+        shell: pwsh
+        run: |
+          $server = Join-Path (Split-Path $env:MARKDOWN_STUDIO_INSTALLED) 'resources\copilot\copilot-language-server.exe'
+          $item = Get-Item $server
+          "Copilot language server: $($item.Length) bytes, version $(& $server --version)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
+          $sig = Get-AuthenticodeSignature $server
+          "Server signature (GitHub's own, not ours): $($sig.Status)" | Tee-Object -Append $env:GITHUB_STEP_SUMMARY
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -278,6 +286,20 @@ jobs:
         run: |
           APP="$(ls -d release/*/mac*/'Markdown Studio.app' | head -1)"
           MARKDOWN_STUDIO_EXECUTABLE="$PWD/$APP/Contents/MacOS/Markdown Studio" npm run test:e2e:packaged
+      - name: Report the Copilot language server in the packaged application
+        run: |
+          APP="$(ls -d release/*/mac*/'Markdown Studio.app' | head -1)"
+          SERVER="$APP/Contents/Resources/copilot/copilot-language-server"
+          {
+            echo "### Copilot language server (macOS $(uname -m))"
+            echo '```'
+            file "$SERVER"
+            lipo -archs "$SERVER" || true
+            "$SERVER" --version
+            codesign -dv --verbose=2 "$SERVER" 2>&1 || true
+            codesign --verify --deep --strict "$APP" 2>&1 || echo "application signature: not valid or unsigned"
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: markdown-studio-macos-dmg
