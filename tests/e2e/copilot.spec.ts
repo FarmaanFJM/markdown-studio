@@ -86,6 +86,12 @@ test.describe('GitHub Copilot', () => {
     delete process.env.MARKDOWN_STUDIO_COPILOT_SERVER_SCRIPT
   })
 
+  // A packaged application ignores the mock override on purpose, so this test needs the
+  // development build. Packaged builds are covered by packaged.spec.ts (real server).
+  test.skip(
+    !!process.env.MARKDOWN_STUDIO_EXECUTABLE,
+    'needs the mock language server, which packaged builds never load'
+  )
   test('sign in, inline suggestions in Monaco, accept, undo, dismiss, switch, disable and sign out', async () => {
     const sandbox = createSandbox()
     const { app, page } = await launchEditing(sandbox)
