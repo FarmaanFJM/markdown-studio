@@ -676,8 +676,8 @@ test.describe('AI assistant', () => {
       await expect(panel).toBeVisible()
       await expect(page.getByTestId('ai-status')).toContainText('switched off')
       await expect(page.getByTestId('ai-continue')).toHaveCount(0)
-      await expect(page.getByTestId('ai-unavailable-provider')).toContainText('GitHub Copilot')
-      await expect(page.getByTestId('ai-unavailable-provider')).toContainText('Not available yet')
+      await expect(page.getByTestId('ai-provider-github-copilot')).toContainText('GitHub Copilot')
+      await expect(page.getByTestId('ai-provider-github-copilot')).not.toContainText('active')
       await runPaletteCommand(page, 'AI: Continue Writing')
       await expect(page.getByTestId('toast-info')).toContainText('switched off')
       // Typing and saving are untouched.

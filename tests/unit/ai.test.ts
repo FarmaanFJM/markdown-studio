@@ -5,12 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { aiAvailability, toggledPath } from '@shared/ai/availability'
 import { checkAiEndpoint, normalizeAiModel } from '@shared/ai/endpoint'
 import { buildMessages, cleanReply, isPlausibleRewrite, tailOf } from '@shared/ai/prompts'
-import {
-  AI_LIMITS,
-  AI_PROVIDERS,
-  UNAVAILABLE_PROVIDERS,
-  type AiTaskRequest
-} from '@shared/ai/types'
+import { AI_LIMITS, AI_PROVIDERS, type AiTaskRequest } from '@shared/ai/types'
 import {
   DEFAULT_SETTINGS,
   applySettingsPatch,
@@ -139,10 +134,13 @@ describe('provider endpoints', () => {
 })
 
 describe('provider abstraction', () => {
-  it('does not pretend to offer GitHub Copilot', () => {
-    expect(AI_PROVIDERS.map((p) => p.name).join()).not.toMatch(/copilot/i)
-    const copilot = UNAVAILABLE_PROVIDERS.find((p) => /copilot/i.test(p.name))!
-    expect(copilot.reason).toMatch(/language server/i)
+  it('offers GitHub Copilot and the OpenAI-compatible endpoint, and says what Copilot cannot do', () => {
+    expect(AI_PROVIDERS.map((p) => p.id)).toEqual(['github-copilot', 'openai-compatible'])
+    const copilot = AI_PROVIDERS.find((p) => p.id === 'github-copilot')!
+    expect(copilot.needsKey).toBe(false)
+    expect(copilot.capabilities.rewrite).toBe(false)
+    expect(copilot.limitations).toMatch(/rewrite/i)
+    expect(AI_PROVIDERS.find((p) => p.id === 'openai-compatible')!.capabilities.rewrite).toBe(true)
   })
 })
 

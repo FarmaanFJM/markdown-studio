@@ -81,3 +81,27 @@ test('the application starts and publishes with only its own bundled assets', as
     await closeApp(app)
   }
 })
+
+/**
+ * The real GitHub Copilot language server that ships with the application starts from its install
+ * location (resources/copilot in a packaged build, node_modules in development) and answers the
+ * LSP handshake. This does not sign in or contact GitHub, so it needs no account and no network.
+ */
+test('the bundled GitHub Copilot language server starts and reports that nobody is signed in', async () => {
+  const sandbox = createSandbox()
+  const { app, page } = await launchWithWorkspace(sandbox, {
+    ai: { enabled: true, provider: 'github-copilot' }
+  })
+  try {
+    await page.keyboard.press(`${process.platform === 'darwin' ? 'Meta' : 'Control'}+,`)
+    const settings = page.getByTestId('settings-panel')
+    await settings.getByTestId('settings-nav-ai').click()
+    await expect(settings.getByTestId('copilot-state')).toHaveText('Not signed in', {
+      timeout: 30_000
+    })
+    await expect(settings.getByTestId('copilot-server-version')).toContainText(/\d+\.\d+\.\d+/)
+    await expect(settings.getByTestId('copilot-sign-in')).toBeVisible()
+  } finally {
+    await closeApp(app)
+  }
+})
