@@ -44,9 +44,9 @@ account.
 - **Safe by design.** Crash recovery of unsaved text, restored sessions, no silent overwrites of files changed
   elsewhere, atomic writes; sanitised HTML; no scripts in previews.
 - **Application.** Integrated title bar, full-page Settings with search, thumbnail Explorer, command palette.
-- **Optional AI assistance** (off by default): continue writing and rewrite a selection through an
-  OpenAI-compatible provider, including a model on your own computer. GitHub Copilot is **not** supported.
-  → [AI guide](docs/AI.md)
+- **Optional AI assistance** (off by default): **GitHub Copilot** inline suggestions in the editor (sign in with
+  GitHub; needs your own Copilot plan; awaiting acceptance with a real account), or an **OpenAI-compatible** provider
+  for continue-writing and rewrite-selection, including a model on your own computer. → [AI guide](docs/AI.md)
 
 The complete list is in the [feature reference](docs/FEATURES.md); known limits are at its end.
 

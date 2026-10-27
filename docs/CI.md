@@ -87,3 +87,12 @@ jobs count as passing) and never stay pending. Tags, manual runs and fork PRs al
 
 Actions → CI → **Run workflow**, pick the branch. This runs Linux on the self-hosted runner and Windows and macOS
 on hosted runners (plus the benchmark unless you untick it).
+
+## GitHub Copilot tests
+
+The Copilot integration is tested with a deterministic mock language server (`tests/support/mock-copilot-server.mjs`),
+so no test needs a GitHub account, network access or paid Copilot usage, and **no credentials are stored in CI or
+given to a runner**. `packaged.spec.ts` also starts the real bundled language server and checks that it reports "not
+signed in"; it does not sign in or contact GitHub. The server comes from a platform-specific optional npm package
+(about 160 MB), so the first `npm ci` on a runner downloads it; it is verified against `package-lock.json`. Real-account
+acceptance is a manual procedure ([AI guide](AI.md#acceptance-with-a-real-copilot-account)).
