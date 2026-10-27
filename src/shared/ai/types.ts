@@ -5,7 +5,7 @@
  * code runs and no text ever leaves the computer.
  */
 
-export type AiProviderId = 'none' | 'openai-compatible'
+export type AiProviderId = 'none' | 'openai-compatible' | 'github-copilot'
 
 export type AiTaskKind =
   /** Continue the text at the cursor. */
@@ -55,29 +55,30 @@ export interface AiProviderInfo {
   /** True when the provider needs an API key kept by the application. */
   needsKey: boolean
   capabilities: AiCapabilities
+  /** What an unsupported action means for this provider, shown instead of silently switching. */
+  limitations: string
 }
 
 /** Providers that exist in this version. */
 export const AI_PROVIDERS: AiProviderInfo[] = [
+  {
+    id: 'github-copilot',
+    name: 'GitHub Copilot',
+    description:
+      'Inline writing suggestions from your own GitHub Copilot subscription, through the official GitHub Copilot language server. You sign in with GitHub; no API key is needed.',
+    needsKey: false,
+    capabilities: { continue: true, rewrite: false, inline: true },
+    limitations:
+      'Copilot provides inline suggestions only. “Rewrite selection” is not available with GitHub Copilot; switch the provider to an OpenAI-compatible endpoint to use it.'
+  },
   {
     id: 'openai-compatible',
     name: 'OpenAI-compatible endpoint',
     description:
       'Any service that speaks the OpenAI chat completions protocol: OpenAI, Azure OpenAI, OpenRouter, or a local model server such as Ollama or LM Studio.',
     needsKey: true,
-    capabilities: { continue: true, rewrite: true, inline: true }
-  }
-]
-
-/**
- * Providers that were investigated and are deliberately not offered, with the reason. They are
- * listed in the interface so nobody mistakes the absence for an oversight.
- */
-export const UNAVAILABLE_PROVIDERS: { name: string; reason: string }[] = [
-  {
-    name: 'GitHub Copilot',
-    reason:
-      'GitHub offers no public inline-completion API for third-party editors. The supported route is the Copilot language server, which requires the user to sign in with their own Copilot licence and is governed by GitHub’s Copilot terms. It will be added as a provider once that integration has been built and reviewed, not before.'
+    capabilities: { continue: true, rewrite: true, inline: true },
+    limitations: ''
   }
 ]
 

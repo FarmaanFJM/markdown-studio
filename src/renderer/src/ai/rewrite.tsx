@@ -1,7 +1,8 @@
 import { isPlausibleRewrite } from '@shared/ai/prompts'
-import { REWRITE_PRESETS } from '@shared/ai/types'
+import { AI_PROVIDERS, REWRITE_PRESETS } from '@shared/ai/types'
 import { Modal } from '../dialogs/Modal'
 import { requireEditor } from '../editor/markdown/commands'
+import { useSettings } from '../state/settings'
 import { dialogs, notify } from '../state/ui'
 import { currentAvailability } from './state'
 import { runTask } from './run'
@@ -87,6 +88,10 @@ export async function rewriteSelection(instruction: string): Promise<void> {
 
 /** Chooses an instruction (or writes one) and rewrites the selection. */
 export async function rewriteWithChoice(): Promise<void> {
+  const provider = AI_PROVIDERS.find((p) => p.id === useSettings.getState().settings.ai.provider)
+  if (provider && !provider.capabilities.rewrite) {
+    return void notify('info', provider.limitations)
+  }
   const availability = currentAvailability()
   if (!availability.available) return void notify('info', 'AI is not available for this document.')
   const choice = await dialogs.choice({

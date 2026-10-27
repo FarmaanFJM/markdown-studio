@@ -3160,13 +3160,36 @@ summary:focus-visible,
   width: 240px;
 }
 
-.ai-unavailable {
-  margin-top: 12px;
-  padding-left: 10px;
-  border-left: 2px solid var(--border);
+.settings-page .copilot-account {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0 8px;
+  max-width: 600px;
+}
+
+.copilot-status {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   color: var(--text-2);
   font-size: 12px;
-  max-width: 600px;
+}
+
+.copilot-status strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.copilot-user-code {
+  align-self: flex-start;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: var(--mono, monospace);
+  font-size: 18px;
+  letter-spacing: 0.12em;
+  user-select: all;
 }
 
 /* ---------- AI assistant ---------- */

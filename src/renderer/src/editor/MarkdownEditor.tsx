@@ -9,6 +9,7 @@ import {
   sourcesFromDataTransfer
 } from './imageDrop'
 import { documentModels, setActiveEditor } from './models'
+import { installCopilotSync } from '../ai/copilotSync'
 import { registerInlineSuggestions } from '../ai/inline'
 import { installDiagnostics, registerQuickFixes } from '../diagnostics/manager'
 import { registerCompletions } from './markdown/completions'
@@ -81,7 +82,8 @@ export function MarkdownEditor() {
       installSmartEditing(editor),
       installContextMenu(editor),
       installDiagnostics(editor),
-      registerInlineSuggestions(() => editorRef.current)
+      registerInlineSuggestions(() => editorRef.current),
+      installCopilotSync(() => editorRef.current)
     ]
 
     editor.onDidChangeCursorSelection(({ selection }) => {

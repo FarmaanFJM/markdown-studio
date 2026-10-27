@@ -3,6 +3,11 @@ import { isCodeAt } from '../editor/markdown/model'
 import { useSettings } from '../state/settings'
 import { currentAvailability } from './state'
 import { runTask } from './run'
+import {
+  copilotLifecycle,
+  provideCopilotCompletions,
+  registerCopilotCommands
+} from './copilotInline'
 
 /** A continuation fetched by the "Continue writing" command, waiting to be shown as ghost text. */
 let explicit: { uri: string; line: number; column: number; text: string } | null = null
@@ -40,8 +45,14 @@ function pause(ms: number, token: monaco.CancellationToken): Promise<boolean> {
 export function registerInlineSuggestions(
   getEditor: () => monaco.editor.IStandaloneCodeEditor | null
 ): monaco.IDisposable {
-  return monaco.languages.registerInlineCompletionsProvider('markdown', {
-    async provideInlineCompletions(model, position, _context, token) {
+  const commands = registerCopilotCommands()
+  const provider = monaco.languages.registerInlineCompletionsProvider('markdown', {
+    async provideInlineCompletions(model, position, context, token) {
+      // GitHub Copilot and the OpenAI-compatible endpoint never share a request path: the
+      // selected provider decides, and the other one is not consulted.
+      if (useSettings.getState().settings.ai.provider === 'github-copilot') {
+        return provideCopilotCompletions(model, position, context, token)
+      }
       const pending = explicit
       if (pending && pending.uri === model.uri.toString()) {
         explicit = null
@@ -81,6 +92,13 @@ export function registerInlineSuggestions(
       const text = /^[\s.,;:!?)]/.test(result.text) ? result.text : ` ${result.text}`
       return { items: [{ insertText: text, range: monaco.Range.fromPositions(position) }] }
     },
+    handleItemDidShow(_completions, item) {
+      copilotLifecycle.shown(item)
+    },
+    handlePartialAccept(_completions, item, acceptedCharacters) {
+      copilotLifecycle.partial(item, acceptedCharacters)
+    },
     disposeInlineCompletions() {}
   })
+  return { dispose: () => (provider.dispose(), commands.dispose()) }
 }
