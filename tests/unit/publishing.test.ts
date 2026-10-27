@@ -63,6 +63,35 @@ describe('headings with attributes', () => {
     expect(result.labels[0].number).toBe('1')
   })
 
+  it('does not add a second number to headings the author numbered the same way', () => {
+    const doc = [
+      '# Onderzoek',
+      '',
+      '## 1. Inleiding',
+      '',
+      '## 2. Methode',
+      '',
+      '### 2.1 Opzet',
+      '',
+      '### Zonder nummer',
+      '',
+      '## 2024 Resultaten',
+      ''
+    ].join('\n')
+    const { html, result } = render(doc, { numberSections: true })
+    expect(html).not.toContain('ms-secnum">1</span> 1.')
+    expect(html).not.toContain('ms-secnum">2.1</span> 2.1')
+    // The author's numbers stay; headings without one get the generated number.
+    expect(html).toContain('>1. Inleiding</h2>')
+    expect(html).toContain('>2.1 Opzet</h3>')
+    expect(html).toContain('<span class="ms-secnum">2.2</span> Zonder nummer')
+    expect(html).toContain('<span class="ms-secnum">3</span> 2024 Resultaten')
+    // The table of contents does not number them again either.
+    expect(result.headings.filter((h) => h.text.startsWith('1.')).map((h) => h.number)).toEqual([
+      ''
+    ])
+  })
+
   it('honours {.unnumbered}', () => {
     const { html } = render('# T\n\n## A\n\n## Notes {.unnumbered}\n', { numberSections: true })
     expect(html).toContain('>Notes</h2>')

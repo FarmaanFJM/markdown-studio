@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { create } from 'zustand'
+import { getActiveEditor } from '../editor/models'
 
 export type ToastKind = 'info' | 'success' | 'error'
 
@@ -65,7 +66,14 @@ export interface ContextMenuItem {
   separatorBefore?: boolean
 }
 
+export type SettingsCategoryId =
+  'editor' | 'markdown' | 'appearance' | 'preview' | 'export' | 'files' | 'ai' | 'advanced'
+
 interface UiState {
+  /** The Settings page replaces the editor area while it is open. */
+  settingsOpen: boolean
+  /** Category the page should scroll to when it opens or the request changes. */
+  settingsTarget: { category: SettingsCategoryId; nonce: number } | null
   dialogs: DialogRequest[]
   toasts: Toast[]
   contextMenu: { x: number; y: number; items: ContextMenuItem[] } | null
@@ -78,6 +86,8 @@ interface UiState {
 let nextToastId = 1
 
 export const useUi = create<UiState>((set) => ({
+  settingsOpen: false,
+  settingsTarget: null,
   dialogs: [],
   toasts: [],
   contextMenu: null,
@@ -86,6 +96,22 @@ export const useUi = create<UiState>((set) => ({
   hideContextMenu: () => set({ contextMenu: null }),
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }))
 }))
+
+let settingsNonce = 0
+
+/** Opens the Settings page, optionally at one category. */
+export function openSettings(category?: SettingsCategoryId): void {
+  useUi.setState({
+    settingsOpen: true,
+    settingsTarget: category ? { category, nonce: ++settingsNonce } : null
+  })
+}
+
+export function closeSettings(): void {
+  useUi.setState({ settingsOpen: false })
+  // Back to writing: the editor takes the keyboard again once it is visible.
+  requestAnimationFrame(() => getActiveEditor()?.focus())
+}
 
 type WithoutResolve<T> = T extends unknown ? Omit<T, 'resolve'> : never
 

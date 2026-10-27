@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { basename } from '@shared/paths'
 import { DEFAULT_SETTINGS, LIMITS } from '@shared/settings'
 import { api } from './bridge'
 import { runMenuCommand } from './commands/commands'
@@ -15,22 +14,20 @@ import { Explorer } from './explorer/Explorer'
 import { ActivityBar } from './layout/ActivityBar'
 import { Splitter } from './layout/Splitter'
 import { StatusBar } from './layout/StatusBar'
+import { TitleBar, useWindowTitle } from './layout/TitleBar'
 import { Welcome } from './layout/Welcome'
 import { PreviewPanel } from './preview/PreviewPanel'
 import { PublicationPanel } from './publishing/PublicationPanel'
-import { SettingsPanel } from './settings/SettingsPanel'
-import {
-  checkForExternalChanges,
-  confirmCloseAll,
-  documentName,
-  useDocuments
-} from './state/documents'
+import { SettingsPage } from './settings/SettingsPage'
+import { AiPanel } from './ai/AiPanel'
+import { checkForExternalChanges, confirmCloseAll, useDocuments } from './state/documents'
 import { useExportSetup } from './state/exportSetup'
 import { startPresentationStore } from './state/presentation'
 import { startProjectStore } from './state/project'
 import { clearSnapshots } from './state/recovery'
 import { offerRecovery, restoreSession, startSessionTracking } from './state/session'
 import { flushSettings, useSettings } from './state/settings'
+import { useUi } from './state/ui'
 import { useWorkspace } from './state/workspace'
 
 const ACTIVITY_BAR_WIDTH = 48
@@ -81,17 +78,11 @@ function useApplicationEvents(): void {
   }, [])
 }
 
-function useWindowTitle(): void {
-  const doc = useDocuments((s) => s.documents.find((d) => d.id === s.activeId) ?? null)
-  const root = useWorkspace((s) => s.root)
+function useDocumentTitle(): void {
+  const title = useWindowTitle()
   useEffect(() => {
-    const parts = [
-      doc ? `${doc.dirty ? '● ' : ''}${documentName(doc)}` : null,
-      root ? basename(root) : null,
-      'Markdown Studio'
-    ]
-    document.title = parts.filter(Boolean).join(' — ')
-  }, [doc, root])
+    document.title = title
+  }, [title])
 }
 
 export function App() {
@@ -99,10 +90,12 @@ export function App() {
   const settings = useSettings((s) => s.settings)
   const update = useSettings((s) => s.update)
   const hasDocuments = useDocuments((s) => s.documents.length > 0)
+  const settingsOpen = useUi((s) => s.settingsOpen)
+  const activeId = useDocuments((s) => s.activeId)
   const editorAreaRef = useRef<HTMLDivElement>(null)
 
   useApplicationEvents()
-  useWindowTitle()
+  useDocumentTitle()
 
   useEffect(() => {
     void useSettings
@@ -123,6 +116,11 @@ export function App() {
       })
   }, [])
 
+  // Opening or switching to a document leaves the Settings page and shows it.
+  useEffect(() => {
+    useUi.setState({ settingsOpen: false })
+  }, [activeId])
+
   useEffect(() => {
     document.documentElement.dataset.theme = settings.theme
   }, [settings.theme])
@@ -133,17 +131,24 @@ export function App() {
   const clampRatio = (ratio: number) =>
     Math.min(LIMITS.previewRatio.max, Math.max(LIMITS.previewRatio.min, ratio))
 
-  if (!ready) return <div className="app loading" />
+  if (!ready) {
+    return (
+      <div className="app loading">
+        <TitleBar />
+      </div>
+    )
+  }
 
   return (
     <div className="app">
+      <TitleBar />
       <div className="workbench">
         <ActivityBar />
         {layout.sidebarVisible && (
           <>
             <aside className="sidebar" style={{ width: layout.sidebarWidth }} data-testid="sidebar">
-              {layout.sidebarView === 'settings' ? (
-                <SettingsPanel />
+              {layout.sidebarView === 'ai' ? (
+                <AiPanel />
               ) : layout.sidebarView === 'publication' ? (
                 <PublicationPanel />
               ) : (
@@ -165,7 +170,8 @@ export function App() {
             />
           </>
         )}
-        <main className="editor-area" ref={editorAreaRef}>
+        {settingsOpen && <SettingsPage />}
+        <main className="editor-area" ref={editorAreaRef} hidden={settingsOpen}>
           <div className="editor-column" data-testid="editor-column">
             {hasDocuments && <EditorTabs />}
             {hasDocuments && settings.markdown.toolbar && <FormattingToolbar />}

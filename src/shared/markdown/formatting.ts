@@ -252,9 +252,15 @@ export function toggleInline(
         text: wrapped.text
       })
       const at = collapsed ? wrapped.offset + (cursorColumn - segment.from) : wrapped.offset
+      // A selection over several lines keeps the markers inside it, so the same command removes
+      // them again; a single line keeps just its text selected.
+      const whole = segments.length > 1
       selects.push([
-        { plan: plans.length - 1, offset: at },
-        { plan: plans.length - 1, offset: collapsed ? at : wrapped.offset + inner.length }
+        { plan: plans.length - 1, offset: whole ? 0 : at },
+        {
+          plan: plans.length - 1,
+          offset: whole ? wrapped.text.length : collapsed ? at : wrapped.offset + inner.length
+        }
       ])
     }
   })

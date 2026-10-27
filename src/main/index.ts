@@ -6,6 +6,9 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  Menu,
+  nativeTheme,
+  safeStorage,
   screen,
   session,
   shell,
@@ -14,7 +17,9 @@ import {
 import { IPC, type AppInfo } from '@shared/ipc'
 import { withRecentWorkspace, type SettingsPatch } from '@shared/settings'
 import iconPath from '../../resources/build/icon.png?asset'
+import { parseMenuLabel, windowChromeOptions, chromeColors } from '@shared/windowChrome'
 import { buildApplicationMenu } from './menu'
+import { AiService } from './services/aiService'
 import { AccessControl } from './services/accessControl'
 import { AssetService } from './services/assetService'
 import { DiagramService } from './services/diagramService'
@@ -50,6 +55,15 @@ const presets = new PresetService(access, path.join(app.getPath('userData'), 'ex
 const presentation = new PresentationService(access, () => mainWindow)
 const project = new ProjectService(access)
 const recovery = new RecoveryService(path.join(app.getPath('userData'), 'recovery'))
+const ai = new AiService(
+  path.join(app.getPath('userData'), 'ai-key.bin'),
+  () => settings.get().ai,
+  {
+    isAvailable: () => safeStorage.isEncryptionAvailable(),
+    encrypt: (plain) => safeStorage.encryptString(plain),
+    decrypt: (data) => safeStorage.decryptString(Buffer.from(data))
+  }
+)
 const exportService = new ExportService({
   pdf,
   chooseTarget: async (format, defaultPath) => {
@@ -163,6 +177,32 @@ function getDiagrams(): DiagramService {
 }
 
 function registerIpc(): void {
+  handle(IPC.aiStatus, () => ai.status())
+  handle(IPC.aiSetKey, (key: unknown) => ai.setKey(key))
+  handle(IPC.aiClearKey, () => ai.clearKey())
+  handle(IPC.aiRun, (id: unknown, task: unknown) => ai.run(id, task))
+  handle(IPC.aiCancel, (id: unknown) => ai.cancel(id))
+  handle(IPC.windowMenuHeadings, () =>
+    process.platform === 'darwin'
+      ? []
+      : (Menu.getApplicationMenu()?.items ?? []).map((item) => parseMenuLabel(item.label))
+  )
+  handle(IPC.windowPopupMenu, (index: unknown, x: unknown, y: unknown) => {
+    const submenu = Menu.getApplicationMenu()?.items[Number(index)]?.submenu
+    if (!mainWindow || !submenu || !Number.isFinite(Number(x)) || !Number.isFinite(Number(y)))
+      return
+    submenu.popup({ window: mainWindow, x: Math.round(Number(x)), y: Math.round(Number(y)) })
+  })
+  handle(IPC.windowSetTheme, (theme: unknown) => {
+    if (theme !== 'dark' && theme !== 'light') return
+    nativeTheme.themeSource = theme
+    // Only the overlay of Windows and Linux can be recoloured; macOS draws its own.
+    if (process.platform !== 'darwin' && mainWindow && !mainWindow.isDestroyed()) {
+      const overlay = windowChromeOptions(process.platform, theme).titleBarOverlay
+      if (overlay) mainWindow.setTitleBarOverlay(overlay)
+    }
+  })
+
   handle(IPC.appInfo, (): AppInfo => ({
     name: app.getName(),
     version: app.getVersion(),
@@ -386,9 +426,10 @@ function createWindow(): void {
     minHeight: 480,
     show: false,
     title: 'Markdown Studio',
-    backgroundColor: settings.get().theme === 'light' ? '#F7F8F8' : '#0C0D0E',
+    backgroundColor: chromeColors(settings.get().theme).color,
     icon: iconPath,
     autoHideMenuBar: false,
+    ...windowChromeOptions(process.platform, settings.get().theme),
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       sandbox: true,
@@ -424,6 +465,7 @@ function createWindow(): void {
     allowClose = true
   })
 
+  nativeTheme.themeSource = settings.get().theme
   buildApplicationMenu(window, settings.get().workspace.recent)
 
   const dev = rendererUrl()

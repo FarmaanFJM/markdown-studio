@@ -12,7 +12,7 @@ import { commands } from './commands'
 import { registerCommands } from './registry'
 
 export function openDocumentSettings(): void {
-  commands.showSettings()
+  commands.showSettings('appearance')
   setTimeout(() => {
     const section = document.getElementById('settings-document-appearance')
     section?.scrollIntoView({ block: 'start' })

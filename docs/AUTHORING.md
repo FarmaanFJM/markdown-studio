@@ -1,10 +1,63 @@
 # Authoring guide
 
-This guide describes the Markdown authoring tools of Markdown Studio (Phase 2). Everything works
-on the real Markdown source: there is no second document format, and the tools only ever change
-the text you point them at. Every tool is also in the command palette
-(<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>); shortcuts are listed in the
-[README](../README.md#keyboard-shortcuts).
+This guide explains the Markdown syntax Markdown Studio understands and the editing tools that help
+you write it. Everything works on the real Markdown source: there is no second document format, and
+the tools only ever change the text you point them at. Every tool is also in the command palette
+(<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>); shortcuts are listed in
+[KEYBOARD_SHORTCUTS.md](KEYBOARD_SHORTCUTS.md). New to the application? Start with
+[GETTING_STARTED.md](GETTING_STARTED.md).
+
+## Markdown syntax
+
+Markdown is plain text with a few symbols that say how it should look. The preview, the PDF and the HTML
+export all use the same renderer (markdown-it), which follows **CommonMark** plus the **GitHub Flavored
+Markdown** (GFM) extensions listed below. Each example shows the source you type.
+
+| Element              | You type                                                           | You get                                                                                                   |
+| -------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| Heading              | `# Title`, `## Section`, `### Subsection` (up to `######`)         | Headings of level 1–6. Leave a space after the `#`s.                                                      |
+| Paragraph            | Text, then a blank line                                            | A paragraph. A single line break stays inside the paragraph; end a line with two spaces for a hard break. |
+| Bold                 | `**important**`                                                    | **important**                                                                                             |
+| Italic               | `*important*` or `_important_`                                     | _important_                                                                                               |
+| Bold and italic      | `***important***`                                                  | **_important_**                                                                                           |
+| Strikethrough (GFM)  | `~~old~~`                                                          | ~~old~~                                                                                                   |
+| Inline code          | `` `npm run build` ``                                              | `npm run build`                                                                                           |
+| Link                 | `[Markdown Studio](https://github.com/FarmaanFJM/markdown-studio)` | A link. Local files: `[guide](docs/guide.md)`, headings: `[see below](#installatie)`                      |
+| Automatic link (GFM) | `https://example.com`                                              | A clickable address                                                                                       |
+| Image                | `![Alt text](assets/photo.png)`                                    | An image; the alt text describes it. See [IMAGES_AND_ASSETS.md](IMAGES_AND_ASSETS.md)                     |
+| Bulleted list        | `- item` (also `*` or `+`)                                         | A list; indent two or four spaces to nest                                                                 |
+| Numbered list        | `1. first` then `2. second`                                        | A numbered list                                                                                           |
+| Task list (GFM)      | `- [ ] todo` and `- [x] done`                                      | Checkboxes                                                                                                |
+| Blockquote           | `> quoted text`                                                    | An indented quote                                                                                         |
+| Horizontal rule      | `---` on its own line                                              | A divider                                                                                                 |
+| Table (GFM)          | `\| a \| b \|` with a `---` line under the header                  | A table; see [TABLES_AND_QUICK_FIXES.md](TABLES_AND_QUICK_FIXES.md)                                       |
+
+**Code blocks** are fenced with three backticks, followed by the language for highlighting:
+
+````markdown
+```python
+print("Hallo wereld")
+```
+````
+
+**Raw HTML** is allowed in Markdown and shown in the preview and exports after sanitising: scripts, frames,
+forms and event handlers are removed. Use it sparingly — it is a convenience, not part of Markdown proper.
+
+**Mathematics** (an extension, KaTeX): `$e^{i\pi} + 1 = 0$` inline, `$$ … $$` for display equations. See the
+[Mathematics guide](MATHEMATICS.md). **Diagrams** (an extension, Mermaid) are fenced blocks tagged `mermaid`.
+
+**Markdown Studio extensions** (they are plain Markdown to other programs, and documented in
+[PUBLICATIONS.md](PUBLICATIONS.md)): YAML front matter between `---` lines at the top of a file for page, theme and
+numbering settings; figure and table captions with `{#fig-name}` / `{#tbl-name}` and cross-references like
+`@fig-name`; citations `[@key]` with an APA reference list; `[TOC]`, `[LOF]` and `[LOT]` generated lists; and
+`<!-- pagebreak -->` for a new PDF page.
+
+**Not supported:** footnotes, definition lists, superscript/subscript syntax, merged table cells and emoji
+shortcodes. They are shown as typed.
+
+**Headings and numbers.** A heading may carry its own number (`## 1. Inleiding`, `### 4.1 Opzet`). Themes
+and the section-numbering option that add numbers automatically recognise these and do not add them a second
+time; see [PUBLISHING.md](PUBLISHING.md#heading-numbers).
 
 ## Suggestions and slash commands
 
@@ -37,15 +90,15 @@ workspace are listed with the relative path that reaches them.
 
 ## Formatting
 
-| Command                         | Selected text                                                                               | Nothing selected                                           | Applied again                                       |
-| ------------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------- |
-| Bold, italic, strike, code      | Wrapped; each line of a multi-line selection separately                                     | The word at the cursor, or an empty pair around the cursor | Removed                                             |
-| Heading 1–6, Paragraph          | Every non-blank selected line                                                               | The current line                                           | Same level → paragraph                              |
-| Bulleted / numbered / task list | Each non-blank line (numbered lists count per nesting level and restart after a blank line) | Current line                                               | Back to plain lines; other list types are converted |
-| Blockquote                      | Quoted (blank lines between quoted lines keep the quote together)                           | Current line                                               | Unquoted                                            |
-| Link                            | `[selection](url)`, or `[text](selected URL)` when a URL is selected                        | `[link text](url)`                                         | —                                                   |
-| Image                           | `![selection](path)` (the selection becomes the alt text)                                   | `![alt text](path)`                                        | —                                                   |
-| Code block                      | The selected lines are fenced                                                               | An empty fence with the cursor inside                      | —                                                   |
+| Command                         | Selected text                                                                               | Nothing selected                                                                     | Applied again                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------- |
+| Bold, italic, strike, code      | Wrapped; each line of a multi-line selection separately                                     | Inside a word, that word; otherwise an empty pair with the cursor between its halves | Removed                                             |
+| Heading 1–6, Paragraph          | Every non-blank selected line                                                               | The current line                                                                     | Same level → paragraph                              |
+| Bulleted / numbered / task list | Each non-blank line (numbered lists count per nesting level and restart after a blank line) | Current line                                                                         | Back to plain lines; other list types are converted |
+| Blockquote                      | Quoted (blank lines between quoted lines keep the quote together)                           | Current line                                                                         | Unquoted                                            |
+| Link                            | `[selection](url)`, or `[text](selected URL)` when a URL is selected                        | `[link text](url)`                                                                   | —                                                   |
+| Image                           | `![selection](path)` (the selection becomes the alt text)                                   | `![alt text](path)`                                                                  | —                                                   |
+| Code block                      | The selected lines are fenced                                                               | An empty fence with the cursor inside                                                | —                                                   |
 
 Rules that hold for all of them: they are one undo step; unrelated lines stay byte-for-byte as
 they were; line endings (LF/CRLF) and the byte-order mark are untouched; they do nothing inside
@@ -67,119 +120,9 @@ Italic never mistakes bold for italic: on `**word**` it produces `***word***`, a
 
 ## Tables
 
-Given
-
-```markdown
-| Name  | Age | City      |
-| ----- | --- | --------- |
-| Alice | 24  | Amsterdam |
-| Bob   | 30  | Rotterdam |
-```
-
-**Format Table** (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>) produces
-
-```markdown
-| Name  | Age | City      |
-| ----- | --- | --------- |
-| Alice | 24  | Amsterdam |
-| Bob   | 30  | Rotterdam |
-```
-
-- Alignment markers (`:--`, `:-:`, `--:`) are kept and the cells are padded to match.
-- Cells keep their text exactly, including escaped pipes (`\|`), inline Markdown, and empty
-  cells. Rows with too few cells are completed. Columns are measured by display width, so CJK
-  text and emoji line up.
-- _Format Tables in Selection_ and _Format All Tables_ do the same for several tables. Text
-  between tables and tables inside code blocks are never touched.
-- A table is not rewritten when that would lose content (a row with non-empty cells beyond the
-  header's columns), or when it begins on a list-item marker line; a message explains why.
-- Inside a table, <kbd>Tab</kbd> moves to the next cell (tidying the table first), at the very
-  last cell it adds a row, and <kbd>Shift</kbd>+<kbd>Tab</kbd> moves back. The _Table_ menu and
-  palette have commands to insert or delete rows and columns and to set a column's alignment.
-
-### The table editor
-
-_Edit Table Visually…_ (<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd>) opens the table under the
-cursor as a grid. Edit cells and headers, use the toolbar for rows and columns (relative to
-the cell you are in), and the three alignment buttons above each column. _Apply to Document_
-(<kbd>Ctrl</kbd>+<kbd>Enter</kbd>) replaces exactly that table with well-formed GFM in one
-undoable edit; _Cancel_ or <kbd>Esc</kbd> leaves the document untouched. If the table is
-changed in the document while the grid is open (or text is added to its edge), a notice appears
-and _Apply_ is disabled until you choose _Reload from document_.
-
-_Insert Table…_ (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd>) designs a new table the same way
-and inserts it at the cursor.
-
-## Templates and snippets
-
-_File → New File from Template…_ (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd>) lists the
-templates: those of the open folder, your global ones, and the built-in ones (README, Technical
-documentation, Project notes, Meeting notes, Report, Blank document). Choose one and enter the
-values it needs.
-
-| Placeholder    | Replaced by                                                                                                                                           |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `{{title}}`    | The title you type (also suggests the file name)                                                                                                      |
-| `{{date}}`     | Today, `YYYY-MM-DD`                                                                                                                                   |
-| `{{datetime}}` | Today and the current time, `YYYY-MM-DD HH:mm` (local time)                                                                                           |
-| `{{author}}`   | The name you type. It is offered again next time (Settings → Author name) but never filled in without you; empty is allowed and leaves no stray space |
-| `{{cursor}}`   | Nothing: the cursor starts there                                                                                                                      |
-
-Write `\{{title}}` for the literal text. Unknown names such as `{{foo}}` stay as they are, and
-replaced values are never expanded again. Templates are text; nothing in them is run.
-
-- With a folder open the document is created in the folder selected in the Explorer, with a
-  file name you can change. An existing file is never overwritten (you are told, and can choose
-  another name); cancelling creates nothing. Without a folder, an unsaved document is created
-  and _Save As_ asks where to put it. A contents block (the managed markers below) in a
-  template is filled in.
-- **Save Document as Template…** and **Save Selection as Snippet or Template…** keep the
-  content. Choose its name, description, type (_Document template_ creates files; _Snippet_ is
-  inserted at the cursor) and where it is available: **This folder only** (stored in
-  `<folder>/.markdown-studio/templates/`, hidden in the Explorer and moves with the project)
-  or **All folders** (stored in the application's data folder).
-- **Manage Templates and Snippets…** browses, edits, renames (edit the name), duplicates (also
-  built-in ones, as your own copy) and deletes (with confirmation).
-- **Local files.** A template cannot carry files. When you save one that refers to local images
-  or documents, you choose between _Make paths workspace-relative_ (references become
-  `/assets/logo.png` and are re-pointed for each new document, wherever in the folder it is
-  created) and _Keep as written_. When you create a document, references whose files do not
-  exist at its location are listed first so you can decide.
-- Saved snippets (type _Snippet_) are inserted with **Insert Saved Snippet…**, the slash menu
-  and the suggestion list; `{{date}}`, `{{datetime}}` are filled in, `{{title}}` is the
-  document's name, `{{author}}` is your saved name, and `{{cursor}}` is where the cursor ends.
-
-## Outline and table of contents
-
-The **Outline** section of the Explorer lists the headings of the active document as a tree.
-Click one to go to it; the heading that contains the cursor is highlighted; use the arrow keys,
-<kbd>Enter</kbd>, <kbd>←</kbd>/<kbd>→</kbd> to collapse and expand. The list is built from the
-same parse as the preview, so a heading in a code block is not listed and every listed heading
-is a heading the preview renders.
-
-**Insert Table of Contents** adds
-
-```markdown
-<!-- markdown-studio:toc:start -->
-
-- [Installation](#installation)
-  - [Windows](#windows)
-  - [Linux](#linux)
-- [Configuration](#configuration)
-
-<!-- markdown-studio:toc:end -->
-```
-
-at the cursor (or updates the block that already exists). **Update Table of Contents**
-regenerates only the lines between the two markers; a list or table of contents you wrote
-yourself is never replaced. Anchors are the preview's anchors, so repeated headings become
-`#usage`, `#usage-1`, `#usage-2`.
-
-- By default the document title (a first `#` heading) is not listed; Settings → _Table of
-  contents_ can include it and limit the depth.
-- Add `<!-- omit in toc -->` to a heading line to leave it out. A `Table of Contents` heading
-  right above the markers does not list itself.
-- A start marker without an end marker is reported and nothing is changed.
+Writing, formatting and repairing tables — including the _Table source width_ setting for wide tables, the
+visual table editor and Tab navigation between cells — is covered in
+[TABLES_AND_QUICK_FIXES.md](TABLES_AND_QUICK_FIXES.md).
 
 ## Links, images and problems
 
@@ -192,12 +135,15 @@ The editor underlines, and the status bar counts:
 - **Notes** — spacing and structure from markdownlint (multiple blank lines, missing blank
   lines around lists and headings, trailing spaces, inconsistent list markers, empty links…).
   Rules that clash with Markdown Studio (line length, inline HTML, bare URLs, first-line
-  heading, link fragments) are off. Switch single rules off in Settings → _Problems_.
+  heading, link fragments) are off. Switch single rules off in **Settings → Markdown**.
 
 Click the status-bar counter or press <kbd>F8</kbd> to step through them. The quick-fix menu
-(<kbd>Ctrl</kbd>+<kbd>.</kbd>) offers a correction only when it is unambiguous: a moved file
-with a unique name, an anchor with one obvious spelling. _Fix All Automatic Style Problems_
-applies markdownlint's own fixes in one undoable edit. Nothing is ever rewritten just because a
+(<kbd>Ctrl</kbd>+<kbd>.</kbd>, or the lightbulb) offers a correction only when it is unambiguous: remove
+repeated spaces, normalise heading and list spacing, change a skipped heading level, repair a table with
+mismatched columns, a moved file with a unique name, an anchor with one obvious spelling.
+_Format Markdown Block_ tidies the block under the cursor, and _Fix All Automatic Style Problems_ applies
+markdownlint's own fixes in one undoable edit. The full list is in
+[TABLES_AND_QUICK_FIXES.md](TABLES_AND_QUICK_FIXES.md#quick-fixes). Nothing is ever rewritten just because a
 warning is shown.
 
 ## Renaming and moving
@@ -232,6 +178,7 @@ References_, _Without Updating_ or _Cancel_.
 | Style checks / Style rules         | markdownlint notes, and which rules are on                                  |
 | Include the document title / depth | Table-of-contents contents                                                  |
 | Author name                        | Offered when a template asks for an author                                  |
+| Table source width                 | Target line width of Format Table (0 = always align fully)                  |
 
 ## Mathematics, diagrams and page breaks (Phase 3)
 

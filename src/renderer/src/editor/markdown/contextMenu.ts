@@ -33,10 +33,16 @@ const ENTRIES: MenuEntry[] = [
   { command: 'insert.mermaid', group: '8_markdown_insert', order: 8 },
   { command: 'table.format', group: '9_markdown_table', order: 1, table: true },
   { command: 'table.editVisually', group: '9_markdown_table', order: 2, table: true },
+  { command: 'table.formatFit', group: '9_markdown_table', order: 1.5, table: true },
+  { command: 'table.repair', group: '9_markdown_table', order: 2.5, table: true },
   { command: 'table.insertRowBelow', group: '9_markdown_table', order: 3, table: true },
   { command: 'table.insertColumnRight', group: '9_markdown_table', order: 4, table: true },
   { command: 'table.deleteRow', group: '9_markdown_table', order: 5, table: true },
-  { command: 'table.deleteColumn', group: '9_markdown_table', order: 6, table: true }
+  { command: 'table.deleteColumn', group: '9_markdown_table', order: 6, table: true },
+  { command: 'markdown.quickFix', group: '9_markdown_fix', order: 1 },
+  { command: 'markdown.formatBlock', group: '9_markdown_fix', order: 2 },
+  { command: 'markdown.removeExtraSpaces', group: '9_markdown_fix', order: 3 },
+  { command: 'problems.fixAll', group: '9_markdown_fix', order: 4 }
 ]
 
 /**

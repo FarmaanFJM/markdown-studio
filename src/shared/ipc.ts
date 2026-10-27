@@ -4,7 +4,15 @@
  * The preload script exposes exactly this API as `window.markdownStudio`. Every call is
  * validated again in the main process; the renderer is never given raw Node.js or Electron APIs.
  */
-import type { AppSettings, SettingsPatch } from './settings'
+import type { AppSettings, SettingsPatch, ThemeName } from './settings'
+import type { AiTaskRequest, AiTaskResult } from './ai/types'
+import type { MenuHeading } from './windowChrome'
+
+/** State of the stored AI key; the key itself never reaches the page. */
+export interface AiStatus {
+  hasKey: boolean
+  canStoreKey: boolean
+}
 import type { StoredTemplate, TemplateScope } from './templates'
 import type { DiagramRenderRequest, DiagramRenderResult } from './diagram'
 import type { ExportRequest, ExportResult } from './export/job'
@@ -151,6 +159,14 @@ export const IPC = {
   appConfirmClose: 'app:confirm-close',
   appCloseRequested: 'app:close-requested',
   menuCommand: 'menu:command',
+  aiStatus: 'ai:status',
+  aiSetKey: 'ai:set-key',
+  aiClearKey: 'ai:clear-key',
+  aiRun: 'ai:run',
+  aiCancel: 'ai:cancel',
+  windowMenuHeadings: 'window:menu-headings',
+  windowPopupMenu: 'window:popup-menu',
+  windowSetTheme: 'window:set-theme',
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   workspaceOpenDialog: 'workspace:open-dialog',
@@ -209,6 +225,12 @@ export interface MarkdownStudioApi {
     confirmClose(): Promise<void>
     onCloseRequested(listener: () => void): () => void
     onMenuCommand(listener: (message: MenuCommandMessage) => void): () => void
+    /** Top-level application menu entries for the title bar (empty where the system shows them). */
+    menuHeadings(): Promise<MenuHeading[]>
+    /** Opens the application menu at index `index` below the given window coordinates. */
+    popupMenu(index: number, x: number, y: number): Promise<void>
+    /** Matches the native caption buttons and system menus to the application theme. */
+    setTheme(theme: ThemeName): Promise<void>
   }
   settings: {
     get(): Promise<AppSettings>
@@ -318,6 +340,15 @@ export interface MarkdownStudioApi {
   diagram: {
     render(request: DiagramRenderRequest): Promise<DiagramRenderResult>
     cancel(ids: string[]): Promise<void>
+  }
+  ai: {
+    status(): Promise<AiStatus>
+    /** Stores the API key, encrypted by the operating system. It can never be read back. */
+    setKey(key: string): Promise<AiStatus>
+    clearKey(): Promise<AiStatus>
+    /** Runs a writing task with the configured provider; `id` lets it be cancelled. */
+    run(id: string, task: AiTaskRequest): Promise<AiTaskResult>
+    cancel(id: string): Promise<void>
   }
   shell: {
     openExternal(url: string): Promise<void>

@@ -105,10 +105,30 @@ export interface RangeEdit {
   text: string
 }
 
+/**
+ * markdownlint reports a skipped heading level (`Expected: h2; Actual: h4`) without a fix. For a
+ * `#`-style heading the fix is to use the expected level; it is offered as a quick fix only and
+ * is not part of "fix all", because it changes the document's outline.
+ */
+function headingLevelEdit(issue: LintIssue, lines: string[]): RangeEdit | null {
+  if (issue.rule !== 'MD001') return null
+  const levels = /Expected: h([1-6]); Actual: h([1-6])/.exec(issue.detail ?? '')
+  const text = lines[issue.line - 1]
+  const marker = text === undefined ? null : /^( {0,3})(#{1,6})(?=[ \t]|$)/.exec(text)
+  if (!levels || !marker || marker[2].length !== Number(levels[2])) return null
+  return {
+    startLine: issue.line,
+    startColumn: marker[1].length + 1,
+    endLine: issue.line,
+    endColumn: marker[1].length + 1 + marker[2].length,
+    text: '#'.repeat(Number(levels[1]))
+  }
+}
+
 /** Converts markdownlint fix info to an edit over `lines`; null when the issue has no fix. */
 export function fixToEdit(issue: LintIssue, lines: string[]): RangeEdit | null {
   const fix = issue.fix
-  if (!fix) return null
+  if (!fix) return headingLevelEdit(issue, lines)
   const line = fix.lineNumber ?? issue.line
   if (line < 1 || line > lines.length) return null
 

@@ -9,6 +9,7 @@ import {
   sourcesFromDataTransfer
 } from './imageDrop'
 import { documentModels, setActiveEditor } from './models'
+import { registerInlineSuggestions } from '../ai/inline'
 import { installDiagnostics, registerQuickFixes } from '../diagnostics/manager'
 import { registerCompletions } from './markdown/completions'
 import { installContextMenu } from './markdown/contextMenu'
@@ -67,6 +68,9 @@ export function MarkdownEditor() {
       stickyScroll: { enabled: false },
       unicodeHighlight: { ambiguousCharacters: false, nonBasicASCII: false },
       fixedOverflowWidgets: true,
+      // The shadow-DOM menu cannot see the theme variables Monaco defines on its editor element,
+      // which left the context menu without a background. In the page it inherits them.
+      useShadowDOM: false,
       ariaLabel: 'Markdown source editor'
     })
     editorRef.current = editor
@@ -76,7 +80,8 @@ export function MarkdownEditor() {
       registerQuickFixes(),
       installSmartEditing(editor),
       installContextMenu(editor),
-      installDiagnostics(editor)
+      installDiagnostics(editor),
+      registerInlineSuggestions(() => editorRef.current)
     ]
 
     editor.onDidChangeCursorSelection(({ selection }) => {

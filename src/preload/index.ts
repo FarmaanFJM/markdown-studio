@@ -13,7 +13,10 @@ const api: MarkdownStudioApi = {
     info: () => ipcRenderer.invoke(IPC.appInfo),
     confirmClose: () => ipcRenderer.invoke(IPC.appConfirmClose),
     onCloseRequested: (listener) => subscribe<void>(IPC.appCloseRequested, () => listener()),
-    onMenuCommand: (listener) => subscribe<MenuCommandMessage>(IPC.menuCommand, listener)
+    onMenuCommand: (listener) => subscribe<MenuCommandMessage>(IPC.menuCommand, listener),
+    menuHeadings: () => ipcRenderer.invoke(IPC.windowMenuHeadings),
+    popupMenu: (index, x, y) => ipcRenderer.invoke(IPC.windowPopupMenu, index, x, y),
+    setTheme: (theme) => ipcRenderer.invoke(IPC.windowSetTheme, theme)
   },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
@@ -97,6 +100,13 @@ const api: MarkdownStudioApi = {
   diagram: {
     render: (request) => ipcRenderer.invoke(IPC.diagramRender, request),
     cancel: (ids) => ipcRenderer.invoke(IPC.diagramCancel, ids)
+  },
+  ai: {
+    status: () => ipcRenderer.invoke(IPC.aiStatus),
+    setKey: (key) => ipcRenderer.invoke(IPC.aiSetKey, key),
+    clearKey: () => ipcRenderer.invoke(IPC.aiClearKey),
+    run: (id, task) => ipcRenderer.invoke(IPC.aiRun, id, task),
+    cancel: (id) => ipcRenderer.invoke(IPC.aiCancel, id)
   },
   shell: {
     openExternal: (url) => ipcRenderer.invoke(IPC.shellOpenExternal, url),

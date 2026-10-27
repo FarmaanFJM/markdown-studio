@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { basename } from '@shared/paths'
 import {
   hasWorkspaceOverrides,
@@ -58,8 +58,16 @@ function overrideSummary(overrides: WorkspacePresentation): string {
   return parts.join(', ')
 }
 
-/** Settings for how documents look and how they are published. */
-export function DocumentSettings() {
+export interface DocumentSettingsSections {
+  appearance: ReactNode
+  rendering: ReactNode
+  pdf: ReactNode
+  html: ReactNode
+  presets: ReactNode
+}
+
+/** Settings for how documents look and how they are published, as separately placeable parts. */
+export function useDocumentSettingsSections(): DocumentSettingsSections {
   const settings = useSettings((s) => s.settings.document)
   const update = useSettings((s) => s.update)
   const root = useWorkspace((s) => s.root)
@@ -123,194 +131,208 @@ export function DocumentSettings() {
     editingWorkspace && workspace?.[key] !== undefined
   const folderName = root ? basename(root) : ''
 
-  return (
-    <>
-      <h3 className="settings-section" id="settings-document-appearance" tabIndex={-1}>
-        Document Appearance
-      </h3>
-      <p className="setting-hint section-note">
-        How rendered documents look in the preview, PDF and HTML export. This is separate from the
-        application theme above, and it never changes your Markdown.
-      </p>
-      {hasWorkspaceOverrides(workspace) && workspace && (
-        <div className="override-banner" role="status" data-testid="workspace-override-banner">
-          <strong>Workspace override active</strong> for “{folderName}”:{' '}
-          {overrideSummary(workspace)}.
+  return {
+    appearance: (
+      <>
+        <h3 className="settings-section" id="settings-document-appearance" tabIndex={-1}>
+          Document Appearance
+        </h3>
+        <p className="setting-hint section-note">
+          How rendered documents look in the preview, PDF and HTML export. This is separate from the
+          application theme above, and it never changes your Markdown.
+        </p>
+        {hasWorkspaceOverrides(workspace) && workspace && (
+          <div className="override-banner" role="status" data-testid="workspace-override-banner">
+            <strong>Workspace override active</strong> for “{folderName}”:{' '}
+            {overrideSummary(workspace)}.
+            <div className="button-row">
+              <button type="button" className="button" onClick={() => setScope('workspace')}>
+                Edit
+              </button>
+              <button
+                type="button"
+                className="button"
+                data-testid="clear-workspace-override"
+                onClick={() => void setWorkspace(null)}
+              >
+                Clear override
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="segmented" role="radiogroup" aria-label="Apply appearance to">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={scope === 'global'}
+            className={scope === 'global' ? 'active' : ''}
+            data-testid="scope-global"
+            onClick={() => setScope('global')}
+          >
+            Application default
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked={scope === 'workspace'}
+            className={scope === 'workspace' ? 'active' : ''}
+            disabled={root === null}
+            title={root === null ? 'Open a folder to set workspace-specific appearance' : undefined}
+            data-testid="scope-workspace"
+            onClick={() => setScope('workspace')}
+          >
+            This workspace
+          </button>
+        </div>
+        {editingWorkspace && (
+          <p className="setting-hint" data-testid="scope-hint">
+            Changes apply only to “{folderName}” and are stored in its .markdown-studio folder.
+            Anything you do not change keeps the application default.
+          </p>
+        )}
+        <ThemePicker
+          value={themeId}
+          onChange={(id) => id !== 'inherit' && setTheme(id)}
+          name="document-theme"
+        />
+        {overridden('theme') && (
+          <p className="setting-hint">
+            Theme overridden by this workspace (default: {BUILTIN_THEMES[settings.theme].name}).
+          </p>
+        )}
+        <details className="advanced" data-testid="appearance-details">
+          <summary>
+            Fonts, colours and blocks
+            {Object.keys(customization).length > 0
+              ? ` (${Object.keys(customization).length} customised)`
+              : ''}
+          </summary>
+          <AppearanceEditor
+            themeId={themeId}
+            value={customization}
+            onChange={setCustomization}
+            idPrefix="settings"
+          />
+        </details>
+        <details className="advanced" data-testid="css-details">
+          <summary>
+            Custom CSS
+            {customCss.source !== 'none'
+              ? ` (${customCss.source === 'file' ? 'file' : 'written'})`
+              : ''}
+          </summary>
+          <p className="setting-hint">
+            Your CSS is applied after the theme, to documents only — never to Markdown Studio
+            itself. Remote files, @import and local file references are not allowed.
+          </p>
+          <CssSettings
+            value={customCss}
+            onChange={setCss}
+            result={editingWorkspace ? css : css}
+            scope={editingWorkspace ? 'workspace' : 'global'}
+            idPrefix="settings"
+          />
+        </details>
+        <p className="setting-hint" data-testid="effective-summary">
+          Effective for this document:{' '}
+          {BUILTIN_THEMES[resolvePresentation(settings, workspace).themeId].name}
+          {workspace?.theme ? ' (from workspace)' : ''}.
+        </p>
+        {editingWorkspace && hasWorkspaceOverrides(workspace) && (
+          <p className="setting-hint">
+            {resolved.origin.theme === 'workspace' ? 'Theme comes from the workspace.' : ''}
+          </p>
+        )}
+      </>
+    ),
+    rendering: (
+      <>
+        <h3 className="settings-section">Mathematical Notation</h3>
+        <SwitchRow
+          id="setting-math"
+          label="Render math"
+          hint={`Shows $…$, $$…$$, \\(…\\) and \\[…\\] as typeset equations (KaTeX, bundled). The Markdown stays as written.${overridden('math') ? ' Overridden by this workspace.' : ''}`}
+          checked={mathOn}
+          onChange={setMath}
+        />
+
+        <h3 className="settings-section">Diagrams</h3>
+        <SwitchRow
+          id="setting-diagrams"
+          label="Render Mermaid diagrams"
+          hint={`Fenced blocks tagged “mermaid” become diagrams, drawn in an isolated, script-free sandbox and embedded as static SVG. Diagrams up to 50,000 characters.${overridden('diagrams') ? ' Overridden by this workspace.' : ''}`}
+          checked={diagramsOn}
+          onChange={setDiagrams}
+        />
+      </>
+    ),
+    pdf: (
+      <>
+        <h3 className="settings-section">PDF Export</h3>
+        <p className="setting-hint section-note">
+          Default page setup. The Export dialog starts from these values or from a preset.
+        </p>
+        <PageSetup
+          value={settings.pdf}
+          idPrefix="settings-pdf"
+          onChange={(pdf) => update({ document: { pdf } })}
+        />
+      </>
+    ),
+    html: (
+      <>
+        <h3 className="settings-section">HTML Export</h3>
+        <SwitchRow
+          id="setting-html-embed"
+          label="Embed local images"
+          hint="Images are stored inside the HTML file so it works anywhere, offline. Equations and diagrams are always embedded."
+          checked={settings.html.embedImages}
+          onChange={(embedImages) => update({ document: { html: { embedImages } } })}
+        />
+      </>
+    ),
+    presets: (
+      <>
+        <h3 className="settings-section">Export Presets</h3>
+        <div className="setting-row">
+          <Field
+            label="Default preset"
+            htmlFor="setting-export-preset"
+            hint="Used by the PDF preview and “Export with Current Preset”."
+          >
+            <SelectInput
+              id="setting-export-preset"
+              testId="setting-export-preset"
+              value={settings.exportPreset}
+              options={[
+                { value: '', label: 'Settings defaults' },
+                ...presets.map((p) => ({ value: p.id, label: p.name }))
+              ]}
+              onChange={(id) => useExportSetup.getState().choose(id)}
+            />
+          </Field>
           <div className="button-row">
-            <button type="button" className="button" onClick={() => setScope('workspace')}>
-              Edit
-            </button>
             <button
               type="button"
               className="button"
-              data-testid="clear-workspace-override"
-              onClick={() => void setWorkspace(null)}
+              data-testid="manage-presets"
+              onClick={() =>
+                void dialogs.custom<null>((done) => (
+                  <PresetManager
+                    done={() => done(null)}
+                    onEdit={(id) => {
+                      done(null)
+                      void openExportDialog(undefined, id)
+                    }}
+                  />
+                ))
+              }
             >
-              Clear override
+              Manage presets…
             </button>
           </div>
         </div>
-      )}
-      <div className="segmented" role="radiogroup" aria-label="Apply appearance to">
-        <button
-          type="button"
-          role="radio"
-          aria-checked={scope === 'global'}
-          className={scope === 'global' ? 'active' : ''}
-          data-testid="scope-global"
-          onClick={() => setScope('global')}
-        >
-          Application default
-        </button>
-        <button
-          type="button"
-          role="radio"
-          aria-checked={scope === 'workspace'}
-          className={scope === 'workspace' ? 'active' : ''}
-          disabled={root === null}
-          title={root === null ? 'Open a folder to set workspace-specific appearance' : undefined}
-          data-testid="scope-workspace"
-          onClick={() => setScope('workspace')}
-        >
-          This workspace
-        </button>
-      </div>
-      {editingWorkspace && (
-        <p className="setting-hint" data-testid="scope-hint">
-          Changes apply only to “{folderName}” and are stored in its .markdown-studio folder.
-          Anything you do not change keeps the application default.
-        </p>
-      )}
-      <ThemePicker
-        value={themeId}
-        onChange={(id) => id !== 'inherit' && setTheme(id)}
-        name="document-theme"
-      />
-      {overridden('theme') && (
-        <p className="setting-hint">
-          Theme overridden by this workspace (default: {BUILTIN_THEMES[settings.theme].name}).
-        </p>
-      )}
-      <details className="advanced" data-testid="appearance-details">
-        <summary>
-          Fonts, colours and blocks
-          {Object.keys(customization).length > 0
-            ? ` (${Object.keys(customization).length} customised)`
-            : ''}
-        </summary>
-        <AppearanceEditor
-          themeId={themeId}
-          value={customization}
-          onChange={setCustomization}
-          idPrefix="settings"
-        />
-      </details>
-      <details className="advanced" data-testid="css-details">
-        <summary>
-          Custom CSS
-          {customCss.source !== 'none'
-            ? ` (${customCss.source === 'file' ? 'file' : 'written'})`
-            : ''}
-        </summary>
-        <p className="setting-hint">
-          Your CSS is applied after the theme, to documents only — never to Markdown Studio itself.
-          Remote files, @import and local file references are not allowed.
-        </p>
-        <CssSettings
-          value={customCss}
-          onChange={setCss}
-          result={editingWorkspace ? css : css}
-          scope={editingWorkspace ? 'workspace' : 'global'}
-          idPrefix="settings"
-        />
-      </details>
-      <p className="setting-hint" data-testid="effective-summary">
-        Effective for this document:{' '}
-        {BUILTIN_THEMES[resolvePresentation(settings, workspace).themeId].name}
-        {workspace?.theme ? ' (from workspace)' : ''}.
-      </p>
-      {editingWorkspace && hasWorkspaceOverrides(workspace) && (
-        <p className="setting-hint">
-          {resolved.origin.theme === 'workspace' ? 'Theme comes from the workspace.' : ''}
-        </p>
-      )}
-
-      <h3 className="settings-section">Mathematical Notation</h3>
-      <SwitchRow
-        id="setting-math"
-        label="Render math"
-        hint={`Shows $…$, $$…$$, \\(…\\) and \\[…\\] as typeset equations (KaTeX, bundled). The Markdown stays as written.${overridden('math') ? ' Overridden by this workspace.' : ''}`}
-        checked={mathOn}
-        onChange={setMath}
-      />
-
-      <h3 className="settings-section">Diagrams</h3>
-      <SwitchRow
-        id="setting-diagrams"
-        label="Render Mermaid diagrams"
-        hint={`Fenced blocks tagged “mermaid” become diagrams, drawn in an isolated, script-free sandbox and embedded as static SVG. Diagrams up to 50,000 characters.${overridden('diagrams') ? ' Overridden by this workspace.' : ''}`}
-        checked={diagramsOn}
-        onChange={setDiagrams}
-      />
-
-      <h3 className="settings-section">PDF Export</h3>
-      <p className="setting-hint section-note">
-        Default page setup. The Export dialog starts from these values or from a preset.
-      </p>
-      <PageSetup
-        value={settings.pdf}
-        idPrefix="settings-pdf"
-        onChange={(pdf) => update({ document: { pdf } })}
-      />
-
-      <h3 className="settings-section">HTML Export</h3>
-      <SwitchRow
-        id="setting-html-embed"
-        label="Embed local images"
-        hint="Images are stored inside the HTML file so it works anywhere, offline. Equations and diagrams are always embedded."
-        checked={settings.html.embedImages}
-        onChange={(embedImages) => update({ document: { html: { embedImages } } })}
-      />
-
-      <h3 className="settings-section">Export Presets</h3>
-      <div className="setting-row">
-        <Field
-          label="Default preset"
-          htmlFor="setting-export-preset"
-          hint="Used by the PDF preview and “Export with Current Preset”."
-        >
-          <SelectInput
-            id="setting-export-preset"
-            testId="setting-export-preset"
-            value={settings.exportPreset}
-            options={[
-              { value: '', label: 'Settings defaults' },
-              ...presets.map((p) => ({ value: p.id, label: p.name }))
-            ]}
-            onChange={(id) => useExportSetup.getState().choose(id)}
-          />
-        </Field>
-        <div className="button-row">
-          <button
-            type="button"
-            className="button"
-            data-testid="manage-presets"
-            onClick={() =>
-              void dialogs.custom<null>((done) => (
-                <PresetManager
-                  done={() => done(null)}
-                  onEdit={(id) => {
-                    done(null)
-                    void openExportDialog(undefined, id)
-                  }}
-                />
-              ))
-            }
-          >
-            Manage presets…
-          </button>
-        </div>
-      </div>
-    </>
-  )
+      </>
+    )
+  }
 }

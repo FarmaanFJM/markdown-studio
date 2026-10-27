@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron'
 import { IPC, type MenuCommand } from '@shared/ipc'
+import { shortcutAccelerator, shortcutFor } from '@shared/shortcuts'
 
 const REPOSITORY_URL = 'https://github.com/FarmaanFJM/markdown-studio'
 
@@ -11,6 +12,11 @@ const REPOSITORY_URL = 'https://github.com/FarmaanFJM/markdown-studio'
  * (`registerAccelerator: false`). Clipboard items use native roles, which Monaco supports.
  */
 export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: string[]): void {
+  // Accelerators come from the shared shortcut list; the menu only displays them.
+  const accel = (id: string, fallback?: string) => {
+    const spec = shortcutFor(id)
+    return spec ? shortcutAccelerator(spec, process.platform) : fallback
+  }
   const send = (command: MenuCommand, argument?: string) => () => {
     if (!window.isDestroyed()) window.webContents.send(IPC.menuCommand, { command, argument })
   }
@@ -21,7 +27,7 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
     extra: Partial<MenuItemConstructorOptions> = {}
   ): MenuItemConstructorOptions => ({
     label,
-    accelerator,
+    accelerator: accel(command, accelerator),
     registerAccelerator: false,
     click: send(command),
     ...extra
@@ -35,7 +41,7 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
     extra: Partial<MenuItemConstructorOptions> = {}
   ): MenuItemConstructorOptions => ({
     label,
-    accelerator,
+    accelerator: accel(id, accelerator),
     registerAccelerator: false,
     click: send('app.command', id),
     ...extra
@@ -198,7 +204,7 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
         item('Explorer', 'view.explorer', 'CmdOrCtrl+Shift+E'),
         item('Toggle Sidebar', 'view.toggleSidebar', 'CmdOrCtrl+B'),
         { type: 'separator' },
-        item('Source Only', 'view.previewNone'),
+        item('Close Preview', 'view.previewNone'),
         item('Source and HTML Preview', 'view.previewHtml'),
         item('Source and PDF Preview', 'view.previewPdf'),
         item('Toggle Preview', 'view.togglePreview', 'CmdOrCtrl+Shift+V'),
@@ -244,4 +250,6 @@ export function buildApplicationMenu(window: BrowserWindow, recentWorkspaces: st
   ]
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template))
+  // The title bar shows the menu headings itself; the shortcuts of menu roles keep working.
+  if (!isMac) window.setMenuBarVisibility(false)
 }

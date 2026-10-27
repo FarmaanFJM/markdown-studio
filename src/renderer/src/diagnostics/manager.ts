@@ -1,3 +1,4 @@
+import { findSpaceRuns } from '@shared/markdown/quickFixes'
 import { findTableProblems } from '@shared/markdown/tables'
 import { findLinkProblems, type LinkProblem } from '@shared/markdown/linkProblems'
 import { buildLintConfig, fixAllText, fixToEdit, lintSeverity, type LintIssue } from '@shared/lint'
@@ -7,6 +8,12 @@ import { api } from '../bridge'
 import { documentContext } from '../editor/markdown/context'
 import { analysisFor } from '../editor/markdown/model'
 import { getActiveEditor } from '../editor/models'
+import {
+  blockActionTitle,
+  blockFormatAt,
+  lineEditToTextEdit,
+  tableRepairAt
+} from '../editor/markdown/quickFixActions'
 import { monaco } from '../editor/monaco'
 import { activeDocument, useDocuments } from '../state/documents'
 import { useProject } from '../state/project'
@@ -28,6 +35,7 @@ type Editor = monaco.editor.IStandaloneCodeEditor
 export const LINK_OWNER = 'markdown-studio-links'
 export const TABLE_OWNER = 'markdown-studio-tables'
 export const LINT_OWNER = 'markdown-studio-lint'
+export const SPACES_OWNER = 'markdown-studio-spaces'
 export const RENDER_OWNER = 'markdown-studio-render'
 export const PUBLISHING_OWNER = 'markdown-studio-publishing'
 
@@ -137,18 +145,54 @@ async function validateLinks(model: monaco.editor.ITextModel): Promise<LinkProbl
 // --- Tables --------------------------------------------------------------------------------------
 
 function tableMarkers(model: monaco.editor.ITextModel) {
-  return findTableProblems(analysisFor(model)).map((problem) => ({
-    marker: {
+  return findTableProblems(analysisFor(model)).map((problem) => {
+    const range = {
       startLineNumber: problem.line + 1,
       startColumn: 1,
       endLineNumber: problem.line + 1,
-      endColumn: model.getLineMaxColumn(problem.line + 1),
-      severity: monaco.MarkerSeverity.Warning,
-      message: problem.message,
-      code: 'table',
-      source: 'Markdown Studio'
+      endColumn: model.getLineMaxColumn(problem.line + 1)
     }
-  }))
+    const repair = tableRepairAt(model, problem.line)
+    return {
+      marker: {
+        ...range,
+        severity: monaco.MarkerSeverity.Warning,
+        message: problem.message,
+        code: 'table',
+        source: 'Markdown Studio'
+      },
+      fix: repair
+        ? {
+            title: 'Repair table: add the missing columns',
+            edit: lineEditToTextEdit(model, repair)
+          }
+        : undefined
+    }
+  })
+}
+
+// --- Repeated spaces -------------------------------------------------------------------------------
+
+/** Runs of spaces inside sentences: a faint hint (not counted as a problem) with a quick fix. */
+function spaceMarkers(model: monaco.editor.ITextModel) {
+  return findSpaceRuns(analysisFor(model)).map((run) => {
+    const range = {
+      startLineNumber: run.line + 1,
+      startColumn: run.column + 1,
+      endLineNumber: run.line + 1,
+      endColumn: run.column + 1 + run.length
+    }
+    return {
+      marker: {
+        ...range,
+        severity: monaco.MarkerSeverity.Hint,
+        message: `${run.length} spaces in a row; one is enough.`,
+        code: 'spaces',
+        source: 'Markdown Studio'
+      },
+      fix: { title: 'Remove extra spaces', edit: { range, text: ' ' } }
+    }
+  })
 }
 
 // --- Style (markdownlint) --------------------------------------------------------------------------
@@ -377,6 +421,7 @@ async function validate(editor: Editor): Promise<void> {
   }
 
   if (diagnostics.lint && model.getValueLength() <= MAX_LINT_CHARACTERS) {
+    setMarkers(model, SPACES_OWNER, spaceMarkers(model))
     jobs.push(
       lintText(model.getValue(), buildLintConfig(diagnostics.disabledRules)).then(
         (issues) => {
@@ -387,6 +432,7 @@ async function validate(editor: Editor): Promise<void> {
     )
   } else {
     clear(model, LINT_OWNER)
+    clear(model, SPACES_OWNER)
   }
   await Promise.all(jobs)
 }
@@ -446,11 +492,39 @@ export function installDiagnostics(editor: Editor): monaco.IDisposable {
 
 let providerRegistration: monaco.IDisposable | null = null
 
+/**
+ * "Format this block" offered at the cursor (table, heading, list or paragraph), only when the
+ * block actually has something to tidy, so it never shows up as noise on tidy text.
+ */
+function blockActions(
+  model: monaco.editor.ITextModel,
+  range: monaco.Range
+): monaco.languages.CodeAction[] {
+  if (model.getValueLength() > MAX_LINT_CHARACTERS) return []
+  const format = blockFormatAt(model, range.startLineNumber - 1)
+  if (!format) return []
+  return [
+    {
+      title: blockActionTitle(format),
+      kind: 'refactor.rewrite',
+      edit: {
+        edits: [
+          {
+            resource: model.uri,
+            versionId: model.getVersionId(),
+            textEdit: lineEditToTextEdit(model, format)
+          }
+        ]
+      }
+    }
+  ]
+}
+
 /** Quick fixes (Ctrl+.) for the corrections stored with the markers. */
 export function registerQuickFixes(): monaco.IDisposable {
   providerRegistration?.dispose()
   providerRegistration = monaco.languages.registerCodeActionProvider('markdown', {
-    provideCodeActions(model, _range, context) {
+    provideCodeActions(model, range, context) {
       const table = fixes.get(model)
       const actions: monaco.languages.CodeAction[] = []
       for (const marker of context.markers) {
@@ -473,6 +547,7 @@ export function registerQuickFixes(): monaco.IDisposable {
           }
         })
       }
+      actions.push(...blockActions(model, range))
       return { actions, dispose() {} }
     }
   })

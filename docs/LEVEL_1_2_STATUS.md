@@ -92,10 +92,29 @@ latest local run on Linux (11 tests, 11 passed):
 
 Screenshots and PDF pages from this run: `docs/screenshots/workflow-*.png`, `stress-*.png`.
 
+## Student Workflow Polish Pass (after Levels 1 and 2)
+
+A real playtest while writing a school research document produced ten findings, fixed afterwards. This is
+what changed and how it is verified; Levels 1 and 2 themselves are unchanged.
+
+| Finding                                         | Verified by                                                                                                                                 |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unreadable editor right-click menu              | E2E: computed colours and contrast in both themes, hover state; unit: theme colours                                                         |
+| Quick Fixes and diagnostics                     | Unit: space runs, table repair, block formatting, heading-level fix; E2E: Ctrl+. and commands                                               |
+| Table formatter and wide tables                 | Unit: widths, idempotence, HTML equivalence on a realistic comparison table; E2E: explicit format, undo, PDF                                |
+| Integrated title bar                            | Unit: window options; E2E (Linux): drag regions, menu headings, resize. **Windows behaviour: human test pending**                           |
+| Image drops after text                          | Unit: placement and rendered HTML; E2E: preview and PDF structure                                                                           |
+| AI foundation                                   | Unit: service, validation, switches; E2E: local fake server                                                                                 |
+| Thumbnail navigation context                    | Unit: folder choice; E2E                                                                                                                    |
+| Duplicate preview-close control                 | E2E                                                                                                                                         |
+| Professional Report numbering                   | Unit: detection and counters; E2E: preview counters and exported PDF text                                                                   |
+| Full-page Settings                              | Unit: categories and search; E2E: navigation, existing settings                                                                             |
+| Standard Markdown shortcuts (Ctrl+B / Ctrl+I …) | Unit: shared definition, no conflicts per platform, docs in sync; E2E: formatting, undo, toolbar equivalence, preview open, Settings search |
+
 ## CI evidence
 
-See the pull request for the CI results of the pushed branch (Linux, Windows, macOS jobs). What each
-job verifies is described in the README (_Release status_). The new specs were added to the
+See the GitHub Actions run of the pushed branch (Linux, Windows, macOS jobs). What each
+job verifies is described in the [development guide](DEVELOPMENT.md#release-status). The new specs were added to the
 `test:e2e:core` and `test:e2e:export` groups, and the Windows job runs the complete E2E suite
 against the unpacked application.
 

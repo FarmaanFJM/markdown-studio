@@ -1,5 +1,6 @@
 import { tableAtLine } from '@shared/markdown/analysis'
 import { escapeSnippetText } from '@shared/markdown/snippets'
+import { tableFormatOptions } from '../editor/markdown/tableCommands'
 import { formatTable, parseTableBlock, type TableModel } from '@shared/markdown/tables'
 import { requireEditor } from '../editor/markdown/commands'
 import { insertSnippetText } from '../editor/markdown/insert'
@@ -96,7 +97,9 @@ export async function editTableVisually(): Promise<void> {
     const range = tracked.getRange(0)
     if (result && range && !stale.isStale()) {
       editor.pushUndoStop()
-      editor.executeEdits(SOURCE, [{ range, text: formatTable(result).join(model.getEOL()) }])
+      editor.executeEdits(SOURCE, [
+        { range, text: formatTable(result, tableFormatOptions()).join(model.getEOL()) }
+      ])
       editor.pushUndoStop()
       notify('success', 'Table updated.')
     } else if (result) {
@@ -132,7 +135,11 @@ export async function insertTableVisually(): Promise<void> {
     />
   ))
   if (result) {
-    insertSnippetText(editor, escapeSnippetText(formatTable(result).join('\n')), { block: true })
+    insertSnippetText(
+      editor,
+      escapeSnippetText(formatTable(result, tableFormatOptions()).join('\n')),
+      { block: true }
+    )
   } else {
     editor.focus()
   }

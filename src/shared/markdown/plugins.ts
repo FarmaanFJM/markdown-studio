@@ -4,6 +4,7 @@ import { mathPlugin, type MathOptions } from './math'
 import { publishingPlugin } from '../publishing/plugin'
 import type { PublishingEnv } from '../publishing/types'
 import { SlugAllocator } from './slug'
+import { manualHeadingNumber } from './headingNumbers'
 
 /** Plain text of an inline token (text and code spans only), used for heading ids and labels. */
 export function inlineText(token: Token | undefined): string {
@@ -23,6 +24,45 @@ export function headingIds(md: MarkdownIt): void {
     state.tokens.forEach((token, index) => {
       if (token.type !== 'heading_open' || token.attrGet('id')) return
       token.attrSet('id', prefix + slugs.next(inlineText(state.tokens[index + 1])))
+    })
+  })
+}
+
+/**
+ * Marks headings the author already numbered by hand (`## 1. Introduction`, `### 4.1 Comparison`)
+ * with the class `manual-number`, so a theme that numbers headings itself (Professional Report)
+ * does not print the number twice. Mirroring the theme's counters, the heading also carries the
+ * counter value it stands for, so headings without a typed number keep counting from it.
+ *
+ * A level-2 heading counts as numbered when it starts with `N.`; a level-3 heading when it starts
+ * with `M.N` and `M` is the number of the section it sits in.
+ */
+export function headingNumbers(md: MarkdownIt): void {
+  md.core.ruler.push('heading_numbers', (state) => {
+    let section = 0
+    let subsection = 0
+    state.tokens.forEach((token, index) => {
+      if (token.type !== 'heading_open') return
+      const level = Number(token.tag.slice(1))
+      if (level !== 2 && level !== 3) return
+      const found = manualHeadingNumber(inlineText(state.tokens[index + 1]))
+      if (level === 2) {
+        if (found && found.parts.length === 1) {
+          section = found.parts[0]
+          subsection = 0
+          token.attrJoin('class', 'manual-number')
+          token.attrSet('style', `counter-set: report-h2 ${section} report-h3 0`)
+        } else {
+          section++
+          subsection = 0
+        }
+      } else if (found && found.parts.length === 2 && found.parts[0] === section) {
+        subsection = found.parts[1]
+        token.attrJoin('class', 'manual-number')
+        token.attrSet('style', `counter-set: report-h3 ${subsection}`)
+      } else {
+        subsection++
+      }
     })
   })
 }
@@ -90,6 +130,7 @@ export function createApplicationMarkdownIt(options: MarkdownItOptions = {}): Ma
   })
   md.use(headingIds)
   md.use(taskLists)
+  md.use(headingNumbers)
   if (options.math !== false) md.use(mathPlugin, options.math ?? {})
   md.use(diagramFences, { diagrams: options.diagrams })
   md.use(pageBreaks)

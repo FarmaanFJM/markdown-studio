@@ -7,6 +7,8 @@
  */
 
 import { pathsEqual } from './paths'
+import { checkAiEndpoint, normalizeAiModel } from './ai/endpoint'
+import type { AiProviderId } from './ai/types'
 import {
   DEFAULT_DOCUMENT_SETTINGS,
   sanitizeDocumentSettings,
@@ -17,7 +19,7 @@ export type ThemeName = 'dark' | 'light'
 export type ExplorerMode = 'tree' | 'thumbnails'
 export type PreviewKind = 'html' | 'pdf'
 export type PreviewMode = 'none' | PreviewKind
-export type SidebarView = 'explorer' | 'publication' | 'settings'
+export type SidebarView = 'explorer' | 'publication' | 'ai'
 
 export interface WindowBounds {
   x: number
@@ -55,6 +57,8 @@ export interface AppSettings {
     autoSuggest: boolean
     /** Show the formatting toolbar above the editor. */
     toolbar: boolean
+    /** Line width Format Table aims for; wider tables are balanced. 0 aligns every column fully. */
+    tableMaxWidth: number
     diagnostics: {
       /** Missing files, images and heading anchors in local links. */
       links: boolean
@@ -74,6 +78,23 @@ export interface AppSettings {
   templates: {
     /** Last author name typed when creating a document from a template. Never guessed. */
     author: string
+  }
+  /**
+   * Optional AI writing assistance. Off by default; nothing is sent anywhere until the user turns
+   * it on and configures a provider. The API key is never stored here (see the AI service).
+   */
+  ai: {
+    enabled: boolean
+    provider: AiProviderId
+    /** Base URL of an OpenAI-compatible service. */
+    endpoint: string
+    model: string
+    /** Offer ghost-text continuations while typing (sends the text around the cursor). */
+    inlineSuggestions: boolean
+    /** Workspace folders in which AI is switched off. */
+    disabledWorkspaces: string[]
+    /** Saved documents for which AI is switched off. */
+    disabledDocuments: string[]
   }
   /** Document appearance and publishing defaults. Never stored in a Markdown document. */
   document: DocumentSettings
@@ -114,10 +135,20 @@ export const DEFAULT_SETTINGS: AppSettings = {
     tableNavigation: true,
     autoSuggest: true,
     toolbar: true,
+    tableMaxWidth: 100,
     diagnostics: { links: true, tables: true, lint: true, disabledRules: [] },
     toc: { includeTopLevel: false, maxDepth: 6 }
   },
   templates: { author: '' },
+  ai: {
+    enabled: false,
+    provider: 'none',
+    endpoint: 'https://api.openai.com/v1',
+    model: '',
+    inlineSuggestions: false,
+    disabledWorkspaces: [],
+    disabledDocuments: []
+  },
   document: DEFAULT_DOCUMENT_SETTINGS,
   workspace: {
     restoreLastWorkspace: true,
@@ -146,8 +177,11 @@ export const LIMITS = {
   recentWorkspaces: 10,
   openFiles: 30,
   tocDepth: { min: 1, max: 6 },
+  tableWidth: { min: 40, max: 400 },
   authorLength: 120,
-  disabledRules: 100
+  disabledRules: 100,
+  aiDisabledWorkspaces: 50,
+  aiDisabledDocuments: 300
 } as const
 
 export type DeepPartial<T> = {
@@ -174,6 +208,13 @@ function num(value: unknown, fallback: number, min: number, max: number, integer
   if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
   const n = integer ? Math.round(value) : value
   return Math.min(max, Math.max(min, n))
+}
+
+/** `0` (no limit) or a width between the limits; anything else falls back. */
+function tableMaxWidth(value: unknown, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return fallback
+  const n = Math.round(value)
+  return n <= 0 ? 0 : Math.min(LIMITS.tableWidth.max, Math.max(LIMITS.tableWidth.min, n))
 }
 
 function str(value: unknown): string | null {
@@ -210,6 +251,15 @@ function ruleIds(value: unknown): string[] {
   return [...new Set(ids)].slice(0, LIMITS.disabledRules)
 }
 
+/** A list of distinct, plausible path strings. */
+function pathList(value: unknown, limit: number): string[] {
+  if (!Array.isArray(value)) return []
+  const paths = value.filter(
+    (p): p is string => typeof p === 'string' && p.length > 0 && p.length <= 1024
+  )
+  return [...new Set(paths)].slice(0, limit)
+}
+
 function bounds(value: unknown): WindowBounds | null {
   if (!isObject(value)) return null
   const { x, y, width, height } = value
@@ -234,6 +284,7 @@ export function sanitizeSettings(input: unknown): AppSettings {
   const diagnostics = isObject(markdown.diagnostics) ? markdown.diagnostics : {}
   const toc = isObject(markdown.toc) ? markdown.toc : {}
   const templates = isObject(s.templates) ? s.templates : {}
+  const ai = isObject(s.ai) ? s.ai : {}
   const workspace = isObject(s.workspace) ? s.workspace : {}
   const layout = isObject(s.layout) ? s.layout : {}
   const win = isObject(s.window) ? s.window : {}
@@ -273,6 +324,7 @@ export function sanitizeSettings(input: unknown): AppSettings {
       tableNavigation: bool(markdown.tableNavigation, d.markdown.tableNavigation),
       autoSuggest: bool(markdown.autoSuggest, d.markdown.autoSuggest),
       toolbar: bool(markdown.toolbar, d.markdown.toolbar),
+      tableMaxWidth: tableMaxWidth(markdown.tableMaxWidth, d.markdown.tableMaxWidth),
       diagnostics: {
         links: bool(diagnostics.links, d.markdown.diagnostics.links),
         tables: bool(diagnostics.tables, d.markdown.diagnostics.tables),
@@ -294,6 +346,15 @@ export function sanitizeSettings(input: unknown): AppSettings {
         typeof templates.author === 'string'
           ? templates.author.replace(/[\r\n]+/g, ' ').slice(0, LIMITS.authorLength)
           : d.templates.author
+    },
+    ai: {
+      enabled: bool(ai.enabled, d.ai.enabled),
+      provider: pick(ai.provider, ['none', 'openai-compatible'] as const, d.ai.provider),
+      endpoint: checkAiEndpoint(ai.endpoint).url ?? d.ai.endpoint,
+      model: normalizeAiModel(ai.model) ?? d.ai.model,
+      inlineSuggestions: bool(ai.inlineSuggestions, d.ai.inlineSuggestions),
+      disabledWorkspaces: pathList(ai.disabledWorkspaces, LIMITS.aiDisabledWorkspaces),
+      disabledDocuments: pathList(ai.disabledDocuments, LIMITS.aiDisabledDocuments)
     },
     document: sanitizeDocumentSettings(s.document),
     workspace: {
@@ -317,7 +378,7 @@ export function sanitizeSettings(input: unknown): AppSettings {
       ),
       sidebarView: pick(
         layout.sidebarView,
-        ['explorer', 'publication', 'settings'] as const,
+        ['explorer', 'publication', 'ai'] as const,
         d.layout.sidebarView
       ),
       previewMode: pick(layout.previewMode, ['none', 'html', 'pdf'] as const, d.layout.previewMode),

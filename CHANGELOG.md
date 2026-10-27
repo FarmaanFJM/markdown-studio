@@ -30,6 +30,46 @@ through Phases 1 and 2; Phase 3 is the first release to be versioned and package
   both columns.
 - Documentation: [Writing publications](docs/PUBLICATIONS.md), [Level 1 and 2 status](docs/LEVEL_1_2_STATUS.md).
 
+### Mature-IDE pass (playtest findings)
+
+- **Fixed:** the editor's right-click menu had no background and unreadable text. Cause: Monaco
+  renders context menus in a shadow root that cannot see the theme variables defined on the editor
+  element; the menu now renders in the page and the Monaco themes define the menu colours.
+- **Added:** Quick Fixes for repeated spaces, skipped heading levels (`MD001`) and tables with
+  mismatched columns; _Format Markdown Block_, _Repair Table_, _Remove Extra Spaces_ and _Quick Fix…_
+  in the context menu and the command palette.
+- **Added:** width-aware table formatting (new setting _Table source width_, default 100): wide
+  tables are balanced instead of padded to their longest cell; the rendered table is unchanged.
+- **Added:** integrated title bar with the application menu; system caption buttons are kept.
+- **Changed:** an image dropped on a line that already has text goes on a new line below it (kept
+  inside a list item or quote).
+- **Added:** AI assistant foundation: provider abstraction, an OpenAI-compatible provider, a
+  sidebar section and settings. Off by default. GitHub Copilot is documented, not faked.
+- **Fixed:** switching to thumbnails returned to the project root; it now opens at the selected
+  folder (or the folder of the selected file).
+- **Changed:** the duplicate _Source only_ control is gone; the preview's ✕ closes it.
+- **Fixed:** Professional Report printed typed section numbers twice (`1. 1. Inleiding`).
+- **Changed:** Settings is a full page with categories and search instead of a sidebar.
+
+### Student workflow follow-ups
+
+- **Fixed (release-blocking):** standard Markdown shortcuts. <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+<kbd>B</kbd> is bold
+  (it toggled the sidebar, which moved to <kbd>Ctrl</kbd>+<kbd>\\</kbd>; bold was <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>B</kbd>),
+  <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>9</kbd> is the blockquote (it was the task list, now
+  <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>0</kbd>; the blockquote was <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>.</kbd>).
+  All shortcuts now come from one definition (`src/shared/shortcuts.ts`) used by the key handler, the menu
+  accelerators and the shortcuts dialog; a unit test rejects duplicate bindings on every platform.
+- **Changed:** a dropped image is now a separate Markdown block: a blank line separates it from the text above,
+  and one follows it when text comes next (a single line break would have kept it inside the paragraph). It stays
+  inside list items and quotes; blank lines are added only where missing.
+- **Added:** _Fit Table to Editor Width_, and a notice after formatting a table that is wider than the editor
+  (with a shortcut to turn word wrap off). Tables are never reformatted automatically.
+- **Verified:** Professional Report heading numbers on a realistic document, in the preview counters, the table of
+  contents links and the exported PDF text; the section-numbering option no longer doubles typed numbers either.
+- **Documentation:** new Getting started, Keyboard shortcuts, Tables and Quick Fixes, Images and assets, Feature
+  reference and Development guides; README shortened; AI, Publishing, Authoring, Architecture and Roadmap updated;
+  a unit test checks documentation links and that the shortcut reference matches the application.
+
 ### Changed
 
 - Exports that refer to missing images now report them (an info notice instead of success).

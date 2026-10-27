@@ -14,6 +14,7 @@ import { OutlineSection } from '../outline/Outline'
 import { useSettings } from '../state/settings'
 import { useWorkspace } from '../state/workspace'
 import { createFileIn, createFolderIn } from './actions'
+import { setExplorerMode } from './mode'
 import { targetDirectory } from './target'
 import { ThumbnailView } from './ThumbnailView'
 import { TreeView } from './TreeView'
@@ -113,7 +114,7 @@ export function Explorer() {
               className={mode === 'tree' ? 'active' : ''}
               title="Show as list"
               aria-label="Show as list"
-              onClick={() => update({ explorer: { mode: 'tree' } })}
+              onClick={() => setExplorerMode('tree')}
             >
               <List size={14} />
             </button>
@@ -124,7 +125,7 @@ export function Explorer() {
               className={mode === 'thumbnails' ? 'active' : ''}
               title="Show as thumbnails"
               aria-label="Show as thumbnails"
-              onClick={() => update({ explorer: { mode: 'thumbnails' } })}
+              onClick={() => setExplorerMode('thumbnails')}
             >
               <LayoutGrid size={14} />
             </button>

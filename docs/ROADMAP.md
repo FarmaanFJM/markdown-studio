@@ -5,12 +5,37 @@ documentation into a professional writing and publishing environment.
 
 **Product principle:** Simple by default, powerful when needed.
 
-**Status:** Long-term proposal. Level 1 (core) and Level 2 (professional publishing
-foundations: two columns, captions and cross-references, contents, citations and APA, chapters,
-templates) are implemented, see [LEVEL_1_2_STATUS.md](LEVEL_1_2_STATUS.md). Everything else
-described under a future milestone is **not implemented** and is not a commitment. What is implemented today is described in the
-[README](../README.md); the detailed plan for equation numbering, references and books is in the
-[academic publishing roadmap](ACADEMIC_PUBLISHING_ROADMAP.md), which this document builds on.
+**Status:** Long-term proposal; the table below is the current implementation status. Everything
+under a future milestone is **not implemented** and is not a commitment. What exists today is described in the
+[README](../README.md) and the [feature reference](FEATURES.md); the detailed plan for equation numbering,
+references and books is in the [academic publishing roadmap](ACADEMIC_PUBLISHING_ROADMAP.md), which this
+document builds on.
+
+**Current priority:** a reliable student documentation tool. Milestone 0 is not closed (see below), so the
+next work is real Windows playtesting and bug fixing, not new features.
+
+## Implementation status
+
+"Verified" means automated tests (unit, and Playwright E2E on Linux and, in CI, Windows). **No human has
+playtested on Windows or macOS** except where a playtest finding is listed.
+
+| Status                                       | What                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Implemented and verified**                 | Folder/file management, tabs, safe saving and recovery; Markdown editor with toolbar, standard formatting shortcuts, smart lists, completions and slash commands; tables (insert, format, repair, visual editor); style and link checks with Quick Fixes; reference-aware rename and move; image drops, pasting and thumbnails; HTML and PDF preview; four document themes, custom CSS, export presets and PDF/HTML export; mathematics and Mermaid; front matter, captions, cross-references, citations (APA 7), contents, two columns, publications; templates; full-page Settings; integrated title bar |
+| **Implemented, awaiting human verification** | Windows behaviour of the integrated title bar (maximise, Snap layouts, menu popups); drag-and-drop of images from Windows Explorer; the installer's first-run experience; high-DPI layouts                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| **Implemented, optional**                    | AI assistant with an OpenAI-compatible provider (off by default; tested against a local fake server only, not a real provider)                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| **Planned**                                  | Milestones 1 onward below: section-level layout, equation numbering and reusable definitions, footnotes, more citation styles, EPUB, extension system                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| **Deferred**                                 | GitHub Copilot integration; AI streaming, chat and document-aware actions; code signing of the installers (needs certificates)                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+### Milestone 0 — School-ready: status
+
+Milestone 0 is **not complete**. Its exit criterion — a student completes and submits a real school project
+without another editor — has been exercised only by automated tests that replay the workflow
+(`school-workflow.spec.ts`, `student-workflow.spec.ts`) and by one developer's playtest, which produced the ten
+findings fixed in the _Student Workflow Polish Pass_ (context menu, Quick Fixes, table formatter, title bar, image
+drops, AI foundation, thumbnail navigation, duplicate preview control, Professional Report numbering, Settings
+page) plus the shortcut, image-spacing and wide-table follow-ups. It closes after a further playtest on Windows
+finds no blocking problems.
 
 ## Product direction
 
