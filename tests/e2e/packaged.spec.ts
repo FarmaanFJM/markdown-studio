@@ -1,4 +1,5 @@
-import { mkdirSync, readFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { mkdirSync, readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import {
@@ -93,6 +94,17 @@ test('the bundled GitHub Copilot language server starts and reports that nobody 
     ai: { enabled: true, provider: 'github-copilot' }
   })
   try {
+    if (process.env.MARKDOWN_STUDIO_EXECUTABLE) {
+      // An installed or unpacked build carries the server for its own platform and architecture.
+      const resources = await app.evaluate(() => process.resourcesPath)
+      const exe =
+        process.platform === 'win32' ? 'copilot-language-server.exe' : 'copilot-language-server'
+      const bundled = path.join(resources, 'copilot', exe)
+      expect(statSync(bundled).size).toBeGreaterThan(50_000_000)
+      const version = spawnSync(bundled, ['--version'], { encoding: 'utf8', timeout: 30_000 })
+      expect(version.status).toBe(0)
+      expect(version.stdout.trim()).toMatch(/^\d+\.\d+\.\d+/)
+    }
     await page.keyboard.press(`${process.platform === 'darwin' ? 'Meta' : 'Control'}+,`)
     const settings = page.getByTestId('settings-panel')
     await settings.getByTestId('settings-nav-ai').click()
