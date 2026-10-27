@@ -4,7 +4,6 @@ import { expect, test, type Page } from '@playwright/test'
 import {
   closeApp,
   createSandbox,
-  focusEditor,
   launch,
   launchEditing,
   mod,
@@ -57,6 +56,17 @@ function editorText(page: Page): Promise<string> {
       .map((l) => l.text.replace(/\u00a0/g, ' '))
       .join('\n')
   })
+}
+
+/**
+ * Focuses the editor with a click near the right edge of the first line. The shared helper clicks
+ * 5 px from the left edge of the text, which can land on the line-number margin once a long line
+ * has scrolled the view horizontally (seen on the narrow Windows display).
+ */
+async function focusEditor(page: Page): Promise<void> {
+  const scroller = page.locator('.monaco-editor .monaco-scrollable-element.editor-scrollable')
+  const box = await scroller.boundingBox()
+  await scroller.click({ position: { x: Math.max(10, (box?.width ?? 400) - 40), y: 8 } })
 }
 
 async function openAiSettings(page: Page) {
