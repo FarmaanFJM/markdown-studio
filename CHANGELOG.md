@@ -7,6 +7,19 @@ through Phases 1 and 2; Phase 3 is the first release to be versioned and package
 
 ## 0.4.0 — Level 1 (core) and Level 2 (professional publishing) (unreleased)
 
+### Importing files and folders by drag and drop
+
+- **Fixed:** files and folders dragged in from Windows File Explorer were refused (prohibited cursor, no import):
+  the window-level drag guard rejected everything the Explorer panel did not claim, and the panel only understood
+  drags that start inside the application. The Explorer (tree and thumbnails) now accepts OS drops.
+- **Added:** dropping a folder copies it recursively into the project (names and contents preserved), onto the
+  highlighted folder or the project root; dropping files copies them. Names that are taken get `-1`, `-2`, …;
+  nothing is overwritten or merged, links are skipped, and a failed copy is rolled back. Dropped `.md` files are
+  imported and opened rather than pasted. Image drops into the editor and pasting are unchanged.
+- **Added:** `ImportService` (main process) with unit tests; Electron E2E tests using Chromium's native drag
+  pipeline. **Not verified:** a real drag from the Windows File Explorer shell (manual check in
+  `docs/IMAGES_AND_ASSETS.md`).
+
 ### GitHub Copilot integration
 
 - **Added:** GitHub Copilot as an AI provider, through GitHub's official Copilot language server

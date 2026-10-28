@@ -37,6 +37,7 @@ import { PresentationService } from './services/presentationService'
 import { ProjectService } from './services/projectService'
 import { RecoveryService } from './services/recoveryService'
 import { PresetService } from './services/presetService'
+import { ImportService } from './services/importService'
 import { MsFileProtocol, registerSchemePrivileges } from './services/protocol'
 import { SettingsService } from './services/settingsService'
 import { TemplateService } from './services/templateService'
@@ -54,6 +55,7 @@ registerSchemePrivileges()
 const access = new AccessControl()
 const files = new FileService(access)
 const assets = new AssetService(access)
+const imports = new ImportService(access)
 const settings = new SettingsService(path.join(app.getPath('userData'), 'settings.json'))
 const templates = new TemplateService(access, path.join(app.getPath('userData'), 'templates'))
 const msfile = new MsFileProtocol(access)
@@ -396,6 +398,10 @@ function registerIpc(): void {
 
   handle(IPC.assetsImportImage, (source: string, target: string) =>
     assets.importImage(source, target)
+  )
+
+  handle(IPC.assetsImportExternal, (sources: unknown, target: unknown) =>
+    imports.importExternal(sources, target)
   )
 
   handle(

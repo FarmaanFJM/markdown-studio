@@ -1,7 +1,14 @@
 import { AlertTriangle, Columns2, X } from 'lucide-react'
 import { PREVIEW_LAYOUTS } from '../layout/previewLayouts'
 import { commands } from '../commands/commands'
+import { isMarkdownPath } from '@shared/fileTypes'
+import {
+  carriesExternalFiles,
+  externalPathsFrom,
+  openMarkdownDrops
+} from '../explorer/externalDrop'
 import { FileIcon } from '../explorer/FileIcon'
+import { notify } from '../state/ui'
 import { activateDocument, closeDocument, documentName, useDocuments } from '../state/documents'
 import { useSettings } from '../state/settings'
 
@@ -11,7 +18,26 @@ export function EditorTabs() {
   const previewMode = useSettings((s) => s.settings.layout.previewMode)
 
   return (
-    <div className="tabs-bar">
+    <div
+      className="tabs-bar"
+      onDragOver={(e) => {
+        if (!carriesExternalFiles(e.dataTransfer)) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'copy'
+      }}
+      onDrop={(e) => {
+        if (!carriesExternalFiles(e.dataTransfer)) return
+        e.preventDefault()
+        e.stopPropagation()
+        const markdown = externalPathsFrom(e.dataTransfer).filter(isMarkdownPath)
+        if (markdown.length > 0) void openMarkdownDrops(markdown)
+        else
+          notify(
+            'info',
+            'Drop Markdown files here to open them, or drop files and folders onto the Explorer to import them.'
+          )
+      }}
+    >
       <div className="tabs" role="tablist" aria-label="Open documents">
         {documents.map((doc) => {
           const name = documentName(doc)

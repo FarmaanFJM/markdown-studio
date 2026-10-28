@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type KeyboardEvent,
+  type MouseEvent
+} from 'react'
 import { ArrowUp, ChevronRight } from 'lucide-react'
 import type { DirEntry } from '@shared/ipc'
 import { thumbnailUrl } from '@shared/ipc'
@@ -16,6 +23,7 @@ import { useSettings } from '../state/settings'
 import { useUi } from '../state/ui'
 import { useWorkspace } from '../state/workspace'
 import { deleteEntry, entryContextMenu, openEntry, renameEntry } from './actions'
+import { carriesExternalFiles, externalPathsFrom, importIntoFolder } from './externalDrop'
 import { FileIcon } from './FileIcon'
 import { startImageDrag } from './TreeView'
 
@@ -66,6 +74,7 @@ function Breadcrumbs({ root, folder }: { root: string; folder: string }) {
  */
 export function ThumbnailView({ root }: { root: string }) {
   const folder = useWorkspace((s) => s.folder) ?? root
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
   const state = useWorkspace((s) => s.directories[pathKey(folder)])
   const selected = useWorkspace((s) => s.selected)
   const size = useSettings((s) => s.settings.explorer.thumbnailSize)
@@ -143,8 +152,35 @@ export function ThumbnailView({ root }: { root: string }) {
     useUi.getState().showContextMenu(event.clientX, event.clientY, entryContextMenu(entry, folder))
   }
 
+  /** Folder tile under the pointer, else the folder being shown. */
+  const externalDestination = (event: DragEvent): string => {
+    const tile = (event.target as HTMLElement).closest<HTMLElement>('[data-path]')
+    const entry = tile ? entries.find((e) => e.path === tile.dataset.path) : undefined
+    return entry?.kind === 'directory' ? entry.path : folder
+  }
+
   return (
-    <div className="thumbs">
+    <div
+      className={`thumbs${dropTarget !== null && pathsEqual(dropTarget, folder) ? ' drop-root' : ''}`}
+      onDragOver={(e) => {
+        if (!carriesExternalFiles(e.dataTransfer)) return
+        e.preventDefault()
+        e.stopPropagation()
+        e.dataTransfer.dropEffect = 'copy'
+        setDropTarget(externalDestination(e))
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropTarget(null)
+      }}
+      onDrop={(e) => {
+        if (!carriesExternalFiles(e.dataTransfer)) return
+        e.preventDefault()
+        e.stopPropagation()
+        const destination = externalDestination(e)
+        setDropTarget(null)
+        void importIntoFolder(externalPathsFrom(e.dataTransfer), destination)
+      }}
+    >
       <div className="thumbs-nav">
         <button
           type="button"
@@ -179,7 +215,7 @@ export function ThumbnailView({ root }: { root: string }) {
           return (
             <div
               key={entry.path}
-              className={`thumb-tile${isSelected ? ' selected' : ''}`}
+              className={`thumb-tile${isSelected ? ' selected' : ''}${dropTarget !== null && pathsEqual(dropTarget, entry.path) ? ' drop-target' : ''}`}
               role="option"
               aria-selected={isSelected}
               data-path={entry.path}

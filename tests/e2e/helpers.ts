@@ -529,3 +529,44 @@ export async function killApp(app: ElectronApplication): Promise<void> {
   await exited
   await new Promise((resolve) => setTimeout(resolve, 1000))
 }
+
+/**
+ * Drags real files and/or folders from disk over the window using Chromium's own drag-and-drop
+ * pipeline (CDP `Input.dispatchDragEvent`). The renderer receives genuine `File` objects that
+ * carry their on-disk paths, folders included, which `setInputFiles` cannot produce.
+ *
+ * This is NOT the Windows shell: no Explorer window, OLE drop target or cursor is involved.
+ * It proves that the application accepts and imports what Chromium hands it, not that Windows
+ * delivers it; that stays a manual acceptance check (docs/IMAGES_AND_ASSETS.md).
+ */
+export async function dragFromDisk(
+  page: Page,
+  paths: string[],
+  point: { x: number; y: number },
+  action: 'hover' | 'drop' | 'cancel' = 'drop'
+): Promise<void> {
+  const session = await page.context().newCDPSession(page)
+  try {
+    const data = { items: [], files: paths, dragOperationsMask: 1 /* copy */ }
+    const send = (type: string) =>
+      session.send('Input.dispatchDragEvent', { type, x: point.x, y: point.y, data } as never)
+    await send('dragEnter')
+    // A held drag repeats `dragover` (about every 50 ms) while the pointer rests. Chromium only
+    // delivers a drop once the page has answered the latest one, and the editor re-renders the
+    // line under the pointer on the first, which restarts that exchange.
+    for (let i = 0; i < 4; i++) {
+      await send('dragOver')
+      await page.waitForTimeout(60)
+    }
+    if (action === 'drop') await send('drop')
+    else if (action === 'cancel') await send('dragCancel' as never)
+  } finally {
+    await session.detach()
+  }
+}
+
+/** Centre of an element, for pointing a drag at it. */
+export async function centreOf(locator: Locator): Promise<{ x: number; y: number }> {
+  const box = (await locator.boundingBox())!
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 }
+}
