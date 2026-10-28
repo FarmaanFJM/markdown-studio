@@ -1,4 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { isMarkdownPath } from '@shared/fileTypes'
+import { openMarkdownDrops } from '../explorer/externalDrop'
 import { useDocuments } from '../state/documents'
 import { useSettings } from '../state/settings'
 import { notify } from '../state/ui'
@@ -141,7 +143,11 @@ export function MarkdownEditor() {
         )
         return
       }
-      void insertImages(editor, sources, position)
+      // A Markdown file is a document to open, never raw text to paste into this one.
+      const markdown = sources.filter((s) => s.external && isMarkdownPath(s.path))
+      const rest = sources.filter((s) => !markdown.includes(s))
+      if (markdown.length > 0) void openMarkdownDrops(markdown.map((s) => s.path))
+      if (rest.length > 0) void insertImages(editor, rest, position)
     }
     // Pasting an image (screenshot, copied picture, copied image files) saves it in the project.
     const onPaste = (event: ClipboardEvent) => {

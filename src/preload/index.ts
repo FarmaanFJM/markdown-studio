@@ -59,6 +59,8 @@ const api: MarkdownStudioApi = {
     },
     importImage: (sourcePath, targetDirectory) =>
       ipcRenderer.invoke(IPC.assetsImportImage, sourcePath, targetDirectory),
+    importExternal: (sourcePaths, targetDirectory) =>
+      ipcRenderer.invoke(IPC.assetsImportExternal, sourcePaths, targetDirectory),
     saveClipboardImage: (bytes, mime, targetDirectory, baseName) =>
       ipcRenderer.invoke(IPC.assetsSaveClipboardImage, bytes, mime, targetDirectory, baseName)
   },

@@ -22,6 +22,49 @@ The alt text is made from the file name (`health-ui.png` → "Health ui") and is
 can type a better description straight away. File names with spaces or parentheses are written in angle
 brackets — `![Team photo](<assets/Team Photo (2024).png>)` — which every Markdown renderer understands.
 
+## Importing files and folders from your computer
+
+Drag files **or whole folders** from Windows File Explorer (Finder, a file manager) onto the **Explorer
+panel** and they are copied into the project, so moving or deleting the originals never breaks it.
+
+| You drop…                                  | Onto…                                                                                                       | Result                                                                                                                                                           |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A folder (e.g. `Arcanox Health UI System`) | A folder row → that folder; empty space or a file → the project root (a file row means the folder it is in) | The whole folder is copied recursively: name, nested folders, file names and file contents are preserved byte for byte. The new folder is expanded and selected. |
+| One or more files                          | The same targets                                                                                            | The files are copied into the target folder.                                                                                                                     |
+| A `.md` file                               | The Explorer, the tab strip or the editor                                                                   | Imported as a project document. On the tab strip or in the editor it is also **opened** (its text is never pasted into another document).                        |
+| An image                                   | The editor                                                                                                  | Unchanged: copied to the asset folder and referenced at the drop point (see above).                                                                              |
+
+While dragging, the cursor shows "copy" over valid targets; the destination — the folder row, or the whole
+Explorer for the project root — is outlined. Areas that cannot take a drop (status bar, preview…) refuse it.
+
+- **Nothing is overwritten and nothing is merged.** If the name is taken, the copy becomes `name-1`,
+  `name-2`, … (`Arcanox Health UI System-1`, `photo-1.png`) and the notice says so.
+- Shortcuts and symbolic links are skipped (and listed), never followed. Limits per drop: 5000 files, 1 GB, 200 MB
+  per file. A drop is measured before anything is copied, and a copy that fails half-way is removed again.
+- Files are only written inside the open project folder; a folder cannot be dropped into itself.
+- Implementation: `ImportService` (main process, `assets:import-external`) copies; the renderer only passes the
+  paths Electron's `webUtils.getPathForFile` reports for the dropped files. No renderer privileges were added.
+
+### What is automated and what is not
+
+`tests/unit/importService.test.ts` covers the copy logic (files, several files, folders, nesting, names with
+spaces and parentheses, duplicates, images, Markdown, links, limits, access control, rollback).
+`tests/e2e/external-drop.spec.ts` drives the real Electron app with Chromium's native drag-and-drop pipeline
+(`Input.dispatchDragEvent` with real paths, folders included) and checks highlighting, the accepted/refused drop
+effect, the import, the refreshed Explorer and persistence after a restart.
+
+**That is not Windows File Explorer.** No CI runner can operate the Windows shell's own drag source, so the OLE
+drop target, the Windows cursor and the delivery of a dragged folder as a path are only verified by hand.
+Manual Windows acceptance check:
+
+1. Open a Markdown Studio project, then open Windows File Explorer.
+2. Take a folder with several PNG files and drag it onto the Markdown Studio Explorer. The cursor must show the
+   copy/"allowed" state over the project root and over a folder row (not the prohibited sign), with the target
+   outlined.
+3. Drop it. The whole folder appears with its files beneath it; open or insert one of the images.
+4. Save, close Markdown Studio, reopen the project: the folder and files are still there and work.
+5. Also drag a single file onto the Explorer, and an image straight into a Markdown document.
+
 ## Where the image goes in the text
 
 An image dropped on a line that already has text is placed **below it as its own block**, separated by a blank

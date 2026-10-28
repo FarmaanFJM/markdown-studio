@@ -17,6 +17,12 @@ import { useDocuments } from '../state/documents'
 import { useUi } from '../state/ui'
 import { useWorkspace, type DirectoryState } from '../state/workspace'
 import { deleteEntry, entryContextMenu, openEntry, renameEntry } from './actions'
+import {
+  carriesExternalFiles,
+  externalPathsFrom,
+  importIntoFolder,
+  MOVE_DRAG_MIME
+} from './externalDrop'
 import { FileIcon } from './FileIcon'
 
 interface Row {
@@ -47,9 +53,6 @@ export function startImageDrag(event: DragEvent, entry: DirEntry): void {
   event.dataTransfer.setData(EXPLORER_DRAG_MIME, entry.path)
   event.dataTransfer.effectAllowed = 'copy'
 }
-
-/** Private drag type for moving entries between folders of the Explorer. */
-export const MOVE_DRAG_MIME = 'application/x-markdown-studio-move'
 
 function startEntryDrag(event: DragEvent, entry: DirEntry): void {
   event.dataTransfer.setData(MOVE_DRAG_MIME, entry.path)
@@ -153,6 +156,23 @@ export function TreeView({ root }: { root: string }) {
     void moveWithReferences(entry, folder)
   }
 
+  /** Folder that would receive an external drop at the pointer: a folder row, a file's folder, or the root. */
+  const externalDestination = (event: DragEvent): string => {
+    const row = (event.target as HTMLElement).closest<HTMLElement>('[data-path]')
+    const entry = row ? rows.find((r) => r.entry.path === row.dataset.path)?.entry : undefined
+    if (!entry) return root
+    return entry.kind === 'directory' ? entry.path : dirname(entry.path)
+  }
+
+  const dropExternal = (event: DragEvent) => {
+    event.preventDefault()
+    event.stopPropagation()
+    const destination = externalDestination(event)
+    setDropTarget(null)
+    // DataTransfer contents are only readable synchronously, during the event.
+    void importIntoFolder(externalPathsFrom(event.dataTransfer), destination)
+  }
+
   const onContextMenu = (event: MouseEvent, entry: DirEntry | null) => {
     event.preventDefault()
     event.stopPropagation()
@@ -166,18 +186,36 @@ export function TreeView({ root }: { root: string }) {
   return (
     <div
       ref={containerRef}
-      className="tree"
+      className={`tree${dropTarget !== null && pathsEqual(dropTarget, root) ? ' drop-root' : ''}`}
+      data-drop-target={dropTarget ?? undefined}
       role="tree"
       aria-label="Files"
       tabIndex={0}
       onKeyDown={onKeyDown}
       onContextMenu={(e) => onContextMenu(e, null)}
       onDragOver={(e) => {
+        if (carriesExternalFiles(e.dataTransfer)) {
+          // Files from the operating system: the folder under the pointer, else the project root.
+          e.preventDefault()
+          e.stopPropagation()
+          e.dataTransfer.dropEffect = 'copy'
+          setDropTarget(externalDestination(e))
+          return
+        }
         if (!carriesMove(e)) return
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
       }}
-      onDrop={(e) => dropOn(e, root)}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropTarget(null)
+      }}
+      onDrop={(e) => {
+        if (carriesExternalFiles(e.dataTransfer)) {
+          dropExternal(e)
+          return
+        }
+        dropOn(e, root)
+      }}
     >
       {rows.length === 0 && <div className="explorer-message">This folder is empty.</div>}
       {rows.map(({ entry, depth }) => {
@@ -188,7 +226,7 @@ export function TreeView({ root }: { root: string }) {
         return (
           <div
             key={entry.path}
-            className={`tree-row${isSelected ? ' selected' : ''}${isActive ? ' active' : ''}${dropTarget === entry.path ? ' drop-target' : ''}`}
+            className={`tree-row${isSelected ? ' selected' : ''}${isActive ? ' active' : ''}${dropTarget !== null && pathsEqual(dropTarget, entry.path) ? ' drop-target' : ''}`}
             role="treeitem"
             aria-selected={isSelected}
             aria-expanded={isDir ? isOpen : undefined}
@@ -211,7 +249,12 @@ export function TreeView({ root }: { root: string }) {
                 : undefined
             }
             onDragLeave={isDir ? () => setDropTarget(null) : undefined}
-            onDrop={isDir ? (e) => dropOn(e, entry.path) : undefined}
+            onDrop={
+              isDir
+                ? (e) =>
+                    carriesExternalFiles(e.dataTransfer) ? dropExternal(e) : dropOn(e, entry.path)
+                : undefined
+            }
             onClick={() => activate(entry)}
             onContextMenu={(e) => onContextMenu(e, entry)}
           >

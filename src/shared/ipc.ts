@@ -66,6 +66,24 @@ export interface ImportedImage {
   copied: boolean
 }
 
+/** One top-level item copied into the workspace from a drop. */
+export interface ImportedEntry {
+  /** Where it came from (outside the workspace). */
+  source: string
+  /** Where the copy now lives, after any rename to avoid a clash. */
+  path: string
+  kind: 'file' | 'directory'
+  /** Files copied (1 for a file, the total below it for a folder). */
+  fileCount: number
+}
+
+export interface ExternalImportResult {
+  imported: ImportedEntry[]
+  /** Items left out (links, special files), described for the user. */
+  skipped: string[]
+  fileCount: number
+}
+
 export interface PresetListing {
   global: StoredPreset[]
   workspace: StoredPreset[]
@@ -206,6 +224,7 @@ export const IPC = {
   dialogOpenImage: 'dialog:open-image',
   dialogOpenSources: 'dialog:open-sources',
   assetsImportImage: 'assets:import-image',
+  assetsImportExternal: 'assets:import-external',
   assetsSaveClipboardImage: 'assets:save-clipboard-image',
   recoveryWrite: 'recovery:write',
   recoveryRemove: 'recovery:remove',
@@ -298,6 +317,11 @@ export interface MarkdownStudioApi {
     /** Absolute path of a file dropped from the operating system, or '' if unavailable. */
     pathForFile(file: File): string
     importImage(sourcePath: string, targetDirectory: string): Promise<ImportedImage>
+    /**
+     * Copies files and folders dropped from the operating system into a workspace folder
+     * (recursively, never overwriting; a clashing name gets a numeric suffix).
+     */
+    importExternal(sourcePaths: string[], targetDirectory: string): Promise<ExternalImportResult>
     /** Stores an image from the clipboard as a new file; never overwrites an existing one. */
     saveClipboardImage(
       bytes: Uint8Array,
