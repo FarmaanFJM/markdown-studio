@@ -204,7 +204,11 @@ test('an image dropped into a document is stored in the project and still resolv
       await centreOf(page.locator('.monaco-editor').first()),
       'drop'
     )
-    await expect.poll(async () => editorText(page)).toContain('assets/architecture')
+    // README already references assets/architecture.png, so wait for the newly stored copy
+    // (architecture-1.png). View lines are soft-wrapped, so compare without whitespace.
+    await expect
+      .poll(async () => (await editorText(page)).replace(/\s+/g, ''))
+      .toContain('assets/architecture-1.png')
     await page.keyboard.press('Control+S')
     await expect(page.getByTestId('toast-success')).toContainText('into the project')
   } finally {
