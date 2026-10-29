@@ -185,7 +185,8 @@ test('a Markdown file dropped into the editor opens as a document instead of ins
     await dragFromDisk(page, [md], await centreOf(page.locator('.monaco-editor').first()), 'drop')
     await expect(page.getByTestId('tab').filter({ hasText: 'Leerdoel 1.md' })).toBeVisible()
     await treeRow(page, 'README.md').click()
-    expect(await editorText(page)).toBe(before)
+    // The switch back to README is asynchronous; wait for it instead of reading mid-switch.
+    await expect.poll(() => editorText(page)).toBe(before)
   } finally {
     await closeApp(app)
   }
@@ -203,7 +204,11 @@ test('an image dropped into a document is stored in the project and still resolv
       await centreOf(page.locator('.monaco-editor').first()),
       'drop'
     )
-    await expect.poll(async () => editorText(page)).toContain('assets/architecture')
+    // README already references assets/architecture.png, so wait for the newly stored copy
+    // (architecture-1.png). View lines are soft-wrapped, so compare without whitespace.
+    await expect
+      .poll(async () => (await editorText(page)).replace(/\s+/g, ''))
+      .toContain('assets/architecture-1.png')
     await page.keyboard.press('Control+S')
     await expect(page.getByTestId('toast-success')).toContainText('into the project')
   } finally {
